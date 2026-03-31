@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Bookmark, Eye } from "lucide-react";
 import { Paper } from "../../lib/api";
 import { estimateReadingTime, getCategoryAccent } from "../../lib/categoryColors";
@@ -37,12 +38,14 @@ function extractAuthors(paper: Paper): string {
 /* ── Large Variant ──────────────────────────────────── */
 
 function LargeCard({ paper, onPreview, onBookmark, isBookmarked, isFocused }: DashboardPaperCardProps) {
+  const router = useRouter();
   const readingTime = estimateReadingTime(paper.summary || paper.generated_summary);
   const category = primaryCategory(paper);
   const pubDate = formatDate(paper.published_date);
 
   return (
     <article
+      onClick={() => router.push(`/paper/${paper.arxiv_id}`)}
       className={`
         relative bg-surface-card rounded-2xl p-6 shadow-warm-sm overflow-hidden
         group cursor-pointer card-hover
@@ -136,11 +139,12 @@ function LargeCard({ paper, onPreview, onBookmark, isBookmarked, isFocused }: Da
 /* ── Compact Variant ────────────────────────────────── */
 
 function CompactCard({ paper, onPreview, onBookmark, isBookmarked, isFocused }: DashboardPaperCardProps) {
+  const router = useRouter();
   const category = primaryCategory(paper);
 
   return (
     <article
-      onClick={() => onPreview(paper)}
+      onClick={() => router.push(`/paper/${paper.arxiv_id}`)}
       className={`
         relative bg-surface-card rounded-2xl p-4 shadow-warm-sm overflow-hidden
         group cursor-pointer card-hover
