@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scholarly Curator | AI Research Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,200;0,400;0,700;1,200;1,400;1,700&amp;family=Inter:wght@300;400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-high": "#ede8de",
+                        "surface-variant": "#e7e2d8",
+                        "primary-fixed": "#d0e9d4",
+                        "secondary-fixed": "#ffdad4",
+                        "inverse-on-surface": "#f5f0e6",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#dedad0",
+                        "surface-container-low": "#f8f3e9",
+                        "surface-bright": "#fef9ef",
+                        "on-secondary-fixed-variant": "#80281b",
+                        "tertiary-fixed-dim": "#d5c4ad",
+                        "on-tertiary-fixed": "#231a0c",
+                        "primary": "#061b0e",
+                        "secondary": "#a03f30",
+                        "surface-container": "#f2ede3",
+                        "primary-container": "#1b3022",
+                        "tertiary-container": "#342a1b",
+                        "on-secondary-container": "#741f13",
+                        "on-tertiary": "#ffffff",
+                        "background": "#fef9ef",
+                        "on-tertiary-container": "#a0917c",
+                        "tertiary-fixed": "#f2e0c8",
+                        "surface-tint": "#4d6453",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#32302a",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#e7e2d8",
+                        "secondary-fixed-dim": "#ffb4a7",
+                        "secondary-container": "#fe8672",
+                        "on-primary": "#ffffff",
+                        "outline": "#737973",
+                        "on-surface": "#1d1c16",
+                        "surface": "#fef9ef",
+                        "primary-fixed-dim": "#b4cdb8",
+                        "on-background": "#1d1c16",
+                        "error-container": "#ffdad6",
+                        "on-surface-variant": "#434843",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed": "#400200",
+                        "on-primary-container": "#819986",
+                        "on-primary-fixed": "#0b2013",
+                        "tertiary": "#1e1608",
+                        "on-primary-fixed-variant": "#364c3c",
+                        "on-tertiary-fixed-variant": "#504534",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#b4cdb8",
+                        "outline-variant": "#c3c8c1"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #fef9ef;
+            color: #1d1c16;
+            font-family: 'Inter', sans-serif;
+        }
+        .editorial-shadow {
+            box-shadow: 0 32px 64px -4px rgba(29, 28, 22, 0.06);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#f8f3e9] flex flex-col py-8 space-y-4 font-['Inter'] text-sm tracking-wide leading-relaxed">
+<div class="px-6 mb-8">
+<div class="flex items-center space-x-3 mb-6">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container overflow-hidden">
+<img alt="Curator AI" class="w-full h-full object-cover" data-alt="a minimalist abstract digital avatar representing artificial intelligence with soft geometric shapes and warm earthy tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5kHlA3MifhZtcQ-CIkkiwS8Oq8M4FU6ejGoJFFKWTkSm0I-7spDeoaY_62waQX5IV2MZi8gC4yxR_9MRjdwDyUDHp1-xVTYWW6fjNyABqj5yjHKEiGMusgXF6u2XVRby1Y_HMK6vJiTLQhhZb-XBdjMK5wDMlgf7srMGBKF8N-4N23iU6GLuXFvCAZzHRgLOhhuF_6GLb1pkRJJB2aaj30ow0NA1f5hzTjNYVOrQ8BX6MtE_RHcz4WLFTyDMtqCMQuTFopddnjkJT"/>
+</div>
+<div>
+<h3 class="font-bold text-on-surface">The Library</h3>
+<p class="text-[10px] uppercase tracking-widest text-on-surface/50">Deep Work Mode</p>
+</div>
+</div>
+<button class="w-full py-3 px-4 bg-secondary text-on-secondary rounded-xl font-semibold flex items-center justify-center space-x-2 Active: scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>New Analysis</span>
+</button>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center space-x-3 px-4 py-3 bg-[#f2ede3] text-[#1b3022] font-semibold rounded-r-full Active: scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span>cs.AI</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-[#1d1c16]/70 hover:bg-[#f2ede3]/50 hover:pl-6 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>cs.LG</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-[#1d1c16]/70 hover:bg-[#f2ede3]/50 hover:pl-6 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="translate">translate</span>
+<span>cs.CL</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-[#1d1c16]/70 hover:bg-[#f2ede3]/50 hover:pl-6 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+<span>cs.CV</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-[#1d1c16]/70 hover:bg-[#f2ede3]/50 hover:pl-6 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+<span>Bookmarks</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-[#1d1c16]/70 hover:bg-[#f2ede3]/50 hover:pl-6 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Archive</span>
+</a>
+</nav>
+<div class="px-4 mt-auto border-t border-outline-variant/15 pt-4 space-y-1">
+<a class="flex items-center space-x-3 px-4 py-2 text-[#1d1c16]/70 hover:text-secondary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="keyboard">keyboard</span>
+<span>Shortcuts</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-2 text-[#1d1c16]/70 hover:text-secondary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span>Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- TopAppBar (Shared Component) -->
+<header class="fixed top-0 right-0 left-64 z-50 bg-[#fef9ef] flex justify-between items-center px-12 py-6">
+<div class="flex items-center flex-1 max-w-2xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-secondary/20 focus:bg-surface-container-lowest transition-all placeholder:text-on-surface-variant/40 text-on-surface" placeholder="Search the archives..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-6 ml-8">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary transition-colors" data-icon="refresh">refresh</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary transition-colors" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary transition-colors" data-icon="settings">settings</button>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden cursor-pointer border-2 border-surface-container">
+<img alt="Researcher Profile" class="w-full h-full object-cover" data-alt="close up portrait of a professional academic researcher with spectacles in a softly lit library setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEWCreNizfC5XLXMqa32w-VHwk-qWEHfmEOWq3tNo9l9KX44sfOHtLAQTQ3jH0KJZajc06VaEpdlioYiWLCBJ2UK9OlNiaiABLcyBmm_jp1M61c2NOxFngf8-wOV1owU6WnqFPiG-3bUieRwlQM7IZgzaad7tx-ZT5TRkEnPgxqXo8qiF1NmsGgHRBcYJWfcYrF5-kQn-cGrD4XehrcufqDJKp5ACgoHaikkn-rcJjD2DK1ss1b9tJo1Ve8naRQsu3HCeXA4-CG_0t"/>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="pt-28 px-12 pb-24 max-w-[1400px] mx-auto space-y-12">
+<!-- Hero Section: Lead Story -->
+<section class="relative overflow-hidden rounded-xl bg-primary-container text-inverse-on-surface p-12 min-h-[480px] flex flex-col justify-end group">
+<div class="absolute top-0 right-0 w-1/2 h-full opacity-40 mix-blend-overlay">
+<img alt="Neural Network Visual" class="w-full h-full object-cover grayscale brightness-50" data-alt="abstract artistic visualization of a neural network with flowing digital threads in deep forest green and golden amber" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaF4jckx3RNW0hQmn4bM3VC6O5zr9vZez6rQ8SHNFQC3RcmyVDesaB3FKHMlyBHoRs7etfw9uo4X1V3LdtDPhR6Oi9rPuzBfjgXoRtJu0BhUO5K1YtjsJFrQLgJSDomX07MFj20MTPJv5gXQkkXYB4g-3nEkSjKqWgG4iEqIq5OFfrMTbOWzxG7ZKrW_AluBIJkk95iOerOJjzFgD483FEZNBiZrgEsznyjyJUDMJpCY_uh0UzuR9ajQXKs__-3WVx2x7y-0dkEdUA"/>
+</div>
+<div class="relative z-10 max-w-2xl space-y-6">
+<div class="flex items-center space-x-4">
+<span class="px-3 py-1 rounded-full bg-secondary text-[10px] font-bold tracking-widest uppercase">Lead Story</span>
+<span class="text-on-primary-container font-label text-xs uppercase tracking-widest">March 24, 2024 • 12 min read</span>
+</div>
+<h1 class="font-headline text-5xl leading-tight">
+<span class="font-light">Analysis of</span> <br/>
+<span class="font-bold">Emergent Reasoning in Large Language Models</span>
+</h1>
+<p class="text-lg text-on-primary-container leading-relaxed font-light line-clamp-3">
+                        We investigate the phase transitions associated with reasoning capabilities in transformer architectures. Our findings suggest that specific compute thresholds unlock non-linear performance gains across logical inference tasks that were previously dormant.
+                    </p>
+<div class="flex items-center space-x-4 pt-4">
+<a class="px-8 py-3 bg-inverse-on-surface text-primary-container rounded-xl font-bold hover:bg-white transition-colors" href="#">Read Full Analysis</a>
+<div class="flex space-x-2">
+<span class="px-3 py-1 rounded-full bg-primary/20 border border-on-primary-container/10 text-[10px] uppercase font-semibold">cs.AI</span>
+<span class="px-3 py-1 rounded-full bg-primary/20 border border-on-primary-container/10 text-[10px] uppercase font-semibold">Inference</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats & Breakdown: Tonal Asymmetry -->
+<section class="grid grid-cols-12 gap-8">
+<div class="col-span-8 bg-surface-container-low rounded-xl p-8 flex flex-col justify-between">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h2 class="font-headline text-2xl font-bold">Category Distribution</h2>
+<p class="text-on-surface-variant text-sm font-light italic">Last 30 days of research activity</p>
+</div>
+<div class="flex space-x-2">
+<button class="p-2 bg-surface-container rounded-lg material-symbols-outlined text-sm" data-icon="more_horiz">more_horiz</button>
+</div>
+</div>
+<div class="flex items-end space-x-4 h-32 w-full">
+<div class="flex-1 bg-primary-container/10 rounded-t-lg h-[85%] group relative">
+<div class="absolute bottom-0 left-0 w-full bg-primary-container rounded-t-lg transition-all group-hover:bg-secondary" style="height: 65%;"></div>
+<span class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">cs.AI</span>
+</div>
+<div class="flex-1 bg-primary-container/10 rounded-t-lg h-[60%] group relative">
+<div class="absolute bottom-0 left-0 w-full bg-primary-container rounded-t-lg transition-all group-hover:bg-secondary" style="height: 40%;"></div>
+</div>
+<div class="flex-1 bg-primary-container/10 rounded-t-lg h-[95%] group relative">
+<div class="absolute bottom-0 left-0 w-full bg-primary-container rounded-t-lg transition-all group-hover:bg-secondary" style="height: 80%;"></div>
+</div>
+<div class="flex-1 bg-primary-container/10 rounded-t-lg h-[40%] group relative">
+<div class="absolute bottom-0 left-0 w-full bg-primary-container rounded-t-lg transition-all group-hover:bg-secondary" style="height: 25%;"></div>
+</div>
+<div class="flex-1 bg-primary-container/10 rounded-t-lg h-[75%] group relative">
+<div class="absolute bottom-0 left-0 w-full bg-primary-container rounded-t-lg transition-all group-hover:bg-secondary" style="height: 55%;"></div>
+</div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60 px-1">
+<span>AI</span><span>LG</span><span>CL</span><span>CV</span><span>GR</span>
+</div>
+</div>
+<div class="col-span-4 space-y-8">
+<div class="bg-tertiary-fixed rounded-xl p-8 editorial-shadow">
+<p class="text-on-tertiary-fixed-variant text-[10px] font-bold uppercase tracking-widest mb-1">Total in Library</p>
+<h3 class="font-headline text-4xl font-bold text-on-tertiary-fixed">12,842</h3>
+<div class="mt-4 flex items-center text-sm font-medium text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined text-xs mr-1" data-icon="trending_up">trending_up</span>
+<span>+412 vs last week</span>
+</div>
+</div>
+<div class="bg-surface-container rounded-xl p-8 flex items-center justify-between">
+<div>
+<p class="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-1">Pulse Score</p>
+<h3 class="font-headline text-3xl font-bold">8.4</h3>
+</div>
+<div class="w-16 h-16 rounded-full border-4 border-secondary/20 border-t-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" data-icon="bolt">bolt</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Filter Bar -->
+<section class="bg-surface-container-high/50 p-2 rounded-xl flex items-center justify-between">
+<div class="flex items-center space-x-2 px-2">
+<span class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface/40">Filter by</span>
+<button class="px-4 py-2 bg-surface-container-lowest rounded-lg text-sm font-medium border border-outline-variant/15">All Categories</button>
+<button class="px-4 py-2 bg-surface-container-lowest rounded-lg text-sm font-medium border border-outline-variant/15">Last 7 Days</button>
+<button class="px-4 py-2 bg-surface-container-lowest rounded-lg text-sm font-medium border border-outline-variant/15">Most Relevant</button>
+<button class="px-4 py-2 text-secondary text-xs font-bold uppercase ml-2 hover:opacity-70 transition-opacity">Reset</button>
+</div>
+<div class="flex items-center space-x-4 pr-4">
+<div class="flex bg-surface-container-low rounded-lg p-1">
+<button class="p-2 bg-surface-container-lowest rounded-md shadow-sm material-symbols-outlined text-sm" data-icon="grid_view">grid_view</button>
+<button class="p-2 rounded-md material-symbols-outlined text-sm text-on-surface-variant/40" data-icon="view_list">view_list</button>
+</div>
+</div>
+</section>
+<!-- Chronological Feed -->
+<section class="space-y-12">
+<!-- Today -->
+<div class="space-y-6">
+<div class="flex items-center justify-between border-b border-outline-variant/10 pb-4">
+<h2 class="font-headline text-3xl font-bold">Today <span class="font-light italic text-on-surface-variant/40 ml-2">March 25</span></h2>
+<span class="px-3 py-1 bg-surface-container rounded-full text-[10px] font-bold text-on-surface-variant">24 NEW PAPERS</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Paper Card 1 -->
+<div class="bg-surface-container-lowest p-8 rounded-xl editorial-shadow group cursor-pointer hover:bg-surface-container transition-all">
+<div class="flex justify-between items-start mb-6">
+<span class="px-3 py-1 rounded-full bg-tertiary-fixed text-[10px] font-bold uppercase text-on-tertiary-fixed">cs.CL</span>
+<button class="material-symbols-outlined text-on-surface-variant/30 group-hover:text-secondary transition-colors" data-icon="bookmark">bookmark</button>
+</div>
+<h3 class="font-headline text-2xl leading-tight font-bold mb-4 group-hover:text-secondary transition-colors">Decoding Intent: A New Metric for LLM Evaluation</h3>
+<p class="text-sm text-on-surface-variant font-light leading-relaxed line-clamp-2 mb-6">Introducing the 'Intent-Alignment Quotient' (IAQ), a metric designed to quantify the semantic gap between user prompts and generated tokens.</p>
+<div class="flex items-center justify-between pt-4 border-t border-outline-variant/5">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-lowest bg-surface-dim overflow-hidden">
+<img alt="Author" class="w-full h-full object-cover" data-alt="close up headshot of a young male computer scientist" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4z68Onrc5NqEc8tuPGFlLT13TUKgEiST_-_j8WVmrbo85f1Gv1f2H12trDHjj0jcvaY6z2zsXM1JRoFhjoL7ObJ9N-mFf8FmTUvPN1cUx8B-4xvRfGAo1MAj5CZLJAiCGnUeoaREdHmV_FQ1SvoUvyrToVSpOutaWXEUNU-pFjtx9ZJqG3BX9DooP_urHIrmMbyabwrlj8IP6gTrI8Djgk-M94VFBydBtmHzpANzCpiSru9mlxAgH1NwbBtsrdGoAZHpMH9w8sn4d"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-lowest bg-surface-dim overflow-hidden">
+<img alt="Author" class="w-full h-full object-cover" data-alt="close up headshot of a smiling female AI researcher" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmqT5aOA1jDaowaTuVIHcSqD06g_zToHkYGTM4IM1WTu54p_gQob9benYGuA-vno_MHxERRyp_lWPB04Fff2iVpVpbrzyfR6W4Yz81Jwk_TTtQ3genZ1hgbZh1jfgxbIWy34jhDz-10fiVepwNLNyxO7RCX8Aruz-Xn2kvZBqErAIC0DGXOr4wKZyKr9VzYlaQZqgMmmMAC5_KCMzDdCF8Ogq3LseOMgAXq9Ez0jPKwCFYddtnBULYYdmmRwITkPGRYqt4jMY6J9_D"/>
+</div>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">8 min read</span>
+</div>
+</div>
+<!-- Paper Card 2 -->
+<div class="bg-surface-container-lowest p-8 rounded-xl editorial-shadow group cursor-pointer hover:bg-surface-container transition-all">
+<div class="flex justify-between items-start mb-6">
+<span class="px-3 py-1 rounded-full bg-tertiary-fixed text-[10px] font-bold uppercase text-on-tertiary-fixed">cs.CV</span>
+<button class="material-symbols-outlined text-secondary" data-icon="bookmark" style="font-variation-settings: 'FILL' 1;">bookmark</button>
+</div>
+<h3 class="font-headline text-2xl leading-tight font-bold mb-4 group-hover:text-secondary transition-colors">Real-time Gaussian Splatting for Dynamic Scenes</h3>
+<p class="text-sm text-on-surface-variant font-light leading-relaxed line-clamp-2 mb-6">A novel approach to 4D scene reconstruction that achieves photorealistic results at 60fps on consumer-grade hardware.</p>
+<div class="flex items-center justify-between pt-4 border-t border-outline-variant/5">
+<span class="text-xs text-on-surface-variant italic">K. Tanaka et al.</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">15 min read</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Yesterday -->
+<div class="space-y-6 opacity-80">
+<div class="flex items-center justify-between border-b border-outline-variant/10 pb-4">
+<h2 class="font-headline text-3xl font-bold">Yesterday <span class="font-light italic text-on-surface-variant/40 ml-2">March 24</span></h2>
+<span class="px-3 py-1 bg-surface-container rounded-full text-[10px] font-bold text-on-surface-variant">18 PAPERS</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Paper Card 3 -->
+<div class="bg-surface-container-low p-6 rounded-xl group cursor-pointer hover:bg-surface-container transition-all">
+<span class="text-[10px] font-bold uppercase text-on-surface-variant/50 mb-4 block">cs.LG • Neural Dynamics</span>
+<h3 class="font-headline text-xl leading-tight font-bold mb-3 group-hover:text-secondary transition-colors">Stability Analysis of Recurrent Weights</h3>
+<div class="flex items-center justify-between mt-auto pt-4">
+<span class="text-[10px] font-bold text-secondary">READY FOR ANALYSIS</span>
+<span class="material-symbols-outlined text-on-surface-variant/20" data-icon="bookmark">bookmark</span>
+</div>
+</div>
+<!-- Paper Card 4 -->
+<div class="bg-surface-container-low p-6 rounded-xl group cursor-pointer hover:bg-surface-container transition-all">
+<span class="text-[10px] font-bold uppercase text-on-surface-variant/50 mb-4 block">cs.AI • Ethics</span>
+<h3 class="font-headline text-xl leading-tight font-bold mb-3 group-hover:text-secondary transition-colors">Moral Framing in Instruction Tuning</h3>
+<div class="flex items-center justify-between mt-auto pt-4">
+<span class="text-[10px] font-bold text-on-surface-variant/40">CITED 14 TIMES</span>
+<span class="material-symbols-outlined text-on-surface-variant/20" data-icon="bookmark">bookmark</span>
+</div>
+</div>
+<!-- Paper Card 5 -->
+<div class="bg-surface-container-low p-6 rounded-xl group cursor-pointer hover:bg-surface-container transition-all">
+<span class="text-[10px] font-bold uppercase text-on-surface-variant/50 mb-4 block">cs.RO • Robotics</span>
+<h3 class="font-headline text-xl leading-tight font-bold mb-3 group-hover:text-secondary transition-colors">Zero-Shot Dexterous Manipulation</h3>
+<div class="flex items-center justify-between mt-auto pt-4">
+<span class="text-[10px] font-bold text-on-surface-variant/40">10 MIN READ</span>
+<span class="material-symbols-outlined text-on-surface-variant/20" data-icon="bookmark">bookmark</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Infinite Scroll Loading Indicator -->
+<div class="flex flex-col items-center py-12 space-y-4">
+<div class="w-12 h-1 border-2 border-secondary/20 rounded-full relative overflow-hidden">
+<div class="absolute inset-0 bg-secondary w-1/3 rounded-full"></div>
+</div>
+<p class="font-headline italic text-lg text-on-surface-variant/60">Fetching deeper archives...</p>
+</div>
+</div>
+</main>
+<!-- Keyboard Shortcuts Overlay (Footer Reference) -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="bg-primary-container text-on-primary-container w-12 h-12 rounded-full flex items-center justify-center editorial-shadow hover:scale-110 transition-transform peer">
+<span class="material-symbols-outlined">keyboard_command_key</span>
+</button>
+<div class="absolute bottom-16 right-0 w-64 bg-surface-container-lowest p-6 rounded-xl editorial-shadow opacity-0 translate-y-4 pointer-events-none transition-all peer-hover:opacity-100 peer-hover:translate-y-0">
+<h4 class="font-headline font-bold mb-4">Shortcuts</h4>
+<ul class="space-y-3 text-xs">
+<li class="flex justify-between items-center"><span class="text-on-surface-variant">Search</span> <kbd class="px-2 py-1 bg-surface-container-low rounded border border-outline-variant/20 font-mono"> / </kbd></li>
+<li class="flex justify-between items-center"><span class="text-on-surface-variant">Bookmark</span> <kbd class="px-2 py-1 bg-surface-container-low rounded border border-outline-variant/20 font-mono"> B </kbd></li>
+<li class="flex justify-between items-center"><span class="text-on-surface-variant">Analyze</span> <kbd class="px-2 py-1 bg-surface-container-low rounded border border-outline-variant/20 font-mono"> A </kbd></li>
+<li class="flex justify-between items-center"><span class="text-on-surface-variant">Next Paper</span> <kbd class="px-2 py-1 bg-surface-container-low rounded border border-outline-variant/20 font-mono"> J </kbd></li>
+</ul>
+</div>
+</div>
+<!-- Quick-Peek capability placeholder (Visual hint) -->
+<div class="fixed top-0 right-0 w-[400px] h-full bg-surface-container-lowest translate-x-full shadow-2xl z-[60] transition-transform duration-500 ease-in-out p-12 overflow-y-auto hidden">
+<div class="flex justify-between items-start mb-12">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary transition-colors" data-icon="close">close</button>
+<div class="flex space-x-4">
+<button class="material-symbols-outlined text-on-surface-variant/40" data-icon="arrow_back_ios">arrow_back_ios</button>
+<button class="material-symbols-outlined text-on-surface-variant/40" data-icon="arrow_forward_ios">arrow_forward_ios</button>
+</div>
+</div>
+<div class="space-y-8">
+<span class="px-3 py-1 bg-secondary text-on-secondary rounded-full text-[10px] font-bold uppercase">Quick Peek</span>
+<h2 class="font-headline text-4xl font-bold leading-tight">Decentralized Multi-Agent Coordination</h2>
+<div class="space-y-4">
+<h4 class="font-label text-xs uppercase font-bold tracking-widest text-secondary">AI Summary</h4>
+<p class="text-on-surface text-sm leading-relaxed bg-surface-container p-6 rounded-xl italic">This paper presents a swarm-intelligence approach where individual nodes maintain local state while converging on global objectives via asynchronous peer-to-peer weight sharing.</p>
+</div>
+<button class="w-full py-4 bg-primary-container text-on-primary-container rounded-xl font-bold">Open Deep Analysis</button>
+</div>
+</div>
+</body></html>

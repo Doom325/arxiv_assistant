@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scholar's Atelier | Reading Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,200..800;1,200..800&amp;family=Inter:wght@300;400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-on-surface": "#f5f0e6",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#ffdbd1",
+                        "secondary": "#4d6453",
+                        "on-surface-variant": "#56423d",
+                        "primary": "#9b3f25",
+                        "on-primary": "#ffffff",
+                        "background": "#fef9ef",
+                        "on-secondary-fixed": "#0b2013",
+                        "inverse-surface": "#32302a",
+                        "on-primary-fixed-variant": "#7f2a12",
+                        "secondary-fixed-dim": "#b4cdb8",
+                        "surface-container": "#f2ede3",
+                        "primary-container": "#bb563b",
+                        "on-secondary-fixed-variant": "#364c3c",
+                        "surface-tint": "#9e4127",
+                        "tertiary-fixed-dim": "#ffb59f",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#fffbff",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#874c3b",
+                        "on-secondary-container": "#516857",
+                        "secondary-fixed": "#d0e9d4",
+                        "surface-container-low": "#f8f3e9",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#a46451",
+                        "inverse-primary": "#ffb5a1",
+                        "outline-variant": "#ddc0b9",
+                        "on-background": "#1d1c16",
+                        "surface-variant": "#e7e2d8",
+                        "error-container": "#ffdad6",
+                        "outline": "#89726c",
+                        "surface-container-high": "#ece8de",
+                        "primary-fixed-dim": "#ffb5a1",
+                        "surface": "#fef9ef",
+                        "surface-dim": "#dedad0",
+                        "on-primary-fixed": "#3b0800",
+                        "on-surface": "#1d1c16",
+                        "on-tertiary-fixed-variant": "#6e3827",
+                        "tertiary-fixed": "#ffdbd1",
+                        "surface-container-highest": "#e7e2d8",
+                        "on-tertiary-fixed": "#370e03",
+                        "surface-bright": "#fef9ef",
+                        "error": "#ba1a1a",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#cde6d1",
+                        "on-primary-container": "#fffbff"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .serif-italic { font-family: 'Newsreader', serif; font-style: italic; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/20">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-screen flex flex-col py-8 px-4 h-full w-64 border-r border-stone-200/50 dark:border-stone-800/50 bg-stone-100 dark:bg-stone-900 z-50">
+<div class="mb-12 px-4">
+<h1 class="text-xl font-serif font-bold text-stone-900 dark:text-stone-50">The Atelier</h1>
+<p class="font-serif italic text-stone-700 dark:text-stone-300 text-sm">Research Assistant</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-200/30 dark:hover:bg-stone-800/30 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-label text-sm">Library</span>
+</a>
+<!-- Queue is Active -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-orange-800 dark:text-orange-400 font-bold border-r-2 border-orange-800 dark:border-orange-400 bg-stone-200/50 dark:bg-stone-800/50 scale-98 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="view_agenda">view_agenda</span>
+<span class="font-label text-sm">Queue</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-200/30 dark:hover:bg-stone-800/30 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="folder_special">folder_special</span>
+<span class="font-label text-sm">Collections</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-200/30 dark:hover:bg-stone-800/30 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-label text-sm">Archive</span>
+</a>
+</nav>
+<div class="mt-auto space-y-6">
+<button class="w-full py-3 px-4 rounded-xl bg-gradient-to-br from-primary to-primary-container text-white font-label text-sm flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="bolt">bolt</span>
+                Trigger Scan
+            </button>
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-stone-500 hover:bg-stone-200/30 transition-colors" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="keyboard">keyboard</span>
+<span class="text-xs uppercase tracking-widest font-label">Shortcuts</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-stone-500 hover:bg-stone-200/30 transition-colors" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="settings">settings</span>
+<span class="text-xs uppercase tracking-widest font-label">Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-40 flex justify-between items-center px-12 h-20 bg-stone-50/80 dark:bg-stone-950/80 backdrop-blur-xl shadow-sm dark:shadow-none">
+<div class="flex items-center gap-8">
+<span class="font-serif italic text-2xl text-emerald-900 dark:text-emerald-400">Scholar's Atelier</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="font-serif text-lg tracking-tight text-stone-600 dark:text-stone-400 hover:text-emerald-800 transition-all" href="#">Unread</a>
+<a class="font-serif text-lg tracking-tight text-orange-800 dark:text-orange-400 border-b-2 border-orange-800 dark:border-orange-400 pb-1" href="#">Reading</a>
+<a class="font-serif text-lg tracking-tight text-stone-600 dark:text-stone-400 hover:text-emerald-800 transition-all" href="#">Read</a>
+<a class="font-serif text-lg tracking-tight text-stone-600 dark:text-stone-400 hover:text-emerald-800 transition-all" href="#">Skipped</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<div class="flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/10 focus-within:ring-1 focus-within:ring-orange-800/20 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant/50" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-48 font-body" placeholder="Search collection..." type="text"/>
+<kbd class="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-stone-400 bg-white rounded border border-stone-200">⌘K</kbd>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="notifications">notifications</button>
+<img alt="Curator Avatar" class="w-10 h-10 rounded-full border-2 border-surface-container-high" data-alt="Close-up portrait of a thoughtful academic professional in a library setting with warm, focused lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwWRPYMklZHL9ECyQHoaRJ41MXgrqAv9wPr2gdGV5hHL5m1-6QWBDNZg9mH5o5g4Pb0C73-bTa4bs9Z2FtMPXSV-Xn0HULxnpGojBUqVautq0TfphuBu5xZERKM6idsJ_t-0MAKyfBS88j2N1vJeu_eqXhbBFTOJ3Xw_5HVJ9tumJdCbMqSTNyJtouuOOdHeqN5YdHlCbSSADig8ASEMlLyjVMgRVW_w-XHA6XCDglVsX_f7fqvXH37z6q0yaThEFqUIe-EeOvXykV"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-32 pb-24 px-12 max-w-7xl mx-auto">
+<!-- Hero Header Section -->
+<header class="mb-16">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
+<div>
+<h2 class="font-headline text-6xl tracking-tighter text-on-surface">
+<span class="font-extralight">Your Reading</span> <br/>
+<span class="font-black italic">Queue</span>
+</h2>
+<p class="mt-4 text-on-surface-variant/70 font-serif italic text-xl">Curating 42 open investigations across 3 research clusters.</p>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-3 rounded-full bg-surface-container text-on-surface font-label text-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="refresh">refresh</span>
+                        Recalculate Scores
+                    </button>
+<button class="px-6 py-3 rounded-full bg-gradient-to-br from-primary to-primary-container text-white font-label text-sm flex items-center gap-2 shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-lg" data-icon="auto_awesome">auto_awesome</span>
+                        AI Scan
+                    </button>
+</div>
+</div>
+<!-- Hero Summary Stat Block (The single deep green forest element) -->
+<section class="bg-secondary rounded-lg p-10 text-white flex flex-col md:flex-row gap-12 items-center relative overflow-hidden">
+<div class="relative z-10 flex-1">
+<span class="text-xs uppercase tracking-widest opacity-70 font-bold mb-2 block">Focus Mode: Recommended Next</span>
+<h3 class="font-headline text-3xl mb-4 italic">The Architecture of Memory in Post-Digital Archives</h3>
+<p class="text-secondary-fixed/80 max-w-xl leading-relaxed">Based on your recent scans of "Library of Babel" and your interest in "Metadata Ethics," this paper has a <span class="text-primary-fixed-dim font-bold">98% relevance score</span>. Estimated reading time: 14 mins.</p>
+<div class="mt-8 flex gap-6">
+<button class="px-8 py-3 bg-white text-secondary rounded-full font-label text-sm font-bold hover:bg-secondary-fixed transition-colors">Start Reading</button>
+<div class="flex items-center gap-4 text-sm opacity-80">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-base" data-icon="person">person</span> Dr. Elias Thorne</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-base" data-icon="calendar_today">calendar_today</span> Oct 2023</span>
+</div>
+</div>
+</div>
+<div class="relative z-10 grid grid-cols-2 gap-4 w-full md:w-auto">
+<div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/5">
+<p class="text-3xl font-headline italic">12</p>
+<p class="text-[10px] uppercase tracking-widest opacity-60 mt-1">AI Discovered</p>
+</div>
+<div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/5">
+<p class="text-3xl font-headline italic">30</p>
+<p class="text-[10px] uppercase tracking-widest opacity-60 mt-1">Manual Adds</p>
+</div>
+<div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/5">
+<p class="text-3xl font-headline italic">84%</p>
+<p class="text-[10px] uppercase tracking-widest opacity-60 mt-1">Completion</p>
+</div>
+<div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/5">
+<p class="text-3xl font-headline italic">High</p>
+<p class="text-[10px] uppercase tracking-widest opacity-60 mt-1">Current Velocity</p>
+</div>
+</div>
+<!-- Decorative background detail -->
+<div class="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
+</section>
+</header>
+<!-- List Controls & Filtering -->
+<div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
+<div class="flex items-center gap-2 p-1 bg-surface-container rounded-full overflow-hidden">
+<button class="px-6 py-2 rounded-full bg-white shadow-sm text-sm font-label text-on-surface">All Sources</button>
+<button class="px-6 py-2 rounded-full text-sm font-label text-on-surface-variant/60 hover:text-on-surface transition-colors">JSTOR</button>
+<button class="px-6 py-2 rounded-full text-sm font-label text-on-surface-variant/60 hover:text-on-surface transition-colors">ArXiv</button>
+<button class="px-6 py-2 rounded-full text-sm font-label text-on-surface-variant/60 hover:text-on-surface transition-colors">Personal</button>
+</div>
+</div><!-- Detailed Filtering & Sorting Bar -->
+<div class="flex flex-col gap-8 mb-12 p-8 bg-surface-container-low/50 rounded-2xl">
+<div class="flex flex-wrap items-center justify-between gap-6">
+<!-- Status Group -->
+<div class="flex flex-col gap-3">
+<span class="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/40 ml-1">Filter by Status</span>
+<div class="flex items-center gap-2 p-1 bg-surface-container rounded-full">
+<button class="px-5 py-2 rounded-full bg-primary text-white text-xs font-label font-bold shadow-sm transition-all">All</button>
+<button class="px-5 py-2 rounded-full text-xs font-label text-on-surface-variant/60 hover:text-on-surface transition-colors">Unread</button>
+<button class="px-5 py-2 rounded-full text-xs font-label text-on-surface-variant/60 hover:text-on-surface transition-colors">Reading</button>
+<button class="px-5 py-2 rounded-full text-xs font-label text-on-surface-variant/60 hover:text-on-surface transition-colors">Read</button>
+<button class="px-5 py-2 rounded-full text-xs font-label text-on-surface-variant/60 hover:text-on-surface transition-colors">Skipped</button>
+</div>
+</div>
+<!-- Sort By Group -->
+<div class="flex flex-col gap-3">
+<span class="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/40 ml-1">Sort Documents</span>
+<div class="flex items-center gap-3">
+<div class="relative group">
+<button class="flex items-center gap-3 px-5 py-3 bg-surface-container rounded-xl text-xs font-label font-bold text-on-surface hover:bg-surface-variant transition-colors">
+                        Priority Score
+                        <span class="material-symbols-outlined text-sm text-primary" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+<button class="p-3 bg-surface-container rounded-xl text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-lg" data-icon="south_east">south_east</span>
+</button>
+</div>
+</div>
+<!-- Discovery Type -->
+<div class="flex flex-col gap-3">
+<span class="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/40 ml-1">Discovery</span>
+<div class="flex items-center gap-2 p-1 bg-surface-container rounded-full">
+<button class="px-5 py-2 rounded-full bg-white shadow-sm text-xs font-label font-bold text-primary">Show All</button>
+<button class="px-5 py-2 rounded-full text-xs font-label text-on-surface-variant/60 hover:text-on-surface transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="auto_awesome">auto_awesome</span> AI
+                </button>
+<button class="px-5 py-2 rounded-full text-xs font-label text-on-surface-variant/60 hover:text-on-surface transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="bookmark">bookmark</span> Manual
+                </button>
+</div>
+</div>
+</div>
+<div class="h-px bg-outline-variant/10 w-full"></div>
+<div class="flex items-center justify-between">
+<!-- Grouping Controls -->
+<div class="flex items-center gap-6">
+<span class="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/40">Group by:</span>
+<div class="flex gap-1">
+<button class="px-4 py-1.5 rounded-lg text-[11px] font-label font-bold bg-surface-container text-on-surface-variant/40 hover:text-primary transition-colors">Day</button>
+<button class="px-4 py-1.5 rounded-lg text-[11px] font-label font-bold bg-primary/10 text-primary">Week</button>
+<button class="px-4 py-1.5 rounded-lg text-[11px] font-label font-bold bg-surface-container text-on-surface-variant/40 hover:text-primary transition-colors">Month</button>
+<button class="px-4 py-1.5 rounded-lg text-[11px] font-label font-bold bg-surface-container text-on-surface-variant/40 hover:text-primary transition-colors">None</button>
+</div>
+</div>
+<button class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/40 hover:text-primary transition-colors">
+            Clear All Filters
+            <span class="material-symbols-outlined text-sm" data-icon="close">close</span>
+</button>
+</div>
+</div>
+<!-- The Reading Queue List -->
+<div class="space-y-6">
+<!-- Group Header -->
+<div class="pt-4 pb-2">
+<h4 class="text-xs uppercase tracking-[0.2em] font-bold text-on-surface-variant/40">This Week</h4>
+</div>
+<!-- Card 1 -->
+<div class="group bg-surface-container-high rounded-lg p-8 transition-all hover:bg-white hover:shadow-[0_20px_40px_rgba(86,66,61,0.06)] flex flex-col lg:flex-row gap-8 items-start relative">
+<div class="flex-shrink-0 w-12 h-12 bg-surface-container flex items-center justify-center rounded-xl text-primary">
+<span class="material-symbols-outlined text-2xl" data-icon="picture_as_pdf">picture_as_pdf</span>
+</div>
+<div class="flex-1">
+<div class="flex items-start justify-between mb-2">
+<h5 class="font-headline text-2xl group-hover:text-primary transition-colors cursor-pointer">Epistemological Barriers in Generative Language Models</h5>
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase tracking-wider">Priority: 9.4</span>
+<span class="material-symbols-outlined text-stone-300" data-icon="more_vert">more_vert</span>
+</div>
+</div>
+<p class="text-on-surface-variant/80 font-serif italic text-lg mb-6">M. Chen, S. Roberts • Journal of AI Ethics • June 2023</p>
+<div class="flex flex-wrap items-center gap-6 mt-auto">
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-white scale-110 shadow-md">
+<span class="material-symbols-outlined text-base" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<span class="text-xs font-label uppercase tracking-widest font-bold text-primary">Currently Reading</span>
+</div>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<div class="flex gap-2">
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container text-on-surface-variant hover:bg-outline-variant/20 transition-colors">Unread</button>
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container text-on-surface-variant hover:bg-outline-variant/20 transition-colors">Read</button>
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container text-on-surface-variant hover:bg-outline-variant/20 transition-colors">Skipped</button>
+</div>
+</div>
+</div>
+<div class="flex lg:flex-col gap-3 justify-end w-full lg:w-auto">
+<button class="flex-1 lg:flex-none px-6 py-2.5 rounded-full border border-outline-variant/30 text-xs font-label font-bold hover:bg-primary hover:border-primary hover:text-white transition-all">Open Details</button>
+<button class="flex-1 lg:flex-none px-6 py-2.5 rounded-full bg-surface-container text-xs font-label font-bold hover:bg-surface-container-highest transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="summarize">summarize</span> Preview
+                    </button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-surface-container-high rounded-lg p-8 transition-all hover:bg-white hover:shadow-[0_20px_40px_rgba(86,66,61,0.06)] flex flex-col lg:flex-row gap-8 items-start relative">
+<div class="flex-shrink-0 w-12 h-12 bg-surface-container flex items-center justify-center rounded-xl text-stone-400">
+<span class="material-symbols-outlined text-2xl" data-icon="article">article</span>
+</div>
+<div class="flex-1">
+<div class="flex items-start justify-between mb-2">
+<h5 class="font-headline text-2xl group-hover:text-primary transition-colors cursor-pointer">The Silent Archive: Hidden Narratives in Urban Planning</h5>
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 bg-stone-200 text-stone-600 text-[10px] font-bold rounded-full uppercase tracking-wider">Priority: 7.2</span>
+<span class="material-symbols-outlined text-stone-300" data-icon="more_vert">more_vert</span>
+</div>
+</div>
+<p class="text-on-surface-variant/80 font-serif italic text-lg mb-6">Julian Vane • Cities &amp; Culture Quarterly • 2022</p>
+<div class="flex flex-wrap items-center gap-6 mt-auto">
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 rounded-full border-2 border-outline-variant flex items-center justify-center text-on-surface-variant/40 hover:border-primary hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="radio_button_unchecked">radio_button_unchecked</span>
+</button>
+<span class="text-xs font-label uppercase tracking-widest font-bold text-on-surface-variant/40">Mark as Reading</span>
+</div>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<div class="flex gap-2">
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container-highest text-on-surface font-bold">Unread</button>
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container text-on-surface-variant hover:bg-outline-variant/20 transition-colors">Read</button>
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container text-on-surface-variant hover:bg-outline-variant/20 transition-colors">Skipped</button>
+</div>
+</div>
+</div>
+<div class="flex lg:flex-col gap-3 justify-end w-full lg:w-auto">
+<button class="flex-1 lg:flex-none px-6 py-2.5 rounded-full border border-outline-variant/30 text-xs font-label font-bold hover:bg-primary hover:border-primary hover:text-white transition-all">Open Details</button>
+<button class="flex-1 lg:flex-none px-6 py-2.5 rounded-full bg-surface-container text-xs font-label font-bold hover:bg-surface-container-highest transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="summarize">summarize</span> Preview
+                    </button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group bg-surface-container-high rounded-lg p-8 transition-all hover:bg-white hover:shadow-[0_20px_40px_rgba(86,66,61,0.06)] flex flex-col lg:flex-row gap-8 items-start relative opacity-80">
+<div class="flex-shrink-0 w-12 h-12 bg-surface-container flex items-center justify-center rounded-xl text-stone-400">
+<span class="material-symbols-outlined text-2xl" data-icon="link">link</span>
+</div>
+<div class="flex-1">
+<div class="flex items-start justify-between mb-2">
+<h5 class="font-headline text-2xl group-hover:text-primary transition-colors cursor-pointer">Synthesizing Qualitative Data: A New Framework</h5>
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 bg-stone-200 text-stone-600 text-[10px] font-bold rounded-full uppercase tracking-wider">Priority: 5.8</span>
+<span class="material-symbols-outlined text-stone-300" data-icon="more_vert">more_vert</span>
+</div>
+</div>
+<p class="text-on-surface-variant/80 font-serif italic text-lg mb-6">Sarah Jenkins • Research Methodology Blog • May 2024</p>
+<div class="flex flex-wrap items-center gap-6 mt-auto">
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 rounded-full border-2 border-outline-variant flex items-center justify-center text-on-surface-variant/40 hover:border-primary hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="radio_button_unchecked">radio_button_unchecked</span>
+</button>
+<span class="text-xs font-label uppercase tracking-widest font-bold text-on-surface-variant/40">Mark as Reading</span>
+</div>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<div class="flex gap-2">
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container text-on-surface-variant hover:bg-outline-variant/20 transition-colors">Unread</button>
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container text-on-surface-variant hover:bg-outline-variant/20 transition-colors">Read</button>
+<button class="px-4 py-1.5 rounded-full text-xs font-label bg-surface-container text-on-surface-variant hover:bg-outline-variant/20 transition-colors">Skipped</button>
+</div>
+</div>
+</div>
+<div class="flex lg:flex-col gap-3 justify-end w-full lg:w-auto">
+<button class="flex-1 lg:flex-none px-6 py-2.5 rounded-full border border-outline-variant/30 text-xs font-label font-bold hover:bg-primary hover:border-primary hover:text-white transition-all">Open Details</button>
+<button class="flex-1 lg:flex-none px-6 py-2.5 rounded-full bg-surface-container text-xs font-label font-bold hover:bg-surface-container-highest transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="summarize">summarize</span> Preview
+                    </button>
+</div>
+</div>
+</div>
+<!-- Pagination or Load More -->
+<div class="mt-20 text-center">
+<button class="font-serif italic text-xl text-on-surface-variant/50 hover:text-primary transition-colors flex items-center gap-3 mx-auto">
+                Discover more insights in the archive <span class="material-symbols-outlined" data-icon="arrow_right_alt">arrow_right_alt</span>
+</button>
+</div>
+</main>
+<!-- Quick Preview Side Panel (Static Mock) -->
+<aside class="fixed top-24 right-8 bottom-8 w-96 glass-panel rounded-lg shadow-xl z-30 transform translate-x-[calc(100%+40px)] lg:translate-x-0 hidden xl:flex flex-col border border-white/40 overflow-hidden">
+<div class="p-8 border-b border-outline-variant/10">
+<div class="flex justify-between items-center mb-6">
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold rounded-full uppercase tracking-wider">Quick Preview</span>
+<button class="material-symbols-outlined text-on-surface-variant/40 hover:text-on-surface transition-colors" data-icon="close">close</button>
+</div>
+<h6 class="font-headline text-2xl italic leading-tight mb-2">Epistemological Barriers in Generative Language Models</h6>
+<p class="text-xs text-on-surface-variant uppercase tracking-widest font-bold opacity-60">M. Chen et al. (2023)</p>
+</div>
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<section>
+<h7 class="text-[10px] uppercase tracking-[0.2em] font-bold text-primary mb-4 block">Abstract</h7>
+<p class="text-sm text-on-surface-variant leading-relaxed font-body">This research explores the inherent limitations of Transformer architectures in processing non-linear reasoning chains. By examining token-probability distributions, the authors identify critical 'black boxes' in inference logic that impede true epistemic understanding in large language models...</p>
+</section>
+<section class="bg-surface-container p-6 rounded-2xl">
+<h7 class="text-[10px] uppercase tracking-[0.2em] font-bold text-on-secondary-fixed mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="auto_awesome">auto_awesome</span> AI Key Takeaways
+                </h7>
+<ul class="space-y-4">
+<li class="flex gap-3 text-sm text-on-surface-variant italic">
+<span class="text-primary font-bold">01.</span>
+                        LLMs struggle with "indirect logical jumps" across segmented training data.
+                    </li>
+<li class="flex gap-3 text-sm text-on-surface-variant italic">
+<span class="text-primary font-bold">02.</span>
+                        Author proposes a new 'Recursive Verification' layer to solve logical gaps.
+                    </li>
+<li class="flex gap-3 text-sm text-on-surface-variant italic">
+<span class="text-primary font-bold">03.</span>
+                        Critical for your current project on 'Metadata Ethics' and transparency.
+                    </li>
+</ul>
+</section>
+</div>
+<div class="p-8 bg-surface-container-high/50">
+<button class="w-full py-4 bg-primary text-white rounded-xl font-label text-sm font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+                Begin Reading Session
+            </button>
+</div>
+</aside>
+<!-- Contextual FAB (Only for Home/Dashboard/Queue) -->
+<button class="fixed bottom-10 left-1/2 -translate-x-1/2 lg:left-[calc(50%+4rem)] px-8 py-4 bg-secondary text-white rounded-full font-label text-sm font-bold flex items-center gap-3 shadow-2xl hover:scale-105 transition-transform z-50">
+<span class="material-symbols-outlined" data-icon="add" style="font-variation-settings: 'wght' 600;">add</span>
+        Add New Research Item
+    </button>
+</body></html>

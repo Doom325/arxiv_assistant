@@ -1,0 +1,115 @@
+<svg width="1440px" height="1080px" viewBox="0 0 1440 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .cut-line { stroke: #000000; stroke-width: 1; fill-opacity: 0.5; }
+      .score-line { stroke: #333333; stroke-width: 1; stroke-dasharray: 10, 5; fill: none; }
+      .label { font-family: sans-serif; font-size: 18px; fill: #555; }
+    </style>
+  </defs>
+
+  <text x="30" y="30" class="label" font-weight="bold">Explosion Box (Fixed: 72 DPI / 1px = 1/72 inch)</text>
+  <text x="30" y="55" class="label">1. Ungroup | 2. Set dashed lines to 'Score' | 3. Attach</text>
+
+  <!-- ========================================== -->
+  <!-- LAYER 1: BASE (Red) - 9 x 9 inches       -->
+  <!-- Calculation: 9 inches * 72 DPI = 648 px  -->
+  <!-- ========================================== -->
+  <g id="Layer_1_Base" transform="translate(50, 100)">
+    <text x="0" y="-15" class="label">Layer 1 (Target: 9" Width)</text>
+    
+    <!-- Cut Path -->
+    <path class="cut-line" fill="#E57373" d="
+      M 216,0   L 432,0 
+      L 432,216 L 648,216 
+      L 648,432 L 432,432 
+      L 432,648 L 216,648 
+      L 216,432 L 0,432 
+      L 0,216   L 216,216 
+      Z" />
+      
+    <!-- Score Lines -->
+    <path class="score-line" d="
+      M 216,216 L 432,216
+      M 432,216 L 432,432
+      M 432,432 L 216,432
+      M 216,432 L 216,216" />
+  </g>
+
+  <!-- ========================================== -->
+  <!-- LAYER 2: MIDDLE (Blue) - 8.25 inches     -->
+  <!-- Calculation: 8.25 * 72 = 594 px          -->
+  <!-- ========================================== -->
+  <g id="Layer_2_Middle" transform="translate(750, 100)">
+    <text x="0" y="-15" class="label">Layer 2 (Target: 8.25" Width)</text>
+    
+    <!-- Cut Path -->
+    <path class="cut-line" fill="#64B5F6" d="
+      M 198,0   L 396,0 
+      L 396,198 L 594,198 
+      L 594,396 L 396,396 
+      L 396,594 L 198,594 
+      L 198,396 L 0,396 
+      L 0,198   L 198,198 
+      Z" />
+      
+    <!-- Score Lines -->
+    <path class="score-line" d="
+      M 198,198 L 396,198
+      M 396,198 L 396,396
+      M 396,396 L 198,396
+      M 198,396 L 198,198" />
+  </g>
+
+  <!-- ========================================== -->
+  <!-- LAYER 3: TOP (Green) - 7.5 inches        -->
+  <!-- Calculation: 7.5 * 72 = 540 px           -->
+  <!-- ========================================== -->
+  <g id="Layer_3_Top" transform="translate(50, 800)">
+    <text x="0" y="-15" class="label">Layer 3 (Target: 7.5" Width)</text>
+    
+    <!-- Cut Path -->
+    <path class="cut-line" fill="#81C784" d="
+      M 180,0   L 360,0 
+      L 360,180 L 540,180 
+      L 540,360 L 360,360 
+      L 360,540 L 180,540 
+      L 180,360 L 0,360 
+      L 0,180   L 180,180 
+      Z" />
+      
+    <!-- Score Lines -->
+    <path class="score-line" d="
+      M 180,180 L 360,180
+      M 360,180 L 360,360
+      M 360,360 L 180,360
+      M 180,360 L 180,180" />
+  </g>
+
+  <!-- ========================================== -->
+  <!-- LID (Yellow)                             -->
+  <!-- ========================================== -->
+  <g id="Lid" transform="translate(750, 800)">
+    <text x="0" y="-15" class="label">Lid (Attach tabs with glue)</text>
+    
+    <!-- Cut Path (Redrawn as single continuous path) -->
+    <path class="cut-line" fill="#FFD54F" d="
+      M 72,72 L 72,0 L 297,0 L 297,72 
+      L 312,36 L 354,36 L 369,72 
+      L 369,297 L 354,333 L 312,333 L 297,297 
+      L 297,369 L 72,369 L 72,297 
+      L 57,333 L 15,333 L 0,297 
+      L 0,72 L 15,36 L 57,36 L 72,72 
+      Z" />
+
+    <!-- Score Lines for Lid -->
+    <path class="score-line" d="
+      M 72,72 L 297,72
+      M 297,72 L 297,297
+      M 297,297 L 72,297
+      M 72,297 L 72,72
+      M 0,72 L 72,72
+      M 297,72 L 369,72
+      M 0,297 L 72,297
+      M 297,297 L 369,297" />
+  </g>
+</svg>

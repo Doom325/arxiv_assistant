@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .serif-italic { font-family: 'Newsreader', serif; font-style: italic; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "on-surface-variant": "#56423d",
+                "inverse-primary": "#ffb5a1",
+                "on-secondary-container": "#516857",
+                "on-tertiary-fixed": "#370e03",
+                "background": "#fef9ef",
+                "surface-container-highest": "#e7e2d8",
+                "on-surface": "#1d1c16",
+                "on-tertiary-container": "#fffbff",
+                "tertiary-fixed-dim": "#ffb59f",
+                "inverse-on-surface": "#f5f0e6",
+                "tertiary-fixed": "#ffdbd1",
+                "on-tertiary-fixed-variant": "#6e3827",
+                "primary-fixed": "#ffdbd1",
+                "surface-container-high": "#ece8de",
+                "secondary": "#4d6453",
+                "surface-container-low": "#f8f3e9",
+                "surface-container": "#f2ede3",
+                "error": "#ba1a1a",
+                "surface-dim": "#dedad0",
+                "secondary-fixed": "#d0e9d4",
+                "primary-fixed-dim": "#ffb5a1",
+                "outline": "#89726c",
+                "on-tertiary": "#ffffff",
+                "error-container": "#ffdad6",
+                "on-secondary-fixed": "#0b2013",
+                "on-primary-container": "#fffbff",
+                "primary": "#9b3f25",
+                "surface-tint": "#9e4127",
+                "on-error-container": "#93000a",
+                "outline-variant": "#ddc0b9",
+                "inverse-surface": "#32302a",
+                "surface-bright": "#fef9ef",
+                "secondary-container": "#cde6d1",
+                "on-secondary-fixed-variant": "#364c3c",
+                "on-primary-fixed": "#3b0800",
+                "surface-container-lowest": "#ffffff",
+                "primary-container": "#bb563b",
+                "on-secondary": "#ffffff",
+                "on-background": "#1d1c16",
+                "tertiary": "#874c3b",
+                "tertiary-container": "#a46451",
+                "on-primary": "#ffffff",
+                "surface-variant": "#e7e2d8",
+                "surface": "#fef9ef",
+                "secondary-fixed-dim": "#b4cdb8",
+                "on-primary-fixed-variant": "#7f2a12",
+                "on-error": "#ffffff"
+              },
+              fontFamily: {
+                "headline": ["Newsreader"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background font-body text-on-surface">
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 left-0 sticky bg-surface-container flex flex-col py-8 space-y-2 shadow-[20px_0_40px_rgba(86,66,61,0.04)] hidden md:flex">
+<div class="px-8 mb-8">
+<h1 class="text-lg font-serif italic text-secondary">The Atelier</h1>
+<p class="text-[10px] uppercase tracking-[0.2em] font-medium text-on-surface-variant opacity-60">Curated Research</p>
+</div>
+<nav class="flex-1">
+<a class="flex items-center gap-4 bg-[#ece8de] text-primary rounded-r-full py-3 px-6 border-l-4 border-primary font-medium text-sm uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined" data-icon="book_5">book_5</span>
+<span>Queue</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface py-3 px-6 hover:bg-[#ece8de]/50 transition-colors font-medium text-sm uppercase tracking-wider opacity-70 hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="library_books">library_books</span>
+<span>Library</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface py-3 px-6 hover:bg-[#ece8de]/50 transition-colors font-medium text-sm uppercase tracking-wider opacity-70 hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="folder_special">folder_special</span>
+<span>Collections</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface py-3 px-6 hover:bg-[#ece8de]/50 transition-colors font-medium text-sm uppercase tracking-wider opacity-70 hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+<span>Annotate</span>
+</a>
+</nav>
+<div class="px-8 pt-4">
+<div class="h-[1px] bg-outline-variant/20 w-full mb-6"></div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="account_circle">account_circle</span>
+</div>
+<span class="text-xs font-semibold tracking-tight">Dr. Aris Thorne</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-30 bg-background flex justify-between items-center px-8 py-4 w-full">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-bold text-secondary font-serif">Scholar's Atelier</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden sm:block">
+<input class="bg-surface-container-low border-none rounded-full px-6 py-2 text-sm focus:ring-1 focus:ring-primary w-64 placeholder:text-on-surface-variant/40" placeholder="Search archive..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="account_circle">account_circle</button>
+</div>
+</div>
+</header>
+<div class="bg-surface-container h-[1px] w-full"></div>
+<!-- Content Canvas -->
+<div class="px-4 md:px-12 py-8 max-w-6xl mx-auto w-full space-y-12">
+<!-- Hero Element: Forest Green Summary Card -->
+<section class="relative rounded-lg overflow-hidden bg-secondary p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 shadow-2xl">
+<div class="flex-1 space-y-4">
+<span class="inline-block px-3 py-1 bg-secondary-container/20 text-secondary-container rounded-full text-[10px] font-bold tracking-widest uppercase">Atelier Insights</span>
+<h2 class="text-4xl md:text-5xl font-headline font-medium text-white tracking-tight leading-tight">
+                            You have <span class="italic text-secondary-container">12 papers</span> awaiting review this month.
+                        </h2>
+<p class="text-secondary-container/80 max-w-md font-body text-sm leading-relaxed">
+                            Based on your recent annotations in <span class="underline decoration-secondary-container/30">Theoretical Physics</span>, we've prioritized 3 high-impact manuscripts.
+                        </p>
+</div>
+<div class="w-full md:w-64 h-40 bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10 flex flex-col justify-between">
+<div>
+<p class="text-white/60 text-xs uppercase tracking-widest font-semibold">Curation Score</p>
+<p class="text-3xl font-headline font-bold text-white mt-1">98.4<span class="text-sm font-normal text-white/40 ml-1">/100</span></p>
+</div>
+<div class="flex items-center gap-2">
+<div class="h-1.5 flex-1 bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-secondary-container w-4/5"></div>
+</div>
+<span class="text-[10px] text-white/60">Top 2%</span>
+</div>
+</div>
+<div class="absolute -right-12 -top-12 w-64 h-64 bg-secondary-container/10 rounded-full blur-3xl pointer-events-none"></div>
+</section>
+<!-- Filter Bar -->
+<section class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex items-center gap-8 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+<button class="text-primary border-b-2 border-primary pb-2 font-medium text-sm whitespace-nowrap transition-all">This Month</button>
+<button class="text-on-surface-variant/60 hover:text-on-surface-variant pb-2 font-medium text-sm whitespace-nowrap transition-all">Last Month</button>
+<button class="text-on-surface-variant/60 hover:text-on-surface-variant pb-2 font-medium text-sm whitespace-nowrap transition-all">Earlier This Year</button>
+<button class="text-on-surface-variant/60 hover:text-on-surface-variant pb-2 font-medium text-sm whitespace-nowrap transition-all">Archived</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-surface-container-high rounded-full p-1 shadow-sm">
+<span class="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-primary shadow-sm">Group by: Month</span>
+<span class="px-4 py-1.5 rounded-full text-xs font-medium text-on-surface-variant/60 hover:text-on-surface-variant cursor-pointer transition-colors">By Author</span>
+</div>
+<button class="material-symbols-outlined p-2 bg-surface-container-high rounded-full text-on-surface-variant hover:text-primary transition-colors" data-icon="tune">tune</button>
+</div>
+</section>
+<!-- Reading Groups -->
+<div class="space-y-16">
+<!-- This Month -->
+<section>
+<div class="flex items-baseline gap-4 mb-8">
+<h3 class="text-2xl font-headline font-semibold text-on-surface">This Month</h3>
+<span class="text-xs font-body text-on-surface-variant/40 tracking-widest uppercase">October 2023 • 4 items</span>
+</div>
+<div class="space-y-4">
+<!-- Card 1 (High Priority Override) -->
+<div class="group bg-surface-container-high hover:bg-surface-container-highest transition-all duration-300 rounded-lg p-6 flex flex-col md:flex-row gap-6 items-start">
+<div class="w-full md:w-32 aspect-[3/4] bg-surface-container-lowest rounded overflow-hidden flex-shrink-0 shadow-sm relative group-hover:shadow-md transition-shadow">
+<img alt="vintage manuscript detail" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" data-alt="extreme close-up of aged parchment paper with elegant black ink calligraphy and scholarly annotations in a warm library lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIR83405s4udcATWJnOtwdm5jkQq3ar-Jdswlx943YFegz5Hm1mJ89EJrEBl1NHDzgtfh20zNcRrOmr1ZYj8my-gBjemIsycJ2Xj03RpA26XYSPMQESBlnjjpee10zek1K2eIw9hl6GDMLu4sjBAvd_pDoL8FsT-gh3a_ijrHth5SV1xMfaRGMqET16y0djs3qoGAKuKVs0-nOwUt-c9PO7lLEYtbLkdfmuqBeAbr_Hf_hI1HFLcAbxi-hF765WF5nxb1xgBIH41gC"/>
+<div class="absolute inset-0 bg-primary/5"></div>
+</div>
+<div class="flex-1 flex flex-col justify-between min-h-full">
+<div>
+<div class="flex flex-wrap items-center gap-3 mb-3">
+<span class="bg-primary-container text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">High Override</span>
+<div class="flex items-center gap-1 px-2 py-0.5 bg-secondary-container text-on-secondary-container rounded text-[10px] font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-[12px]" data-icon="temp_preferences_custom" data-weight="fill" style="font-variation-settings: 'FILL' 1;">temp_preferences_custom</span>
+                                                AI Score: 9.4
+                                            </div>
+</div>
+<h4 class="text-xl font-headline font-bold text-on-surface leading-snug group-hover:text-primary transition-colors cursor-pointer">The Epistemology of Digital Archives: A Post-Structuralist Approach</h4>
+<p class="text-sm text-on-surface-variant italic mt-1 font-body">by Dr. Julian Vane • Theoretical Media Studies</p>
+<p class="text-sm text-on-surface-variant/70 mt-3 line-clamp-2 leading-relaxed">This paper explores the transition from physical parchment to digital lattices and how the "weight" of information changes across mediums...</p>
+</div>
+<div class="flex flex-wrap items-center gap-2 mt-6">
+<button class="px-6 py-2 bg-gradient-to-br from-primary to-primary-container text-white rounded-full text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all">Read Now</button>
+<button class="px-4 py-2 text-on-surface-variant font-semibold text-xs hover:underline underline-offset-4 decoration-primary/30 transition-all">Skip for now</button>
+<button class="px-4 py-2 text-error/60 font-semibold text-xs hover:text-error transition-all">Remove</button>
+</div>
+</div>
+<div class="hidden md:flex flex-col items-end gap-2 text-on-surface-variant/30">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="bookmark">bookmark</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="share">share</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-surface-container-high hover:bg-surface-container-highest transition-all duration-300 rounded-lg p-6 flex flex-col md:flex-row gap-6 items-start">
+<div class="w-full md:w-32 aspect-[3/4] bg-surface-container-lowest rounded overflow-hidden flex-shrink-0 shadow-sm relative group-hover:shadow-md transition-shadow">
+<img alt="library book spines" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" data-alt="blurred row of classic leather bound book spines in a warm mahogany bookshelf with soft ambient light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVzN3gcDR9L0eRQGsXYhXY3i7ca8KdEeJpYxSfuUOea7W-Q-K_WBd9V2lFVCf1YuF-IIdo5TclMihw7RHm9xq23QMbu5it3iSavP73-GdeDUyEqsKAMRUvwpXdYbQNdJyS9PBQXfJPOb94Q0z0O9QiAQnDiIInusvvGcERtU9mmaqRivGJizbyde0Aswy2QlBUF_ih8sbVo0JcISA8zAvICNYqmgX6WlS0Ex7hTVSnXnhTVC8yCe4z5jTt1AIUUtRaQOXOEb34YvyB"/>
+<div class="absolute inset-0 bg-primary/5"></div>
+</div>
+<div class="flex-1 flex flex-col justify-between min-h-full">
+<div>
+<div class="flex flex-wrap items-center gap-3 mb-3">
+<div class="flex items-center gap-1 px-2 py-0.5 bg-secondary-container/40 text-on-secondary-container rounded text-[10px] font-bold uppercase tracking-wider">
+                                                AI Score: 8.7
+                                            </div>
+</div>
+<h4 class="text-xl font-headline font-bold text-on-surface leading-snug group-hover:text-primary transition-colors cursor-pointer">Memory Landscapes: How Geographic Information Shapes Identity</h4>
+<p class="text-sm text-on-surface-variant italic mt-1 font-body">by Sarah El-Amin • Human Geography</p>
+<p class="text-sm text-on-surface-variant/70 mt-3 line-clamp-2 leading-relaxed">Analyzing the correlation between digital mapping tools and the erosion of local vernacular knowledge in suburban regions...</p>
+</div>
+<div class="flex flex-wrap items-center gap-2 mt-6">
+<button class="px-6 py-2 bg-gradient-to-br from-primary to-primary-container text-white rounded-full text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all">Read Now</button>
+<button class="px-4 py-2 text-on-surface-variant font-semibold text-xs hover:underline transition-all">Skip</button>
+<button class="px-4 py-2 text-error/60 font-semibold text-xs hover:text-error transition-all">Remove</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Last Month -->
+<section>
+<div class="flex items-baseline gap-4 mb-8">
+<h3 class="text-2xl font-headline font-semibold text-on-surface">Last Month</h3>
+<span class="text-xs font-body text-on-surface-variant/40 tracking-widest uppercase">September 2023 • 2 items</span>
+</div>
+<div class="space-y-4">
+<!-- Card 3 (Low Priority Override) -->
+<div class="group bg-surface-container-high/50 hover:bg-surface-container-high transition-all duration-300 rounded-lg p-6 flex flex-col md:flex-row gap-6 items-start opacity-80 hover:opacity-100">
+<div class="w-full md:w-32 aspect-[3/4] bg-surface-container-lowest rounded overflow-hidden flex-shrink-0 shadow-sm grayscale group-hover:grayscale-0 transition-all duration-500">
+<img alt="open textbook" class="w-full h-full object-cover" data-alt="close up of an open scientific textbook with diagrams and black ink text on cream paper" src="https://lh3.googleusercontent.com/aida-public/AB6AXuADw_MkGHxY4RJPc4ipE1_O8iZKZLJp9AynuPW8C0w9zzKlXao-SyNZpfKMpKwco_Sw_Lz6QaGRvHAFjw7xQq-Eb4R3R6MsnePii27iWAYb4DMnzdnWuL6TvXi9QuEgaLQy4Ceiv0YVerFTnVD5tKNPxeovYwTWjwcUfKnPcqqakurpEoDcqP1Aq6FtVzKzTE8UhVkHWfO5KxXhJ5v7ZojdCdFO53q7Ly7gD3HNAQWaRXClzX9a4Scv2hf72HGpPvKQprTGjwqaf51l"/>
+</div>
+<div class="flex-1 flex flex-col justify-between min-h-full">
+<div>
+<div class="flex flex-wrap items-center gap-3 mb-3">
+<span class="bg-on-surface-variant/20 text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Low Override</span>
+<div class="flex items-center gap-1 px-2 py-0.5 bg-secondary-container/30 text-on-secondary-container rounded text-[10px] font-bold uppercase tracking-wider">
+                                                AI Score: 6.2
+                                            </div>
+</div>
+<h4 class="text-xl font-headline font-bold text-on-surface leading-snug group-hover:text-primary transition-colors cursor-pointer">Synthetic Biology: A Brief Primer on Ethical Constraints</h4>
+<p class="text-sm text-on-surface-variant italic mt-1 font-body">by Prof. Markos K. • Bioethics Review</p>
+</div>
+<div class="flex flex-wrap items-center gap-2 mt-6">
+<button class="px-6 py-2 bg-gradient-to-br from-primary/60 to-primary-container/60 text-white rounded-full text-xs font-bold shadow-sm hover:from-primary hover:to-primary-container transition-all">Read</button>
+<button class="px-4 py-2 text-error/60 font-semibold text-xs hover:text-error transition-all">Remove</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Earlier This Year -->
+<section>
+<div class="flex items-baseline gap-4 mb-8">
+<h3 class="text-2xl font-headline font-semibold text-on-surface">Earlier This Year</h3>
+<span class="text-xs font-body text-on-surface-variant/40 tracking-widest uppercase">2023 Archive • 24 items</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Smaller Card Design for Archive -->
+<div class="p-6 bg-surface-container border border-outline-variant/10 rounded-lg hover:border-primary/20 transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/40">Feb 2023</span>
+<span class="text-[10px] font-bold px-1.5 py-0.5 bg-secondary-container/40 text-on-secondary-container rounded">9.1</span>
+</div>
+<h5 class="font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">Quantum Entanglement in Biological Systems</h5>
+<p class="text-xs text-on-surface-variant italic mt-1">Dr. Chen Ling</p>
+</div>
+<div class="p-6 bg-surface-container border border-outline-variant/10 rounded-lg hover:border-primary/20 transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/40">Jan 2023</span>
+<span class="text-[10px] font-bold px-1.5 py-0.5 bg-secondary-container/40 text-on-secondary-container rounded">8.8</span>
+</div>
+<h5 class="font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">The Architecture of Silence: Monastic Spaces</h5>
+<p class="text-xs text-on-surface-variant italic mt-1">Elias Thorne</p>
+</div>
+</div>
+<div class="mt-8 text-center">
+<button class="px-8 py-3 text-primary font-bold text-sm hover:underline underline-offset-8 decoration-primary/20 transition-all">Load Full 2023 Archive</button>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+<!-- Mobile BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface-container-lowest border-t border-outline-variant/10 px-6 py-3 flex justify-between items-center z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" data-icon="book_5" style="font-variation-settings: 'FILL' 1;">book_5</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Queue</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant opacity-50">
+<span class="material-symbols-outlined" data-icon="library_books">library_books</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Library</span>
+</button>
+<div class="relative -top-6">
+<button class="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-full shadow-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-3xl" data-icon="add">add</span>
+</button>
+</div>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant opacity-50">
+<span class="material-symbols-outlined" data-icon="folder_special">folder_special</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Collections</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant opacity-50">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Annotate</span>
+</button>
+</nav>
+</body></html>

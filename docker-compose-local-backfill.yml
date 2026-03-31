@@ -1,0 +1,36 @@
+services:
+  db:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: arxiv_db
+    ports:
+      - "5434:5432" # Different port to avoid conflicts
+    volumes:
+      - ./mac_pgdata:/var/lib/postgresql/data # Local storage
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d arxiv_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    volumes:
+      - ./backend:/app # Hot reload code
+      - /Volumes/External/PDFs/Arxiv Assistant:/app/data # Mount External Drive PDFs
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/arxiv_db
+      PDF_SAVE_DIR: /app/data
+      AI_PROVIDER: local
+      # Skip AI usually for backfill, but we CAN run it if user wants.
+      # User said "run backfill only once locally...". 
+      # With GemmeEmbed loading locally, we probably want to run the script via `backend` container or locally.
+      # Running locally (outside docker) is better for GPU access (MPS).
+      # So we mainly need the DB here.
+    depends_on:
+      db:
+        condition: service_healthy

@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Paper Detail | Scholar's Atelier</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200;0,6..72,400;0,6..72,700;1,6..72,200;1,6..72,400;1,6..72,700&family=Inter:wght@300;400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface-page":     "#F5F0E8",
+        "surface-card":     "#EDE9E1",
+        "surface-inset":    "#E5E0D5",
+        "featured":         "#2A4A1A",
+        "accent":           "#C4614A",
+        "accent-hover":     "#B05540",
+        "fg":               "#1C1915",
+        "fg-secondary":     "#6B6258",
+        "fg-muted":         "#9B9086",
+        "on-featured":      "#FFFFFF",
+        "on-accent":        "#FFFFFF",
+      },
+      fontFamily: {
+        headline: ["Newsreader", "serif"],
+        body:     ["Inter", "sans-serif"],
+      },
+    },
+  },
+}
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  body {
+    background-color: #F5F0E8;
+    color: #1C1915;
+    font-family: 'Inter', sans-serif;
+  }
+  .shadow-warm-sm {
+    box-shadow: 0 2px 12px -2px rgba(28, 25, 21, 0.08);
+  }
+  .shadow-warm-md {
+    box-shadow: 0 8px 32px -4px rgba(28, 25, 21, 0.10);
+  }
+  .drop-cap::first-letter {
+    font-family: 'Newsreader', serif;
+    color: #C4614A;
+    float: left;
+    font-size: 4rem;
+    line-height: 0.8;
+    padding-right: 0.5rem;
+    padding-top: 0.25rem;
+    font-weight: 700;
+  }
+  .confidence-bar {
+    background: #E5E0D5;
+    border-radius: 9999px;
+    overflow: hidden;
+    height: 6px;
+  }
+  .confidence-fill {
+    background: #C4614A;
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.6s ease;
+  }
+  .toc-link {
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .toc-link.active {
+    color: #C4614A;
+    border-left-color: #C4614A;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+</head>
+
+<body class="min-h-screen">
+
+<!-- ========== LEFT SIDEBAR (shared) ========== -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#f8f3e9] flex flex-col py-8 space-y-4 font-body text-sm tracking-wide leading-relaxed">
+  <div class="px-6 mb-8">
+    <div class="flex items-center space-x-3 mb-6">
+      <div class="w-10 h-10 rounded-full bg-featured flex items-center justify-center overflow-hidden">
+        <span class="material-symbols-outlined text-on-featured text-lg">auto_stories</span>
+      </div>
+      <div>
+        <h3 class="font-bold text-fg font-headline text-base">Scholar's Atelier</h3>
+        <p class="text-[10px] uppercase tracking-widest text-fg-muted">Deep Work Mode</p>
+      </div>
+    </div>
+    <button class="w-full py-3 px-4 bg-accent text-on-accent rounded-xl font-semibold flex items-center justify-center space-x-2 hover:bg-accent-hover transition-all">
+      <span class="material-symbols-outlined text-sm">add</span>
+      <span>New Analysis</span>
+    </button>
+  </div>
+
+  <nav class="flex-1 px-4 space-y-1">
+    <a class="flex items-center space-x-3 px-4 py-3 text-fg/70 hover:bg-surface-card/50 hover:pl-6 transition-all duration-200" href="#">
+      <span class="material-symbols-outlined">dashboard</span>
+      <span>Dashboard</span>
+    </a>
+    <a class="flex items-center space-x-3 px-4 py-3 text-fg/70 hover:bg-surface-card/50 hover:pl-6 transition-all duration-200" href="#">
+      <span class="material-symbols-outlined">queue</span>
+      <span>Reading Queue</span>
+    </a>
+    <a class="flex items-center space-x-3 px-4 py-3 bg-surface-card text-featured font-semibold rounded-r-full" href="#">
+      <span class="material-symbols-outlined">article</span>
+      <span>Paper Detail</span>
+    </a>
+    <a class="flex items-center space-x-3 px-4 py-3 text-fg/70 hover:bg-surface-card/50 hover:pl-6 transition-all duration-200" href="#">
+      <span class="material-symbols-outlined">timeline</span>
+      <span>Timeline</span>
+    </a>
+    <a class="flex items-center space-x-3 px-4 py-3 text-fg/70 hover:bg-surface-card/50 hover:pl-6 transition-all duration-200" href="#">
+      <span class="material-symbols-outlined">bookmark</span>
+      <span>Bookmarks</span>
+    </a>
+    <a class="flex items-center space-x-3 px-4 py-3 text-fg/70 hover:bg-surface-card/50 hover:pl-6 transition-all duration-200" href="#">
+      <span class="material-symbols-outlined">inventory_2</span>
+      <span>Archive</span>
+    </a>
+  </nav>
+
+  <div class="px-4 mt-auto border-t border-fg/10 pt-4 space-y-1">
+    <a class="flex items-center space-x-3 px-4 py-2 text-fg/50 hover:text-accent transition-colors" href="#">
+      <span class="material-symbols-outlined text-lg">keyboard</span>
+      <span>Shortcuts</span>
+    </a>
+    <a class="flex items-center space-x-3 px-4 py-2 text-fg/50 hover:text-accent transition-colors" href="#">
+      <span class="material-symbols-outlined text-lg">settings</span>
+      <span>Settings</span>
+    </a>
+  </div>
+</aside>
+
+
+<!-- ========== MAIN CONTENT ========== -->
+<main class="ml-64 min-h-screen">
+
+  <!-- Top bar -->
+  <header class="fixed top-0 right-0 left-64 z-50 bg-surface-page/90 backdrop-blur-sm flex justify-between items-center px-12 py-5">
+    <div class="flex items-center flex-1 max-w-2xl">
+      <div class="relative w-full">
+        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-fg-muted/50">search</span>
+        <input class="w-full bg-surface-card border-none rounded-xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-accent/20 transition-all placeholder:text-fg-muted/60 text-fg" placeholder="Search the archives..." type="text"/>
+      </div>
+    </div>
+    <div class="flex items-center space-x-6 ml-8">
+      <button class="material-symbols-outlined text-fg-muted hover:text-accent transition-colors">refresh</button>
+      <button class="material-symbols-outlined text-fg-muted hover:text-accent transition-colors">notifications</button>
+      <button class="material-symbols-outlined text-fg-muted hover:text-accent transition-colors">settings</button>
+    </div>
+  </header>
+
+  <!-- Scrollable content area -->
+  <div class="pt-24 pb-20 flex">
+
+    <!-- Center Column -->
+    <div class="flex-1 max-w-4xl mx-auto px-12">
+
+      <!-- 1. Back Navigation -->
+      <a href="#" class="inline-flex items-center space-x-1 text-accent hover:text-accent-hover transition-colors text-sm font-medium mb-8 group">
+        <span class="material-symbols-outlined text-base group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+        <span>Back to Queue</span>
+      </a>
+
+
+      <!-- 2. Paper Title Hero (FEATURED SURFACE) -->
+      <section class="bg-featured rounded-2xl p-10 mb-12 shadow-warm-md" id="hero">
+        <p class="uppercase tracking-[0.12em] text-on-featured/50 text-xs font-body font-medium mb-4">Research Paper</p>
+
+        <h1 class="font-headline text-on-featured text-4xl leading-tight mb-6">
+          <span class="italic font-light">Attention Is</span>
+          <span class="font-bold"> All You Need: Revisiting Transformer Architectures for Long-Context Reasoning in Multi-Agent Systems</span>
+        </h1>
+
+        <div class="flex flex-wrap items-center gap-4 text-on-featured/70 text-sm font-body mb-6">
+          <span class="flex items-center space-x-1.5">
+            <span class="material-symbols-outlined text-base">calendar_today</span>
+            <span>March 15, 2026</span>
+          </span>
+          <span class="text-on-featured/30">|</span>
+          <span class="font-mono text-xs">arXiv:2603.12345</span>
+          <span class="text-on-featured/30">|</span>
+          <span class="bg-white/10 text-on-featured/80 text-xs px-3 py-1 rounded-full">cs.AI</span>
+          <span class="bg-white/10 text-on-featured/80 text-xs px-3 py-1 rounded-full">cs.LG</span>
+          <span class="text-on-featured/30">|</span>
+          <span class="flex items-center space-x-1">
+            <span class="material-symbols-outlined text-base">schedule</span>
+            <span>18 min read</span>
+          </span>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <button class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors" title="Email">
+            <span class="material-symbols-outlined text-on-featured text-lg">mail</span>
+          </button>
+          <button class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors" title="Bookmark">
+            <span class="material-symbols-outlined text-on-featured text-lg">bookmark_add</span>
+          </button>
+          <button class="ml-2 px-6 py-2.5 bg-accent hover:bg-accent-hover text-on-accent rounded-full font-semibold text-sm flex items-center space-x-2 transition-colors shadow-warm-sm">
+            <span class="material-symbols-outlined text-base">picture_as_pdf</span>
+            <span>Open PDF</span>
+          </button>
+        </div>
+      </section>
+
+
+      <!-- 3. Abstract Section -->
+      <section class="mb-14" id="abstract">
+        <div class="flex items-center space-x-3 mb-6">
+          <h2 class="uppercase tracking-[0.1em] text-fg-muted text-xs font-body font-semibold">Abstract</h2>
+          <div class="flex-1 h-px bg-fg-muted/20"></div>
+        </div>
+
+        <div class="font-body text-fg leading-relaxed text-base space-y-4">
+          <p class="drop-cap">Recent advances in transformer architectures have demonstrated remarkable capabilities in natural language understanding and generation tasks. However, as multi-agent systems grow in complexity and require reasoning over increasingly long contexts, the fundamental limitations of standard attention mechanisms become apparent. In this work, we revisit the core architectural decisions underlying modern transformers and propose a novel hierarchical attention framework specifically designed for long-context reasoning in cooperative multi-agent environments.</p>
+
+          <p>Our approach introduces a three-tier attention hierarchy that operates at the token, segment, and document levels, enabling agents to maintain coherent reasoning chains across context windows exceeding 128,000 tokens. We demonstrate that this hierarchical decomposition not only reduces the quadratic computational complexity of standard attention to near-linear scaling, but also improves the quality of inter-agent communication by providing structured information routing between specialized reasoning modules.</p>
+
+          <p>We evaluate our framework on a suite of multi-agent benchmarks including collaborative scientific discovery, distributed code generation, and adversarial debate scenarios. Results show consistent improvements of 12-18% on reasoning accuracy metrics compared to baseline transformer architectures, with particularly strong gains on tasks requiring synthesis of information distributed across multiple agent contexts. Furthermore, we provide theoretical analysis showing that our hierarchical attention mechanism provably preserves the representational capacity of full attention while achieving O(n log n) computational complexity.</p>
+
+          <p>Our findings suggest that the next generation of multi-agent systems will benefit significantly from attention architectures explicitly designed for structured inter-agent reasoning, rather than simply scaling existing single-agent transformer designs. We release our full implementation, training recipes, and benchmark suite to facilitate reproducible research in this emerging area.</p>
+        </div>
+      </section>
+
+
+      <!-- 4. AI Analysis Section -->
+      <section class="mb-14" id="analysis">
+        <div class="bg-surface-card rounded-2xl shadow-warm-sm overflow-hidden">
+          <!-- Header -->
+          <div class="flex items-center justify-between px-8 py-5 border-b border-fg/5">
+            <div class="flex items-center space-x-2.5">
+              <span class="material-symbols-outlined text-accent text-xl">auto_awesome</span>
+              <h2 class="uppercase tracking-[0.1em] text-fg-muted text-xs font-body font-semibold">AI Synthesis</h2>
+            </div>
+            <button class="px-5 py-2 bg-accent hover:bg-accent-hover text-on-accent rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-colors">
+              <span class="material-symbols-outlined text-sm">auto_awesome</span>
+              <span>Regenerate</span>
+            </button>
+          </div>
+
+          <!-- Analysis Content -->
+          <div class="px-8 py-6 font-body text-fg leading-relaxed text-sm space-y-5">
+            <p class="text-fg-secondary text-xs uppercase tracking-wider font-medium flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-green-600 animate-none"></span>
+              <span>Analysis complete &mdash; Generated March 16, 2026</span>
+            </p>
+
+            <div>
+              <h3 class="font-headline text-lg font-semibold text-fg mb-2">Key Contributions</h3>
+              <ul class="space-y-2 text-fg/90">
+                <li class="flex items-start space-x-2">
+                  <span class="text-accent mt-1 text-xs">&#9679;</span>
+                  <span><strong>Hierarchical attention framework</strong> with three tiers (token, segment, document) that reduces standard O(n^2) complexity to O(n log n) while preserving representational capacity.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <span class="text-accent mt-1 text-xs">&#9679;</span>
+                  <span><strong>Structured information routing</strong> between specialized reasoning modules enables more coherent inter-agent communication compared to flat attention baselines.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <span class="text-accent mt-1 text-xs">&#9679;</span>
+                  <span><strong>12-18% improvement</strong> on multi-agent reasoning benchmarks across collaborative discovery, distributed code generation, and adversarial debate tasks.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <span class="text-accent mt-1 text-xs">&#9679;</span>
+                  <span><strong>128K+ token contexts</strong> supported with near-linear scaling, making the approach practical for real-world multi-agent deployments.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 class="font-headline text-lg font-semibold text-fg mb-2">Limitations & Open Questions</h3>
+              <ul class="space-y-2 text-fg/80">
+                <li class="flex items-start space-x-2">
+                  <span class="text-fg-muted mt-1 text-xs">&#9675;</span>
+                  <span>Evaluation limited to English-language benchmarks; cross-lingual multi-agent scenarios remain unexplored.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <span class="text-fg-muted mt-1 text-xs">&#9675;</span>
+                  <span>The theoretical guarantees assume bounded vocabulary; extensions to continuous embedding spaces need further investigation.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <span class="text-fg-muted mt-1 text-xs">&#9675;</span>
+                  <span>Training recipes require 64 A100 GPUs for 72 hours, limiting accessibility for resource-constrained labs.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 class="font-headline text-lg font-semibold text-fg mb-2">Relevance to Your Research</h3>
+              <p class="text-fg/85">This paper directly addresses the scalability bottleneck in your multi-agent orchestration pipeline. The hierarchical attention approach could replace the current chunked-context workaround in your agent communication layer, potentially improving coherence on long research synthesis tasks.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- 5. References & Citations -->
+      <section class="mb-14" id="references">
+        <div class="flex items-center space-x-3 mb-6">
+          <h2 class="uppercase tracking-[0.1em] text-fg-muted text-xs font-body font-semibold">References</h2>
+          <span class="bg-surface-inset text-fg-muted text-xs font-mono px-2.5 py-0.5 rounded-full">5</span>
+          <div class="flex-1 h-px bg-fg-muted/20"></div>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Citation 1 — resolved -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <a href="#" class="font-headline text-accent hover:text-accent-hover text-base font-semibold transition-colors leading-snug block mb-1">Attention Is All You Need</a>
+                <p class="text-fg-muted text-sm italic mb-2">Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, L., Polosukhin, I.</p>
+                <p class="text-fg-muted/60 text-xs italic">NeurIPS 2017. Advances in Neural Information Processing Systems, 30.</p>
+              </div>
+              <span class="shrink-0 bg-accent/15 text-accent text-xs font-medium px-3 py-1 rounded-full">Available locally</span>
+            </div>
+          </div>
+
+          <!-- Citation 2 — resolved -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <a href="#" class="font-headline text-accent hover:text-accent-hover text-base font-semibold transition-colors leading-snug block mb-1">Scaling Laws for Neural Language Models</a>
+                <p class="text-fg-muted text-sm italic mb-2">Kaplan, J., McCandlish, S., Henighan, T., Brown, T.B., Chess, B., Child, R., Gray, S., Radford, A., Wu, J., Amodei, D.</p>
+                <p class="text-fg-muted/60 text-xs italic">arXiv:2001.08361, 2020.</p>
+              </div>
+              <span class="shrink-0 bg-accent/15 text-accent text-xs font-medium px-3 py-1 rounded-full">Available locally</span>
+            </div>
+          </div>
+
+          <!-- Citation 3 — unresolved -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <p class="font-headline text-fg text-base font-semibold leading-snug mb-1">Multi-Agent Reinforcement Learning: A Selective Overview of Theories and Algorithms</p>
+                <p class="text-fg-muted text-sm italic mb-2">Zhang, K., Yang, Z., Basar, T.</p>
+                <p class="text-fg-muted/60 text-xs italic">Handbook of Reinforcement Learning and Control, pp. 321-384, 2021.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Citation 4 — resolved -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <a href="#" class="font-headline text-accent hover:text-accent-hover text-base font-semibold transition-colors leading-snug block mb-1">LongNet: Scaling Transformers to 1,000,000,000 Tokens</a>
+                <p class="text-fg-muted text-sm italic mb-2">Ding, J., Ma, S., Dong, L., Zhang, X., Huang, S., Wang, W., Wei, F.</p>
+                <p class="text-fg-muted/60 text-xs italic">arXiv:2307.02486, 2023.</p>
+              </div>
+              <span class="shrink-0 bg-accent/15 text-accent text-xs font-medium px-3 py-1 rounded-full">Available locally</span>
+            </div>
+          </div>
+
+          <!-- Citation 5 — unresolved -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <p class="font-headline text-fg text-base font-semibold leading-snug mb-1">Cooperative Multi-Agent Planning: A Survey</p>
+                <p class="text-fg-muted text-sm italic mb-2">Torreno, A., Onaindia, E., Sapena, O.</p>
+                <p class="text-fg-muted/60 text-xs italic">ACM Computing Surveys, 50(6), 2017.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- 6. Detected Patterns -->
+      <section class="mb-14" id="patterns">
+        <div class="flex items-center space-x-3 mb-6">
+          <h2 class="uppercase tracking-[0.1em] text-fg-muted text-xs font-body font-semibold">Detected Patterns</h2>
+          <span class="bg-surface-inset text-fg-muted text-xs font-mono px-2.5 py-0.5 rounded-full">3</span>
+          <div class="flex-1 h-px bg-fg-muted/20"></div>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Pattern 1 -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <span class="font-mono text-accent text-sm font-medium">attention_mechanism</span>
+                <span class="bg-accent/15 text-accent text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full">Agentic System</span>
+              </div>
+              <span class="bg-surface-inset text-fg-secondary text-xs font-semibold px-3 py-1 rounded-full">94%</span>
+            </div>
+            <div class="confidence-bar mb-3">
+              <div class="confidence-fill" style="width: 94%;"></div>
+            </div>
+            <p class="text-fg-muted text-sm italic leading-relaxed">"...hierarchical attention mechanism provably preserves the representational capacity of full attention while achieving O(n log n) computational complexity."</p>
+
+            <details class="mt-4 group">
+              <summary class="text-fg-muted text-xs uppercase tracking-wider font-medium cursor-pointer hover:text-accent transition-colors flex items-center space-x-1.5">
+                <span class="material-symbols-outlined text-sm group-open:rotate-90 transition-transform">chevron_right</span>
+                <span>Classification Reasoning</span>
+              </summary>
+              <div class="mt-3 pl-6 text-fg-muted/80 text-sm leading-relaxed border-l-2 border-surface-inset">
+                <p>Pattern detected based on the introduction of a novel attention hierarchy operating at three distinct levels. The hierarchical decomposition combined with multi-agent communication routing strongly indicates an agentic architecture design pattern common in recent autonomous system papers.</p>
+              </div>
+            </details>
+          </div>
+
+          <!-- Pattern 2 -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <span class="font-mono text-accent text-sm font-medium">scaling_analysis</span>
+              </div>
+              <span class="bg-surface-inset text-fg-secondary text-xs font-semibold px-3 py-1 rounded-full">87%</span>
+            </div>
+            <div class="confidence-bar mb-3">
+              <div class="confidence-fill" style="width: 87%;"></div>
+            </div>
+            <p class="text-fg-muted text-sm italic leading-relaxed">"...reduces the quadratic computational complexity of standard attention to near-linear scaling..."</p>
+
+            <details class="mt-4 group">
+              <summary class="text-fg-muted text-xs uppercase tracking-wider font-medium cursor-pointer hover:text-accent transition-colors flex items-center space-x-1.5">
+                <span class="material-symbols-outlined text-sm group-open:rotate-90 transition-transform">chevron_right</span>
+                <span>Classification Reasoning</span>
+              </summary>
+              <div class="mt-3 pl-6 text-fg-muted/80 text-sm leading-relaxed border-l-2 border-surface-inset">
+                <p>The paper provides both empirical and theoretical scaling analysis with explicit complexity bounds, matching the scaling_analysis pattern with high confidence. Benchmark comparisons across multiple parameter regimes further strengthen this classification.</p>
+              </div>
+            </details>
+          </div>
+
+          <!-- Pattern 3 -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <span class="font-mono text-accent text-sm font-medium">multi_agent_coordination</span>
+                <span class="bg-accent/15 text-accent text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full">Agentic System</span>
+              </div>
+              <span class="bg-surface-inset text-fg-secondary text-xs font-semibold px-3 py-1 rounded-full">79%</span>
+            </div>
+            <div class="confidence-bar mb-3">
+              <div class="confidence-fill" style="width: 79%;"></div>
+            </div>
+            <p class="text-fg-muted text-sm italic leading-relaxed">"...collaborative scientific discovery, distributed code generation, and adversarial debate scenarios."</p>
+
+            <details class="mt-4 group">
+              <summary class="text-fg-muted text-xs uppercase tracking-wider font-medium cursor-pointer hover:text-accent transition-colors flex items-center space-x-1.5">
+                <span class="material-symbols-outlined text-sm group-open:rotate-90 transition-transform">chevron_right</span>
+                <span>Classification Reasoning</span>
+              </summary>
+              <div class="mt-3 pl-6 text-fg-muted/80 text-sm leading-relaxed border-l-2 border-surface-inset">
+                <p>Multiple evaluation scenarios involve cooperative and adversarial agent interactions, indicating a multi-agent coordination focus. The structured information routing mechanism between specialized modules is a hallmark of coordination-aware architectures.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- 7. Action Footer -->
+      <section class="mb-14">
+        <div class="flex items-center justify-center gap-4">
+          <button class="px-6 py-3 bg-surface-card text-fg font-medium rounded-xl text-sm flex items-center space-x-2 hover:bg-surface-inset transition-colors shadow-warm-sm">
+            <span class="material-symbols-outlined text-base">mail</span>
+            <span>Email Summary</span>
+          </button>
+          <button class="px-6 py-3 bg-surface-card text-fg font-medium rounded-xl text-sm flex items-center space-x-2 hover:bg-surface-inset transition-colors shadow-warm-sm">
+            <span class="material-symbols-outlined text-base">timeline</span>
+            <span>Show Timeline</span>
+          </button>
+          <button class="px-8 py-3 bg-accent hover:bg-accent-hover text-on-accent font-semibold rounded-full text-sm flex items-center space-x-2 transition-colors shadow-warm-sm">
+            <span class="material-symbols-outlined text-base">picture_as_pdf</span>
+            <span>Read Full PDF</span>
+          </button>
+        </div>
+      </section>
+
+
+      <!-- 8. Recommended Research -->
+      <section class="mb-20" id="recommendations">
+        <div class="flex items-center space-x-3 mb-6">
+          <span class="material-symbols-outlined text-accent text-lg">lightbulb</span>
+          <h2 class="uppercase tracking-[0.1em] text-fg-muted text-xs font-body font-semibold">Recommended Research</h2>
+          <div class="flex-1 h-px bg-fg-muted/20"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Rec 1 -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm hover:shadow-warm-md transition-shadow group cursor-pointer">
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="bg-surface-inset text-fg-muted text-[10px] uppercase tracking-wider font-medium px-2.5 py-0.5 rounded-full">cs.AI</span>
+              <span class="bg-surface-inset text-fg-muted text-[10px] uppercase tracking-wider font-medium px-2.5 py-0.5 rounded-full">cs.MA</span>
+            </div>
+            <h3 class="font-headline text-fg text-base font-semibold leading-snug mb-2 group-hover:text-accent transition-colors">Emergent Communication Protocols in Large-Scale Agent Swarms</h3>
+            <div class="flex items-center space-x-3 text-fg-muted text-xs">
+              <span class="flex items-center space-x-1">
+                <span class="material-symbols-outlined text-sm">schedule</span>
+                <span>12 min</span>
+              </span>
+              <span>March 22, 2026</span>
+            </div>
+          </div>
+
+          <!-- Rec 2 -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm hover:shadow-warm-md transition-shadow group cursor-pointer">
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="bg-surface-inset text-fg-muted text-[10px] uppercase tracking-wider font-medium px-2.5 py-0.5 rounded-full">cs.LG</span>
+            </div>
+            <h3 class="font-headline text-fg text-base font-semibold leading-snug mb-2 group-hover:text-accent transition-colors">Efficient Sparse Attention via Locality-Sensitive Hashing for Scientific Document Understanding</h3>
+            <div class="flex items-center space-x-3 text-fg-muted text-xs">
+              <span class="flex items-center space-x-1">
+                <span class="material-symbols-outlined text-sm">schedule</span>
+                <span>22 min</span>
+              </span>
+              <span>March 18, 2026</span>
+            </div>
+          </div>
+
+          <!-- Rec 3 -->
+          <div class="bg-surface-card rounded-xl p-5 shadow-warm-sm hover:shadow-warm-md transition-shadow group cursor-pointer">
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="bg-surface-inset text-fg-muted text-[10px] uppercase tracking-wider font-medium px-2.5 py-0.5 rounded-full">cs.AI</span>
+              <span class="bg-surface-inset text-fg-muted text-[10px] uppercase tracking-wider font-medium px-2.5 py-0.5 rounded-full">cs.CL</span>
+            </div>
+            <h3 class="font-headline text-fg text-base font-semibold leading-snug mb-2 group-hover:text-accent transition-colors">Chain-of-Agents: Compositional Reasoning Through Recursive Delegation</h3>
+            <div class="flex items-center space-x-3 text-fg-muted text-xs">
+              <span class="flex items-center space-x-1">
+                <span class="material-symbols-outlined text-sm">schedule</span>
+                <span>15 min</span>
+              </span>
+              <span>March 10, 2026</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /center column -->
+
+
+    <!-- RIGHT SIDEBAR: Table of Contents (sticky) -->
+    <div class="hidden xl:block w-52 shrink-0 pr-8">
+      <nav class="sticky top-28 space-y-1">
+        <p class="uppercase tracking-[0.1em] text-fg-muted text-[10px] font-semibold mb-3">On this page</p>
+        <a href="#abstract" class="toc-link active block pl-3 border-l-2 border-transparent text-xs py-1.5 text-fg-secondary hover:text-accent transition-colors">Abstract</a>
+        <a href="#analysis" class="toc-link block pl-3 border-l-2 border-transparent text-xs py-1.5 text-fg-muted hover:text-accent transition-colors">AI Analysis</a>
+        <a href="#references" class="toc-link block pl-3 border-l-2 border-transparent text-xs py-1.5 text-fg-muted hover:text-accent transition-colors">References</a>
+        <a href="#patterns" class="toc-link block pl-3 border-l-2 border-transparent text-xs py-1.5 text-fg-muted hover:text-accent transition-colors">Patterns</a>
+        <a href="#recommendations" class="toc-link block pl-3 border-l-2 border-transparent text-xs py-1.5 text-fg-muted hover:text-accent transition-colors">Recommendations</a>
+      </nav>
+    </div>
+
+  </div><!-- /flex wrapper -->
+
+</main>
+
+<!-- Scroll-spy script for TOC -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const sections = document.querySelectorAll('section[id], #hero');
+  const tocLinks = document.querySelectorAll('.toc-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        tocLinks.forEach(link => {
+          link.classList.remove('active');
+          if (link.getAttribute('href') === '#' + id) {
+            link.classList.add('active');
+          }
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(section => observer.observe(section));
+});
+</script>
+
+</body>
+</html>

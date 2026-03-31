@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,700;1,400&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary": "#ffffff",
+              "surface-tint": "#9e4127",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-high": "#ece8de",
+              "on-primary-container": "#fffbff",
+              "error-container": "#ffdad6",
+              "on-tertiary-fixed-variant": "#6e3827",
+              "surface-container": "#f2ede3",
+              "on-secondary-fixed-variant": "#364c3c",
+              "secondary": "#4d6453",
+              "on-error": "#ffffff",
+              "on-secondary-fixed": "#0b2013",
+              "secondary-fixed-dim": "#b4cdb8",
+              "primary": "#9b3f25",
+              "on-tertiary": "#ffffff",
+              "inverse-surface": "#32302a",
+              "outline-variant": "#ddc0b9",
+              "on-surface": "#1d1c16",
+              "on-primary-fixed-variant": "#7f2a12",
+              "tertiary-fixed-dim": "#ffb59f",
+              "primary-fixed-dim": "#ffb5a1",
+              "on-error-container": "#93000a",
+              "surface-variant": "#e7e2d8",
+              "secondary-container": "#cde6d1",
+              "secondary-fixed": "#d0e9d4",
+              "on-secondary-container": "#516857",
+              "on-background": "#1d1c16",
+              "surface-container-highest": "#e7e2d8",
+              "outline": "#89726c",
+              "on-surface-variant": "#56423d",
+              "on-secondary": "#ffffff",
+              "inverse-on-surface": "#f5f0e6",
+              "tertiary": "#874c3b",
+              "surface-container-low": "#f8f3e9",
+              "surface": "#fef9ef",
+              "surface-dim": "#dedad0",
+              "primary-fixed": "#ffdbd1",
+              "on-primary-fixed": "#3b0800",
+              "primary-container": "#bb563b",
+              "inverse-primary": "#ffb5a1",
+              "on-tertiary-container": "#fffbff",
+              "tertiary-fixed": "#ffdbd1",
+              "on-tertiary-fixed": "#370e03",
+              "background": "#fef9ef",
+              "surface-bright": "#fef9ef",
+              "tertiary-container": "#a46451",
+              "error": "#ba1a1a"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #fef9ef;
+            color: #1d1c16;
+            font-family: 'Inter', sans-serif;
+        }
+        h1, h2, h3, .serif-italic {
+            font-family: 'Newsreader', serif;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- TopAppBar from JSON -->
+<header class="bg-[#fef9ef] dark:bg-stone-900 w-full top-0 sticky z-50">
+<div class="flex justify-between items-center px-12 py-6 w-full max-w-screen-2xl mx-auto">
+<div class="font-['Newsreader'] text-2xl font-bold text-[#1d1c16] dark:text-[#f2ede3]">The Curator</div>
+<nav class="hidden md:flex items-center gap-8 font-['Newsreader'] italic text-lg">
+<a class="text-[#9b3f25] dark:text-[#c05a3e] border-b-2 border-[#9b3f25] pb-1 hover:opacity-100 transition-opacity active:scale-95 duration-200" href="#">Library</a>
+<a class="text-[#56423d] dark:text-[#ece8de] opacity-70 hover:opacity-100 transition-opacity active:scale-95 duration-200" href="#">Collections</a>
+<a class="text-[#56423d] dark:text-[#ece8de] opacity-70 hover:opacity-100 transition-opacity active:scale-95 duration-200" href="#">Archive</a>
+</nav>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#9b3f25] cursor-pointer active:scale-95 duration-200">account_circle</span>
+</div>
+</div>
+<div class="bg-[#f2ede3] dark:bg-stone-800 h-[1px] w-full"></div>
+</header>
+<div class="flex max-w-screen-2xl mx-auto">
+<!-- SideNavBar from JSON -->
+<aside class="hidden md:flex flex-col h-screen w-72 left-0 sticky bg-[#f2ede3] dark:bg-stone-900/50 border-r border-[#ece8de]/50 dark:border-stone-800 py-8">
+<div class="px-8 mb-10">
+<div class="font-['Newsreader'] italic text-xl text-[#1d1c16] dark:text-[#fef9ef] mb-1">The Atelier</div>
+<div class="text-[10px] uppercase tracking-[0.15rem] text-on-surface-variant/60 font-medium">Personal Research</div>
+</div>
+<nav class="flex flex-col gap-1 flex-grow">
+<div class="text-[#4d6453] dark:text-[#cde6d1] font-bold bg-[#ece8de] dark:bg-stone-800 rounded-r-full pl-8 py-3 font-['Inter'] font-medium text-sm tracking-wide cursor-pointer active:scale-[0.98] duration-150 flex items-center gap-3">
+<span class="material-symbols-outlined text-lg">book_2</span>
+                    Current Reads
+                </div>
+<div class="text-[#56423d] dark:text-[#ece8de]/60 pl-8 py-3 font-['Inter'] font-medium text-sm tracking-wide cursor-pointer hover:bg-[#ece8de]/50 dark:hover:bg-stone-800/50 transition-colors active:scale-[0.98] duration-150 flex items-center gap-3">
+<span class="material-symbols-outlined text-lg">auto_stories</span>
+                    Unread
+                </div>
+<div class="text-[#56423d] dark:text-[#ece8de]/60 pl-8 py-3 font-['Inter'] font-medium text-sm tracking-wide cursor-pointer hover:bg-[#ece8de]/50 dark:hover:bg-stone-800/50 transition-colors active:scale-[0.98] duration-150 flex items-center gap-3">
+<span class="material-symbols-outlined text-lg">edit_note</span>
+                    Annotated
+                </div>
+<div class="text-[#56423d] dark:text-[#ece8de]/60 pl-8 py-3 font-['Inter'] font-medium text-sm tracking-wide cursor-pointer hover:bg-[#ece8de]/50 dark:hover:bg-stone-800/50 transition-colors active:scale-[0.98] duration-150 flex items-center gap-3">
+<span class="material-symbols-outlined text-lg">format_quote</span>
+                    Citations
+                </div>
+</nav>
+<div class="px-8 mt-auto">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary py-3 rounded-md font-medium text-sm active:scale-95 transition-transform shadow-sm">
+                    New Entry
+                </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 px-12 py-12 bg-surface">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+<div class="max-w-2xl">
+<h1 class="text-5xl text-on-surface mb-4">Reading Queue</h1>
+<p class="text-on-surface-variant italic text-lg leading-relaxed">
+                        Curate your intellectual flow. Manual overrides take precedence over algorithmic scoring to ensure your immediate research needs remain at the forefront.
+                    </p>
+</div>
+<button class="flex items-center gap-2 text-primary font-medium hover:underline py-2 px-4 rounded-lg hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined text-lg">history</span>
+                    Revert All to Automatic
+                </button>
+</div>
+<!-- Bento Grid / Cards Container -->
+<div class="grid grid-cols-1 gap-8">
+<!-- Card 1: High Override -->
+<div class="bg-surface-container-high rounded-lg p-10 flex flex-col md:flex-row gap-8 transition-all hover:bg-surface-container-highest/50">
+<div class="flex-shrink-0">
+<div class="w-48 h-64 bg-surface-variant rounded shadow-inner overflow-hidden relative">
+<img alt="Paper cover" class="w-full h-full object-cover grayscale opacity-80" data-alt="Close up of a weathered vintage book cover with gold embossed lettering on dark leather texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoJAbErnF5B6Z2N_O00v5Lx9PBkPk3apuDQas9Zuiy-bMPrE31hOKhWrTPmbPFVxyB6BtX6uHMZ-zCr8_0lW1fKJ1U11bZf8kK8AK7qbzrC0Y6E1FF84B3T5Fq_WL812VVeSh-B-96jZkJO9G7iKFRCce2zYyODfhVHQU53F3eYDIjmdRafu3uwvVF_Z_qornZ6dIOZMQEbLprKdMaKCZ5dHNgZLBkPW4OSKY0hv8qbmFc27FGZyk0WxAGVoZWVaNPfb8YysuLy7s1"/>
+<div class="absolute inset-0 bg-secondary/10"></div>
+</div>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] uppercase tracking-[0.15rem] text-primary font-bold">Manual Priority: High</span>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-xs text-on-surface-variant/60">AI Score: 7.2</span>
+<div class="flex items-center gap-1">
+<span class="text-2xl font-bold text-on-surface">9.4</span>
+<span class="material-symbols-outlined text-primary scale-75" data-weight="fill" style="font-variation-settings: 'FILL' 1;">arrow_circle_up</span>
+</div>
+</div>
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">High Override</span>
+</div>
+</div>
+<h2 class="text-3xl mb-2 text-on-surface">The Semantics of Silence in Post-War Architecture</h2>
+<p class="text-on-surface-variant font-medium text-sm mb-4">Dr. Helena Vane • Architectural Review • 2024</p>
+<p class="text-on-surface-variant leading-relaxed line-clamp-2 italic">An exploration of negative space and acoustic design as a medium for collective memory in reconstruction efforts...</p>
+</div>
+<div class="flex gap-4 mt-6">
+<button class="bg-secondary text-on-secondary px-6 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity">Open Draft</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 text-sm font-medium">
+<span class="material-symbols-outlined text-lg">bookmark</span> Save to Collection
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 2: High Override -->
+<div class="bg-surface-container-high rounded-lg p-10 flex flex-col md:flex-row gap-8 transition-all hover:bg-surface-container-highest/50 border-l-4 border-primary">
+<div class="flex-shrink-0">
+<div class="w-48 h-64 bg-surface-variant rounded shadow-inner overflow-hidden relative">
+<img alt="Paper cover" class="w-full h-full object-cover grayscale opacity-80" data-alt="Abstract macro photography of ink diffusing in water, deep blue and charcoal tones, scholarly aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuMiE18zea6bDpaY0SedpswkNk4qMQG6VZQygkUAZ3xJcZZRu99ZUjZlAUWYS0q7cSG8V1Kal1BYI-ZdDpe8nCve5n_I91uD3exU0s86SVwqlwyTC8PDF1ufnv9Jk8YQES1zjhJdzTSwg8W3CC6MnRkhaXxoxzd5eg62nGtugy2tRVdHMBioqGw3djMkrJ-pyyBed77hG1E9zmDa950zvx8j2ibJ5rzYE-61g2PEWbPCpMs46SLeLXVPi1LyUyfzGwbNDJzEiQ_Yh8"/>
+</div>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] uppercase tracking-[0.15rem] text-primary font-bold">Manual Priority: High</span>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-xs text-on-surface-variant/60">AI Score: 8.5</span>
+<div class="flex items-center gap-1">
+<span class="text-2xl font-bold text-on-surface">9.1</span>
+<span class="material-symbols-outlined text-primary scale-75" data-weight="fill" style="font-variation-settings: 'FILL' 1;">arrow_circle_up</span>
+</div>
+</div>
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">High Override</span>
+</div>
+</div>
+<h2 class="text-3xl mb-2 text-on-surface">Cognitive Load and Digital Marginalia</h2>
+<p class="text-on-surface-variant font-medium text-sm mb-4">Julian Thorne • Journal of Digital Humanities • 2023</p>
+<p class="text-on-surface-variant leading-relaxed line-clamp-2 italic">Investigating how the act of manual annotation improves retention compared to automated highlighting tools...</p>
+</div>
+<div class="flex gap-4 mt-6">
+<button class="bg-secondary text-on-secondary px-6 py-2 rounded-md text-sm font-medium hover:opacity-90 transition-opacity">Resume Reading</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 text-sm font-medium">
+<span class="material-symbols-outlined text-lg">edit</span> Add Note
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 3: Neutral/Automatic (No override visual but shown for context) -->
+<div class="bg-surface-container-low/50 rounded-lg p-10 flex flex-col md:flex-row gap-8 opacity-90 grayscale-[0.5]">
+<div class="flex-shrink-0">
+<div class="w-48 h-64 bg-surface-variant rounded shadow-inner overflow-hidden relative opacity-60">
+<img alt="Paper cover" class="w-full h-full object-cover grayscale opacity-80" data-alt="Stacks of old paper and manuscripts in a dimly lit library basement, dust motes dancing in light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQOLzuTYa_-RaFgVID_AbEQnV6EPSieKmJEVg4_thbCBawR8D8NJL8b_0tMArMHzHOHGsrjMtRISeKn23D1kS7IMZun-sW9GO-b2OBxQczNc00VDnkNsnvJCtAV0YikjRby4oovIyhAKqVU_HOujQATI5ddQdIZnlpKZvfd0Ji8Z3FaZlv9nEtVgSwwEVHYN1AaihQEsyCfGwKJD5uMpJH1GHt0Vjak3kAR3vlZqd4VtJdOUDEpAfA7QbFCwukPzNyjmTxs_5X3ZgR"/>
+</div>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] uppercase tracking-[0.15rem] text-on-surface-variant/40 font-bold">Automatic Sorting</span>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-xs text-on-surface-variant/40">AI Score</span>
+<div class="flex items-center gap-1">
+<span class="text-2xl font-bold text-on-surface-variant/40">8.8</span>
+</div>
+</div>
+</div>
+</div>
+<h2 class="text-3xl mb-2 text-on-surface-variant/60">Ethics of Synthetic Archiving</h2>
+<p class="text-on-surface-variant font-medium text-sm mb-4">Sarah Cheng • Philosophical Inquiries</p>
+<p class="text-on-surface-variant/50 leading-relaxed line-clamp-2 italic">Exploring the tension between preservation and the right to be forgotten in the age of persistent LLM memory...</p>
+</div>
+<div class="flex gap-4 mt-6">
+<button class="bg-surface-container-high text-on-surface-variant/60 px-6 py-2 rounded-md text-sm font-medium cursor-not-allowed">Locked by Rank</button>
+</div>
+</div>
+</div>
+<!-- Card 4: Low Override -->
+<div class="bg-surface-container rounded-lg p-10 flex flex-col md:flex-row gap-8 border-t border-outline-variant/20">
+<div class="flex-shrink-0">
+<div class="w-48 h-64 bg-surface-variant rounded shadow-inner overflow-hidden relative">
+<img alt="Paper cover" class="w-full h-full object-cover grayscale opacity-80" data-alt="Interior of a classic European library with high wood bookshelves and green reading lamps" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAs7Cq_0onl5q2krEgx9IL8Y0c0WlFzBolsEFl_1i88liWBhgPXySD0NKYmjsjJtwSXEevMDZl9CUg5UpC_311CU7s8WFvWcnZq865Yk9fA2BXfHaxpE3wz9FvHFkaSA9piVRiGfrx9yTVyXGpR3mfqbDDIu8zbJ6zKXZsrG32yFI2dxOIIla86SnMGlCrObsCb4d9vIvkR1yxScqWULP4-thzTwh8_xdFjM5d4YK6tQGkMtLflRw0qj4hiqigbeOIMIUFOv_i1dh1j"/>
+</div>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] uppercase tracking-[0.15rem] text-outline font-bold">Manual Priority: Low</span>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-xs text-on-surface-variant/60">AI Score: 9.6</span>
+<div class="flex items-center gap-1">
+<span class="text-2xl font-bold text-on-surface">4.2</span>
+<span class="material-symbols-outlined text-outline scale-75" data-weight="fill" style="font-variation-settings: 'FILL' 1;">arrow_circle_down</span>
+</div>
+</div>
+<span class="bg-outline/10 text-outline px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Low Override</span>
+</div>
+</div>
+<h2 class="text-3xl mb-2 text-on-surface opacity-70">Quantifying Aesthetic Value in Generative Art</h2>
+<p class="text-on-surface-variant font-medium text-sm mb-4">Liam Grant • Computation &amp; Culture</p>
+<p class="text-on-surface-variant leading-relaxed line-clamp-2 italic opacity-60">A mathematical approach to determining the 'soul' of generated imagery via complex entropy measurements...</p>
+</div>
+<div class="flex gap-4 mt-6">
+<button class="bg-surface-container-high text-on-surface-variant px-6 py-2 rounded-md text-sm font-medium hover:bg-surface-variant">View Later</button>
+<button class="text-primary hover:underline text-sm font-medium">Reset Override</button>
+</div>
+</div>
+</div>
+<!-- Card 5: Low Override -->
+<div class="bg-surface-container rounded-lg p-10 flex flex-col md:flex-row gap-8 border-t border-outline-variant/20">
+<div class="flex-shrink-0">
+<div class="w-48 h-64 bg-surface-variant rounded shadow-inner overflow-hidden relative">
+<img alt="Paper cover" class="w-full h-full object-cover grayscale opacity-80" data-alt="Close up of a person writing with a fountain pen on thick parchment paper, warm candlelight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOxlXff6vQrPfZ7ErpdfMrRmVyw39bFAR-v46GjiENh_IgggKygj4Xt7TF9hoI3Zl1EGHDoxgF4JVAyjaNmf2-UbpPWueGWTboV4PCjrSUKyw9fBcbC7wNg9XIB_t4snrZ6qPu771yYkbTf7m0iYsnAaV-Q2_wf-HRRxs1CHNrwbkQhGeBuOjZj6F1xrBtkjkxwbeQqXDhMRPEfMI641uGKt51CATSyqkqXfKDBKMqvCwTmUkl7RVg6qoKsHlNEoFyE_rNHS0ZvbiF"/>
+</div>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] uppercase tracking-[0.15rem] text-outline font-bold">Manual Priority: Low</span>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-xs text-on-surface-variant/60">AI Score: 9.2</span>
+<div class="flex items-center gap-1">
+<span class="text-2xl font-bold text-on-surface">3.8</span>
+<span class="material-symbols-outlined text-outline scale-75" data-weight="fill" style="font-variation-settings: 'FILL' 1;">arrow_circle_down</span>
+</div>
+</div>
+<span class="bg-outline/10 text-outline px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">Low Override</span>
+</div>
+</div>
+<h2 class="text-3xl mb-2 text-on-surface opacity-70">The Future of the Monograph</h2>
+<p class="text-on-surface-variant font-medium text-sm mb-4">Elena Rossi • Publishing Perspectives</p>
+<p class="text-on-surface-variant leading-relaxed line-clamp-2 italic opacity-60">Why the long-form printed thesis remains the ultimate anchor for academic validity in an instant-publish era...</p>
+</div>
+<div class="flex gap-4 mt-6">
+<button class="bg-surface-container-high text-on-surface-variant px-6 py-2 rounded-md text-sm font-medium hover:bg-surface-variant">View Later</button>
+<button class="text-primary hover:underline text-sm font-medium">Reset Override</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Margin Note / Contextual Component -->
+<div class="fixed bottom-8 right-8 max-w-xs bg-secondary-container p-6 rounded-lg shadow-xl backdrop-blur-md border border-on-secondary-container/10">
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-on-secondary-container">info</span>
+<div>
+<p class="text-on-secondary-container text-sm font-medium mb-1 uppercase tracking-wider text-[10px]">Curator's Note</p>
+<p class="text-on-secondary-container text-sm italic leading-tight">Priority overrides are stored locally and will synchronize with your research focus shifts over the next 24 hours.</p>
+</div>
+</div>
+</div>
+</body></html>

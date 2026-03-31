@@ -1,0 +1,394 @@
+[
+  {
+    "prompt": "v6_cot",
+    "arxiv_id": "2512.21066v1",
+    "title": "Agentic Explainable Artificial Intelligence (Agentic XAI) Approach To ",
+    "elapsed": 12.727765083312988,
+    "expected_agentic": true,
+    "got_agentic": true,
+    "expected_domain": "agent",
+    "got_primary": "agent_memory",
+    "patterns": [
+      {
+        "category": "agent_memory",
+        "name": "iterative refinement",
+        "confidence": 0.85,
+        "evidence": "LLM operates autonomously to improve the explanation"
+      },
+      {
+        "category": "agent_tool_use",
+        "name": "function calling",
+        "confidence": 0.75,
+        "evidence": "SHAP-based explainability"
+      },
+      {
+        "category": "world_models",
+        "name": "environment simulation",
+        "confidence": 0.65,
+        "evidence": "rice yield data from 26 fields in Japan"
+      }
+    ],
+    "issues": [
+      "invented:agent_memory/iterative refinement",
+      "invented:agent_tool_use/function calling",
+      "invented:world_models/environment simulation"
+    ],
+    "reasoning": "Step 1: This paper describes a system where an LLM acts as an autonomous agent iteratively refining explanations for an agricultural recommendation system. The LLM doesn't just generate an explanation; it refines it through an agentic loop. Step 2: The core of the approach is the LLM operating autonomously to improve the explanation, which aligns with the definition of agentic AI. It's not simply about training, architecture, or evaluation. Step 3: The primary category is agent_memory (iterative refinement), followed by agent_tool_use (function calling - SHAP), and potentially world_models (environment simulation - rice yield data).",
+    "raw_json": {
+      "reasoning": "Step 1: This paper describes a system where an LLM acts as an autonomous agent iteratively refining explanations for an agricultural recommendation system. The LLM doesn't just generate an explanation; it refines it through an agentic loop. Step 2: The core of the approach is the LLM operating autonomously to improve the explanation, which aligns with the definition of agentic AI. It's not simply about training, architecture, or evaluation. Step 3: The primary category is agent_memory (iterative refinement), followed by agent_tool_use (function calling - SHAP), and potentially world_models (environment simulation - rice yield data).",
+      "is_agentic": true,
+      "primary_category": "agent_memory",
+      "patterns": [
+        {
+          "category": "agent_memory",
+          "name": "iterative refinement",
+          "confidence": 0.85,
+          "evidence": "LLM operates autonomously to improve the explanation"
+        },
+        {
+          "category": "agent_tool_use",
+          "name": "function calling",
+          "confidence": 0.75,
+          "evidence": "SHAP-based explainability"
+        },
+        {
+          "category": "world_models",
+          "name": "environment simulation",
+          "confidence": 0.65,
+          "evidence": "rice yield data from 26 fields in Japan"
+        }
+      ]
+    }
+  },
+  {
+    "prompt": "v6_cot",
+    "arxiv_id": "2512.21039v1",
+    "title": "Agentic Multi-Persona Framework for Evidence-Aware Fake News Detection",
+    "elapsed": 6.492729902267456,
+    "expected_agentic": true,
+    "got_agentic": true,
+    "expected_domain": "agent",
+    "got_primary": "agent_tool_use",
+    "patterns": [
+      {
+        "category": "agent_tool_use",
+        "name": "function_calling",
+        "confidence": 0.85,
+        "evidence": "reverse image search, knowledge graph paths, persuasion strategy analysis"
+      }
+    ],
+    "issues": [],
+    "reasoning": "Step 1: This paper describes a framework for fake news detection that utilizes multiple personas and integrates various data sources (text, images, knowledge graphs). It focuses on building a robust and explainable system. Step 2: The abstract explicitly mentions an 'agentic multi-persona framework,' suggesting an iterative process where the system actively gathers evidence and reasons. The use of 'reverse image search, knowledge graph paths, and persuasion strategy analysis' implies an active exploration and decision-making process. Therefore, it is agentic. Step 3: The primary categories are agent_tool_use (reverse image search, api orchestration), agent_memory (evidence-grounded), and multi-agent (multi-persona).",
+    "raw_json": {
+      "reasoning": "Step 1: This paper describes a framework for fake news detection that utilizes multiple personas and integrates various data sources (text, images, knowledge graphs). It focuses on building a robust and explainable system. Step 2: The abstract explicitly mentions an 'agentic multi-persona framework,' suggesting an iterative process where the system actively gathers evidence and reasons. The use of 'reverse image search, knowledge graph paths, and persuasion strategy analysis' implies an active exploration and decision-making process. Therefore, it is agentic. Step 3: The primary categories are agent_tool_use (reverse image search, api orchestration), agent_memory (evidence-grounded), and multi-agent (multi-persona).",
+      "is_agentic": true,
+      "primary_category": "agent_tool_use",
+      "patterns": [
+        {
+          "category": "agent_tool_use",
+          "name": "function_calling",
+          "confidence": 0.85,
+          "evidence": "reverse image search, knowledge graph paths, persuasion strategy analysis"
+        }
+      ]
+    }
+  },
+  {
+    "prompt": "v6_cot",
+    "arxiv_id": "2512.21024v1",
+    "title": "Policy-Conditioned Policies for Multi-Agent Task Solving",
+    "elapsed": 8.880468130111694,
+    "expected_agentic": true,
+    "got_agentic": false,
+    "expected_domain": "agent",
+    "got_primary": "architecture",
+    "patterns": [
+      {
+        "category": "architecture",
+        "name": "transformers",
+        "confidence": 0.85,
+        "evidence": "utilizing Large Language Models (LLMs)"
+      },
+      {
+        "category": "training",
+        "name": "supervised_finetuning",
+        "confidence": 0.75,
+        "evidence": "supervised_finetuning"
+      },
+      {
+        "category": "world_models",
+        "name": "predictive_modeling",
+        "confidence": 0.65,
+        "evidence": "the LLM is used for predictive modeling of policies"
+      }
+    ],
+    "issues": [],
+    "reasoning": "Step 1: This paper is about using Large Language Models (LLMs) to represent and optimize policies in multi-agent tasks, specifically by representing policies as human-interpretable source code. The core idea is to use LLMs as \"approximate interpreters\" to achieve a 'Program Equilibrium'. Step 2: It is not agentic because the paper describes a system where LLMs interpret and optimize policies, but there's no autonomous agent that acts in a loop, interacts with an environment, or uses tools. It's a system of interpretation and optimization, not active interaction. Step 3: The matching categories are: architecture (transformers), training (supervised_finetuning), and world_models (predictive_modeling) because it involves using LLMs (a specific architecture), finetuning LLMs, and the LLM is used for predictive modeling of policies.",
+    "raw_json": {
+      "reasoning": "Step 1: This paper is about using Large Language Models (LLMs) to represent and optimize policies in multi-agent tasks, specifically by representing policies as human-interpretable source code. The core idea is to use LLMs as \"approximate interpreters\" to achieve a 'Program Equilibrium'. Step 2: It is not agentic because the paper describes a system where LLMs interpret and optimize policies, but there's no autonomous agent that acts in a loop, interacts with an environment, or uses tools. It's a system of interpretation and optimization, not active interaction. Step 3: The matching categories are: architecture (transformers), training (supervised_finetuning), and world_models (predictive_modeling) because it involves using LLMs (a specific architecture), finetuning LLMs, and the LLM is used for predictive modeling of policies.",
+      "is_agentic": false,
+      "primary_category": "architecture",
+      "patterns": [
+        {
+          "category": "architecture",
+          "name": "transformers",
+          "confidence": 0.85,
+          "evidence": "utilizing Large Language Models (LLMs)"
+        },
+        {
+          "category": "training",
+          "name": "supervised_finetuning",
+          "confidence": 0.75,
+          "evidence": "supervised_finetuning"
+        },
+        {
+          "category": "world_models",
+          "name": "predictive_modeling",
+          "confidence": 0.65,
+          "evidence": "the LLM is used for predictive modeling of policies"
+        }
+      ]
+    }
+  },
+  {
+    "prompt": "v6_cot",
+    "arxiv_id": "2512.21323v1",
+    "title": "Parallel Token Prediction for Language Models",
+    "elapsed": 7.301429986953735,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "inference",
+    "got_primary": "inference",
+    "patterns": [
+      {
+        "category": "speculative_decoding",
+        "name": "speculative decoding",
+        "confidence": 0.95,
+        "evidence": "We achieve state-of-the-art speculative decoding performance"
+      }
+    ],
+    "issues": [
+      "invalid_cat:speculative_decoding"
+    ],
+    "reasoning": "Step 1: This paper describes a novel framework (PTP) for improving the speed of language model generation by predicting multiple tokens in parallel. It focuses on the architecture and training of a language model, specifically addressing latency issues in autoregressive decoding. Step 2: It is not agentic because the paper describes a technique for improving a language model's inference speed, not an autonomous agent that interacts with an environment or tools. It doesn't involve any loop of decision-making or action. Step 3: The primary category is inference, with supporting categories related to architecture and training. Specifically, it's about speculative decoding and efficient attention. \"We achieve state-of-the-art speculative decoding performance\" strongly suggests a focus on inference techniques.",
+    "raw_json": {
+      "reasoning": "Step 1: This paper describes a novel framework (PTP) for improving the speed of language model generation by predicting multiple tokens in parallel. It focuses on the architecture and training of a language model, specifically addressing latency issues in autoregressive decoding. Step 2: It is not agentic because the paper describes a technique for improving a language model's inference speed, not an autonomous agent that interacts with an environment or tools. It doesn't involve any loop of decision-making or action. Step 3: The primary category is inference, with supporting categories related to architecture and training. Specifically, it's about speculative decoding and efficient attention. \"We achieve state-of-the-art speculative decoding performance\" strongly suggests a focus on inference techniques.",
+      "is_agentic": false,
+      "primary_category": "inference",
+      "patterns": [
+        {
+          "category": "speculative_decoding",
+          "name": "speculative decoding",
+          "confidence": 0.95,
+          "evidence": "We achieve state-of-the-art speculative decoding performance"
+        }
+      ]
+    }
+  },
+  {
+    "prompt": "v6_cot",
+    "arxiv_id": "2512.21017v1",
+    "title": "Rethinking Supervised Fine-Tuning: Emphasizing Key Answer Tokens for I",
+    "elapsed": 6.654199123382568,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "training",
+    "got_primary": "training",
+    "patterns": [
+      {
+        "category": "training",
+        "name": "supervised_finetuning",
+        "confidence": 0.95,
+        "evidence": "conventional SFT is applied to ensure proper output format, while in the second stage, only the Key portion is fine-tuned"
+      }
+    ],
+    "issues": [],
+    "reasoning": "Step 1: This paper is about a novel training method for Large Language Models (LLMs) focused on improving accuracy by prioritizing the final answer tokens during Supervised Fine-Tuning (SFT). The core idea is to mitigate the issue of LLMs over-emphasizing lengthy Chain-of-Thought sequences, which can detract from the crucial final answer. Step 2: It is not agentic because the paper describes a training procedure and a modification to an existing training method. There is no autonomous agent, tool use, or interactive loop. Step 3: The matching categories are: training (supervised_finetuning), architecture (transformers), and agent_evaluation (benchmarking).",
+    "raw_json": {
+      "reasoning": "Step 1: This paper is about a novel training method for Large Language Models (LLMs) focused on improving accuracy by prioritizing the final answer tokens during Supervised Fine-Tuning (SFT). The core idea is to mitigate the issue of LLMs over-emphasizing lengthy Chain-of-Thought sequences, which can detract from the crucial final answer. Step 2: It is not agentic because the paper describes a training procedure and a modification to an existing training method. There is no autonomous agent, tool use, or interactive loop. Step 3: The matching categories are: training (supervised_finetuning), architecture (transformers), and agent_evaluation (benchmarking).",
+      "is_agentic": false,
+      "primary_category": "training",
+      "patterns": [
+        {
+          "category": "training",
+          "name": "supervised_finetuning",
+          "confidence": 0.95,
+          "evidence": "conventional SFT is applied to ensure proper output format, while in the second stage, only the Key portion is fine-tuned"
+        }
+      ]
+    }
+  },
+  {
+    "prompt": "v6_cot",
+    "arxiv_id": "2512.21081v1",
+    "title": "Dyna-Style Reinforcement Learning Modeling and Control of Non-linear D",
+    "elapsed": 8.868649244308472,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "world_models",
+    "got_primary": "training",
+    "patterns": [
+      {
+        "category": "training",
+        "name": "rlhf",
+        "confidence": 0.6,
+        "evidence": "reinforcement learning"
+      },
+      {
+        "category": "training",
+        "name": "synthetic_data",
+        "confidence": 0.8,
+        "evidence": "synthetic rollouts"
+      },
+      {
+        "category": "architecture",
+        "name": "transformers",
+        "confidence": 0.7,
+        "evidence": "TD3"
+      },
+      {
+        "category": "world_models",
+        "name": "learned_dynamics",
+        "confidence": 0.8,
+        "evidence": "identify a data-driven model of the system"
+      }
+    ],
+    "issues": [],
+    "reasoning": "Step 1: This paper describes a reinforcement learning approach to control a system with nonlinear dynamics. It uses SINDy to learn a model of the system and then uses this model to generate synthetic rollouts for training. The core idea is to augment the real-world data with data generated from a learned model. Step 2: It is not agentic because the system doesn't involve an AI agent autonomously deciding, acting, and interacting with tools/environments in a loop. It's a training method using a learned model. Step 3: The matching categories are: training (rlhf, dpo, supervised_finetuning, reward_modeling, synthetic_data), architecture (transformers), world_models (learned_dynamics), and agent_memory (retrieval_augmented).",
+    "raw_json": {
+      "reasoning": "Step 1: This paper describes a reinforcement learning approach to control a system with nonlinear dynamics. It uses SINDy to learn a model of the system and then uses this model to generate synthetic rollouts for training. The core idea is to augment the real-world data with data generated from a learned model. Step 2: It is not agentic because the system doesn't involve an AI agent autonomously deciding, acting, and interacting with tools/environments in a loop. It's a training method using a learned model. Step 3: The matching categories are: training (rlhf, dpo, supervised_finetuning, reward_modeling, synthetic_data), architecture (transformers), world_models (learned_dynamics), and agent_memory (retrieval_augmented).",
+      "is_agentic": false,
+      "primary_category": "training",
+      "patterns": [
+        {
+          "category": "training",
+          "name": "rlhf",
+          "confidence": 0.6,
+          "evidence": "reinforcement learning"
+        },
+        {
+          "category": "training",
+          "name": "synthetic_data",
+          "confidence": 0.8,
+          "evidence": "synthetic rollouts"
+        },
+        {
+          "category": "architecture",
+          "name": "transformers",
+          "confidence": 0.7,
+          "evidence": "TD3"
+        },
+        {
+          "category": "world_models",
+          "name": "learned_dynamics",
+          "confidence": 0.8,
+          "evidence": "identify a data-driven model of the system"
+        }
+      ]
+    }
+  },
+  {
+    "prompt": "v6_cot",
+    "arxiv_id": "2512.21153v1",
+    "title": "ElfCore: A 28nm Neural Processor Enabling Dynamic Structured Sparse Tr",
+    "elapsed": 9.57443618774414,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "architecture",
+    "got_primary": "architecture",
+    "patterns": [
+      {
+        "category": "architecture",
+        "name": "attention_mechanism",
+        "confidence": 0.6,
+        "evidence": "ElfCore is a neural processor"
+      },
+      {
+        "category": "training",
+        "name": "synthetic_data",
+        "confidence": 0.7,
+        "evidence": "online self-supervised learning without labeled inputs"
+      },
+      {
+        "category": "training",
+        "name": "reward_modeling",
+        "confidence": 0.5,
+        "evidence": "activity-dependent sparse weight update mechanism"
+      },
+      {
+        "category": "architecture",
+        "name": "mixture_of_experts",
+        "confidence": 0.3,
+        "evidence": "digital spiking neural network processor"
+      }
+    ],
+    "issues": [],
+    "reasoning": "Step 1: This paper describes a novel hardware accelerator \u2013 ElfCore \u2013 designed for processing event-driven neural networks. It focuses on efficient training and inference of spiking neural networks, particularly through online self-supervised learning and dynamic sparse training. It doesn't describe an autonomous agent. Step 2: The paper is about hardware design and training techniques, not agentic behavior. It details a system where the processor learns and adapts, but this is a passive process, not an agent acting in an environment. Step 3: The primary category is architecture, with supporting categories related to training and potentially world models due to the focus on learning dynamics. The 'online self-supervised learning' aspect suggests a training method.",
+    "raw_json": {
+      "reasoning": "Step 1: This paper describes a novel hardware accelerator \u2013 ElfCore \u2013 designed for processing event-driven neural networks. It focuses on efficient training and inference of spiking neural networks, particularly through online self-supervised learning and dynamic sparse training. It doesn't describe an autonomous agent. Step 2: The paper is about hardware design and training techniques, not agentic behavior. It details a system where the processor learns and adapts, but this is a passive process, not an agent acting in an environment. Step 3: The primary category is architecture, with supporting categories related to training and potentially world models due to the focus on learning dynamics. The 'online self-supervised learning' aspect suggests a training method.",
+      "is_agentic": false,
+      "primary_category": "architecture",
+      "patterns": [
+        {
+          "category": "architecture",
+          "name": "attention_mechanism",
+          "confidence": 0.6,
+          "evidence": "ElfCore is a neural processor"
+        },
+        {
+          "category": "training",
+          "name": "synthetic_data",
+          "confidence": 0.7,
+          "evidence": "online self-supervised learning without labeled inputs"
+        },
+        {
+          "category": "training",
+          "name": "reward_modeling",
+          "confidence": 0.5,
+          "evidence": "activity-dependent sparse weight update mechanism"
+        },
+        {
+          "category": "architecture",
+          "name": "mixture_of_experts",
+          "confidence": 0.3,
+          "evidence": "digital spiking neural network processor"
+        }
+      ]
+    }
+  },
+  {
+    "prompt": "v6_cot",
+    "arxiv_id": "2512.21329v1",
+    "title": "Your Reasoning Benchmark May Not Test Reasoning: Revealing Perception ",
+    "elapsed": 7.574960231781006,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "agent_evaluation",
+    "got_primary": "agent_evaluation",
+    "patterns": [
+      {
+        "category": "benchmarking",
+        "name": "benchmark",
+        "confidence": 0.85,
+        "evidence": "We introduce a two-stage experimental pipeline that explicitly separates perception and reasoning. In the perception stage, each image is independently converted into a natural-langua"
+      }
+    ],
+    "issues": [
+      "invalid_cat:benchmarking"
+    ],
+    "reasoning": "Step 1: This paper investigates the performance of vision-language models on reasoning benchmarks and argues that the observed performance gap is due to limitations in visual perception rather than a lack of reasoning ability. It proposes a method to isolate and measure perception separately. Step 2: It is not agentic because the paper describes an experimental setup and a method for analyzing existing models, not the development of an autonomous agent. Step 3: The matching categories are: architecture (due to the experimental pipeline), agent_evaluation (due to the benchmarking of models), world_models (due to the focus on visual perception and its impact on reasoning), and inference (due to the focus on how models 'perceive' images).",
+    "raw_json": {
+      "reasoning": "Step 1: This paper investigates the performance of vision-language models on reasoning benchmarks and argues that the observed performance gap is due to limitations in visual perception rather than a lack of reasoning ability. It proposes a method to isolate and measure perception separately. Step 2: It is not agentic because the paper describes an experimental setup and a method for analyzing existing models, not the development of an autonomous agent. Step 3: The matching categories are: architecture (due to the experimental pipeline), agent_evaluation (due to the benchmarking of models), world_models (due to the focus on visual perception and its impact on reasoning), and inference (due to the focus on how models 'perceive' images).",
+      "is_agentic": false,
+      "primary_category": "agent_evaluation",
+      "patterns": [
+        {
+          "category": "benchmarking",
+          "name": "benchmark",
+          "confidence": 0.85,
+          "evidence": "We introduce a two-stage experimental pipeline that explicitly separates perception and reasoning. In the perception stage, each image is independently converted into a natural-langua"
+        }
+      ]
+    }
+  }
+]

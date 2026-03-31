@@ -1,0 +1,228 @@
+[
+  {
+    "prompt": "v5_hybrid",
+    "arxiv_id": "2512.21066v1",
+    "title": "Agentic Explainable Artificial Intelligence (Agentic XAI) Approach To ",
+    "elapsed": 6.991565942764282,
+    "expected_agentic": true,
+    "got_agentic": true,
+    "expected_domain": "agent",
+    "got_primary": "agent_memory",
+    "patterns": [
+      {
+        "category": "agent_memory",
+        "name": "persistent_memory",
+        "confidence": 0.6,
+        "evidence": "iterative refinement"
+      },
+      {
+        "category": "agent_tool_use",
+        "name": "api_orchestration",
+        "confidence": 0.8,
+        "evidence": "API orchestration"
+      },
+      {
+        "category": "agent_planning",
+        "name": "chain_of_thought",
+        "confidence": 0.7,
+        "evidence": "chain_of_thought"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "prompt": "v5_hybrid",
+    "arxiv_id": "2512.21039v1",
+    "title": "Agentic Multi-Persona Framework for Evidence-Aware Fake News Detection",
+    "elapsed": 5.41877293586731,
+    "expected_agentic": true,
+    "got_agentic": true,
+    "expected_domain": "agent",
+    "got_primary": "agent_memory",
+    "patterns": [
+      {
+        "category": "agent_memory",
+        "name": "retrieval_augmented",
+        "confidence": 0.6,
+        "evidence": "retrieval augmented"
+      },
+      {
+        "category": "agent_tool_use",
+        "name": "browser_use",
+        "confidence": 0.8,
+        "evidence": "browser use"
+      },
+      {
+        "category": "multi_agent",
+        "name": "collaboration",
+        "confidence": 0.7,
+        "evidence": "LLM-SLM synergy"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "prompt": "v5_hybrid",
+    "arxiv_id": "2512.21024v1",
+    "title": "Policy-Conditioned Policies for Multi-Agent Task Solving",
+    "elapsed": 4.6975297927856445,
+    "expected_agentic": true,
+    "got_agentic": true,
+    "expected_domain": "agent",
+    "got_primary": "agent_planning",
+    "patterns": [
+      {
+        "category": "multi_agent",
+        "name": "reasoning_acting",
+        "confidence": 0.85,
+        "evidence": "reasoning of strategies"
+      },
+      {
+        "category": "agent_tool_use",
+        "name": "api_orchestration",
+        "confidence": 0.75,
+        "evidence": "LLMs as approximate interpreters"
+      }
+    ],
+    "issues": [
+      "invented:multi_agent/reasoning_acting"
+    ]
+  },
+  {
+    "prompt": "v5_hybrid",
+    "arxiv_id": "2512.21323v1",
+    "title": "Parallel Token Prediction for Language Models",
+    "elapsed": 4.456387758255005,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "inference",
+    "got_primary": "inference",
+    "patterns": [
+      {
+        "category": "inference",
+        "name": "speculative_decoding",
+        "confidence": 0.85,
+        "evidence": "speculative decoding"
+      },
+      {
+        "category": "training",
+        "name": "supervised_finetuning",
+        "confidence": 0.75,
+        "evidence": "supervised finetuning"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "prompt": "v5_hybrid",
+    "arxiv_id": "2512.21017v1",
+    "title": "Rethinking Supervised Fine-Tuning: Emphasizing Key Answer Tokens for I",
+    "elapsed": 4.700338840484619,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "training",
+    "got_primary": "training",
+    "patterns": [
+      {
+        "category": "training",
+        "name": "supervised_finetuning",
+        "confidence": 0.95,
+        "evidence": "supervised fine-tuning"
+      },
+      {
+        "category": "agent_memory",
+        "name": "working_memory",
+        "confidence": 0.6,
+        "evidence": "allocate disproportionately more attention"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "prompt": "v5_hybrid",
+    "arxiv_id": "2512.21081v1",
+    "title": "Dyna-Style Reinforcement Learning Modeling and Control of Non-linear D",
+    "elapsed": 5.51222562789917,
+    "expected_agentic": false,
+    "got_agentic": true,
+    "expected_domain": "world_models",
+    "got_primary": "world_models",
+    "patterns": [
+      {
+        "category": "world_models",
+        "name": "learned_dynamics",
+        "confidence": 0.95,
+        "evidence": "learn a data-driven model of the system"
+      },
+      {
+        "category": "training",
+        "name": "rlhf",
+        "confidence": 0.6,
+        "evidence": "reinforcement learning"
+      },
+      {
+        "category": "agent_tool_use",
+        "name": "api_orchestration",
+        "confidence": 0.7,
+        "evidence": "generate synthetic rollouts"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "prompt": "v5_hybrid",
+    "arxiv_id": "2512.21153v1",
+    "title": "ElfCore: A 28nm Neural Processor Enabling Dynamic Structured Sparse Tr",
+    "elapsed": 5.522464990615845,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "architecture",
+    "got_primary": "training",
+    "patterns": [
+      {
+        "category": "training",
+        "name": "synthetic_data",
+        "confidence": 0.85,
+        "evidence": "synthetic data"
+      },
+      {
+        "category": "world_models",
+        "name": "learned_dynamics",
+        "confidence": 0.75,
+        "evidence": "learned dynamics"
+      },
+      {
+        "category": "training",
+        "name": "reward_modeling",
+        "confidence": 0.65,
+        "evidence": "sparse weight update mechanism that selectively updates weights based solely on input activity and network dynamics"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "prompt": "v5_hybrid",
+    "arxiv_id": "2512.21329v1",
+    "title": "Your Reasoning Benchmark May Not Test Reasoning: Revealing Perception ",
+    "elapsed": 4.398210048675537,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "agent_evaluation",
+    "got_primary": "agent_evaluation",
+    "patterns": [
+      {
+        "category": "agent_evaluation",
+        "name": "benchmarking",
+        "confidence": 0.85,
+        "evidence": "benchmark"
+      },
+      {
+        "category": "world_models",
+        "name": "learned_dynamics",
+        "confidence": 0.6,
+        "evidence": "learned dynamics"
+      }
+    ],
+    "issues": []
+  }
+]

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package arxiv_assistant;
+
+message EmbeddingConfig {
+  enum Purpose {
+    RETRIEVAL = 0;
+    CLUSTERING = 1;
+  }
+  Purpose purpose = 1;
+  int32 dimensions = 2;
+  bool is_normalized = 3;
+}
+
+message EmbeddingMetadata {
+  string source_model = 1;
+  string provider = 2; // e.g., "google"
+  int32 input_tokens_count = 3;
+  string prompt_template_version = 4; // Hash or semantic version of the prompt
+  map<string, string> extra_info = 5;
+  string schema_version = 6;
+}

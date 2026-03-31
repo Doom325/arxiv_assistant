@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scholar’s Atelier | Reading Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-dim": "#dedad0",
+              "on-tertiary-fixed-variant": "#6e3827",
+              "on-secondary-fixed": "#0b2013",
+              "on-primary": "#ffffff",
+              "on-secondary-container": "#516857",
+              "on-background": "#1d1c16",
+              "on-surface-variant": "#56423d",
+              "on-error": "#ffffff",
+              "error": "#ba1a1a",
+              "tertiary": "#874c3b",
+              "surface-tint": "#9e4127",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-highest": "#e7e2d8",
+              "on-error-container": "#93000a",
+              "on-primary-fixed": "#3b0800",
+              "background": "#fef9ef",
+              "surface-bright": "#fef9ef",
+              "primary-fixed-dim": "#ffb5a1",
+              "inverse-on-surface": "#f5f0e6",
+              "surface-variant": "#e7e2d8",
+              "tertiary-fixed": "#ffdbd1",
+              "outline-variant": "#ddc0b9",
+              "on-tertiary-fixed": "#370e03",
+              "inverse-primary": "#ffb5a1",
+              "secondary": "#4d6453",
+              "primary-container": "#bb563b",
+              "tertiary-fixed-dim": "#ffb59f",
+              "inverse-surface": "#32302a",
+              "surface-container-low": "#f8f3e9",
+              "on-secondary-fixed-variant": "#364c3c",
+              "surface-container": "#f2ede3",
+              "on-surface": "#1d1c16",
+              "outline": "#89726c",
+              "primary-fixed": "#ffdbd1",
+              "secondary-fixed-dim": "#b4cdb8",
+              "primary": "#9b3f25",
+              "on-primary-container": "#fffbff",
+              "tertiary-container": "#a46451",
+              "surface": "#fef9ef",
+              "secondary-fixed": "#d0e9d4",
+              "on-tertiary": "#ffffff",
+              "on-primary-fixed-variant": "#7f2a12",
+              "error-container": "#ffdad6",
+              "surface-container-high": "#ece8de",
+              "on-tertiary-container": "#fffbff",
+              "on-secondary": "#ffffff",
+              "secondary-container": "#cde6d1"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        background-color: #fef9ef;
+        color: #1d1c16;
+        font-family: 'Inter', sans-serif;
+      }
+      .newsreader { font-family: 'Newsreader', serif; }
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(24px);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#f2ede3] dark:bg-stone-900 flex flex-col py-8 shadow-[20px_0_40px_rgba(86,66,61,0.04)] z-50">
+<div class="px-8 mb-12">
+<h1 class="font-headline italic text-2xl text-secondary">The Atelier</h1>
+<p class="font-label uppercase tracking-widest text-[10px] text-on-surface-variant mt-1">Academic Research</p>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="bg-[#ece8de] dark:bg-stone-800 text-[#9b3f25] dark:text-[#bb563b] rounded-r-full font-bold py-3 px-6 flex items-center gap-4 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Queue</span>
+</a>
+<a class="text-stone-500 dark:text-stone-400 py-3 px-6 flex items-center gap-4 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="priority_high">priority_high</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Priorities</span>
+</a>
+<a class="text-stone-500 dark:text-stone-400 py-3 px-6 flex items-center gap-4 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="folder_special">folder_special</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Collections</span>
+</a>
+<a class="text-stone-500 dark:text-stone-400 py-3 px-6 flex items-center gap-4 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Annotate</span>
+</a>
+</nav>
+<div class="px-6 mt-auto">
+<button class="w-full py-4 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all mb-8">
+                New Entry
+            </button>
+<a class="text-stone-500 dark:text-stone-400 py-3 flex items-center gap-4 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar Shell -->
+<header class="w-full top-0 sticky z-40 bg-[#fef9ef] dark:bg-stone-950">
+<div class="flex justify-between items-center px-8 py-4 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-12">
+<span class="text-2xl font-bold font-headline text-[#4d6453] dark:text-[#cde6d1]">Scholar’s Atelier</span>
+<nav class="hidden md:flex gap-8">
+<a class="text-stone-600 dark:text-stone-400 hover:text-[#9b3f25] font-label text-sm uppercase tracking-wider" href="#">Library</a>
+<a class="text-stone-600 dark:text-stone-400 hover:text-[#9b3f25] font-label text-sm uppercase tracking-wider" href="#">Archive</a>
+<a class="text-stone-600 dark:text-stone-400 hover:text-[#9b3f25] font-label text-sm uppercase tracking-wider" href="#">Notes</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined text-stone-500 cursor-pointer hover:text-primary transition-colors" data-icon="notifications">notifications</span>
+<div class="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
+</div>
+<div class="flex items-center gap-3 pl-6 border-l border-outline-variant/20">
+<img alt="Curator Profile" class="w-8 h-8 rounded-full border border-outline-variant/30" data-alt="Close-up portrait of a thoughtful man in glasses in a library setting with warm, low-key academic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9C_U3HoBytEktzvs9DKa59Ibxd214Cd-2VJRpJHBjYhIqOdqZ2qyniTLfUJ42Epa1Ifq29zTjafZlbg37qRErBG8x0rOze7qlAXvhKU0IjvsgLKuo9ZCUK0vcOitLjbOWMIuxFLHLxDGyfFlwnIaE0K3y0RjkAH0OfgyqZqht7-b5wFsc9kiGQ5yMtCqjCOQa3Pf6SyyvUiiYoLes36M48ucXJ-OuKHBXYg6BPznS0E53neHQftKwhZQu8a5MAa2fPSFA1N8CCHEd"/>
+<span class="material-symbols-outlined text-stone-500 cursor-pointer hover:text-primary transition-colors" data-icon="account_circle">account_circle</span>
+</div>
+</div>
+</div>
+<div class="bg-[#f2ede3] dark:bg-stone-900 h-[1px] w-full"></div>
+</header>
+<!-- Content Area -->
+<section class="max-w-6xl mx-auto px-12 py-16">
+<div class="flex justify-between items-end mb-16">
+<div>
+<h2 class="font-headline text-5xl italic text-on-surface mb-4">Reading Queue</h2>
+<p class="text-on-surface-variant max-w-lg leading-relaxed italic">Your curated collection of active inquiries, prioritized by scholarly relevance and conceptual depth.</p>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-2 rounded-full border border-outline-variant/30 text-stone-600 font-label text-xs uppercase tracking-widest hover:bg-surface-container transition-colors">Sort by Date</button>
+<button class="px-6 py-2 rounded-full border border-outline-variant/30 text-stone-600 font-label text-xs uppercase tracking-widest hover:bg-surface-container transition-colors">Filters</button>
+</div>
+</div>
+<!-- Bento Grid / Card Layout -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Main Priority Card (Interacting State) -->
+<div class="col-span-12 md:col-span-8 group relative">
+<div class="bg-surface-container-high rounded-lg p-10 transition-all duration-300">
+<div class="flex justify-between items-start mb-8">
+<span class="font-label text-[10px] uppercase tracking-[0.2em] text-secondary font-bold">Priority Entry</span>
+<!-- Trigger Element -->
+<div class="relative">
+<button class="flex items-center gap-3 bg-surface-container-low px-4 py-2 rounded-full border-2 border-primary ring-4 ring-primary/5 transition-all">
+<span class="font-headline italic font-bold text-primary">9.4</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="keyboard_arrow_down">keyboard_arrow_down</span>
+</button>
+<!-- Override Menu (Popover) -->
+<div class="absolute right-0 top-full mt-4 w-72 glass-panel p-6 rounded-lg shadow-[0_20px_40px_rgba(86,66,61,0.12)] border border-outline-variant/10 z-30">
+<div class="mb-6">
+<h4 class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-2">AI Score Calculation</h4>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline italic font-bold text-on-surface">9.4</span>
+<span class="text-xs text-secondary-container bg-secondary px-2 py-0.5 rounded-full font-medium">Exceptional Match</span>
+</div>
+</div>
+<div class="space-y-1 mb-6">
+<h4 class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-3">Manual Override</h4>
+<button class="w-full flex justify-between items-center py-2 px-4 rounded-md hover:bg-surface-container-high transition-colors text-on-surface">
+<span class="text-sm">High</span>
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+</button>
+<button class="w-full flex justify-between items-center py-2 px-4 rounded-md hover:bg-surface-container-high transition-colors text-on-surface">
+<span class="text-sm">Medium</span>
+<span class="w-2 h-2 rounded-full bg-amber-400"></span>
+</button>
+<button class="w-full flex justify-between items-center py-2 px-4 rounded-md hover:bg-surface-container-high transition-colors text-on-surface">
+<span class="text-sm">Low</span>
+<span class="w-2 h-2 rounded-full bg-stone-300"></span>
+</button>
+</div>
+<button class="w-full py-3 border border-outline-variant/30 rounded-md text-[10px] uppercase tracking-widest font-bold text-primary hover:bg-primary/5 transition-all">
+                                        Revert to Automatic
+                                    </button>
+</div>
+</div>
+</div>
+<h3 class="font-headline text-4xl mb-6 text-on-surface leading-tight">Epistemological Barriers in the Digital Humanities: A Curator’s Perspective</h3>
+<p class="text-on-surface-variant leading-relaxed text-lg mb-10 italic">Exploring the intersection of archival science and algorithmic discovery within the modern academic landscape...</p>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="person">person</span>
+<span class="text-xs font-label uppercase tracking-widest">Dr. Elena Vance</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="schedule">schedule</span>
+<span class="text-xs font-label uppercase tracking-widest">12 min read</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Item -->
+<div class="col-span-12 md:col-span-4 flex flex-col gap-8">
+<div class="bg-surface-container-high rounded-lg p-8 flex-1">
+<div class="flex justify-between items-start mb-6">
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Recommended</span>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container rounded-full">
+<span class="font-headline italic text-on-surface-variant font-bold">8.2</span>
+</div>
+</div>
+<h4 class="font-headline text-2xl mb-4 text-on-surface">The Syntax of Silence</h4>
+<p class="text-sm text-on-surface-variant line-clamp-3 mb-6 italic">A comparative analysis of monastic silence and digital focused-mode environments.</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="sell">sell</span>
+<span class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant">Cognitive Science</span>
+</div>
+</div>
+<!-- Decorative Quote Card -->
+<div class="bg-secondary p-8 rounded-lg text-secondary-container">
+<span class="material-symbols-outlined text-4xl mb-4" data-icon="format_quote">format_quote</span>
+<p class="font-headline italic text-xl leading-snug mb-4">"The library is a growing organism. It is the archive of human curiosity."</p>
+<span class="font-label text-[10px] uppercase tracking-[0.2em] opacity-60">— S.R. Ranganathan</span>
+</div>
+</div>
+<!-- Lower Queue Items -->
+<div class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
+<div class="bg-surface-container-high rounded-lg p-8 group hover:bg-surface-container-highest transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<span class="font-headline italic text-on-surface font-bold">7.5</span>
+<span class="material-symbols-outlined text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity" data-icon="open_in_new">open_in_new</span>
+</div>
+<h4 class="font-headline text-xl mb-2 text-on-surface">Liquid Archives</h4>
+<p class="text-xs text-on-surface-variant font-label uppercase tracking-widest">Museum Studies • 2023</p>
+</div>
+<div class="bg-surface-container-high rounded-lg p-8 group hover:bg-surface-container-highest transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<span class="font-headline italic text-on-surface font-bold">6.9</span>
+<span class="material-symbols-outlined text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity" data-icon="open_in_new">open_in_new</span>
+</div>
+<h4 class="font-headline text-xl mb-2 text-on-surface">The Paper Trails of AI</h4>
+<p class="text-xs text-on-surface-variant font-label uppercase tracking-widest">Philosophy • 2024</p>
+</div>
+<div class="bg-surface-container-high rounded-lg p-8 group hover:bg-surface-container-highest transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<span class="font-headline italic text-on-surface font-bold">6.1</span>
+<span class="material-symbols-outlined text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity" data-icon="open_in_new">open_in_new</span>
+</div>
+<h4 class="font-headline text-xl mb-2 text-on-surface">Marginalia &amp; Memory</h4>
+<p class="text-xs text-on-surface-variant font-label uppercase tracking-widest">Linguistics • 2022</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Contextual FAB (Hidden as per suppression rules on focused task, but kept available for home entry) -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="p-5 bg-secondary text-secondary-container rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+</button>
+</div>
+</body></html>

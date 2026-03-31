@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="../icons/icon48.png" alt="Logo" class="logo">
+      <h3>Add to NotebookLM</h3>
+    </div>
+
+    <!-- State: Paper Info -->
+    <div id="paper-info" class="section">
+      <div id="paper-title" class="paper-title">Detecting Arxiv Paper...</div>
+      <div id="paper-url" class="paper-url"></div>
+    </div>
+
+    <!-- State: Notebook Selection -->
+    <div id="notebook-selection" class="section">
+      <label for="notebook-select">Select Notebook</label>
+      <select id="notebook-select">
+        <option value="" disabled selected>Select a notebook...</option>
+      </select>
+      <div id="sync-hint" class="hint">
+        <a href="#" id="sync-link">Sync Notebooks</a> (Requires visiting NotebookLM)
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button id="add-btn" disabled>Add Source</button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

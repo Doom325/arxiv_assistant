@@ -1,0 +1,212 @@
+[
+  {
+    "arxiv_id": "2512.21066v1",
+    "title": "Agentic Explainable Artificial Intelligence (Agentic XAI) Approach To ",
+    "elapsed": 9.315690040588379,
+    "expected_agentic": true,
+    "got_agentic": true,
+    "expected_domain": "agent",
+    "got_primary": "agent_memory",
+    "patterns": [
+      {
+        "category": "agent_memory",
+        "name": "retrieval_augmented",
+        "confidence": 0.85,
+        "evidence": "This study proposes an agentic XAI framework combining SHAP-based explainability with multimodal LLM-driven iterative refinement"
+      },
+      {
+        "category": "agent_planning",
+        "name": "goal_decomposition",
+        "confidence": 0.75,
+        "evidence": "This study proposes an agentic XAI framework combining SHAP-based explainability with multimodal LLM-driven iterative refinement"
+      },
+      {
+        "category": "agent_tool_use",
+        "name": "api_orchestration",
+        "confidence": 0.65,
+        "evidence": "This study proposes an agentic XAI framework combining SHAP-based explainability with multimodal LLM-driven iterative refinement"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "arxiv_id": "2512.21039v1",
+    "title": "Agentic Multi-Persona Framework for Evidence-Aware Fake News Detection",
+    "elapsed": 7.321156024932861,
+    "expected_agentic": true,
+    "got_agentic": true,
+    "expected_domain": "agent",
+    "got_primary": "agent_memory",
+    "patterns": [
+      {
+        "category": "agent_memory",
+        "name": "retrieval_augmented",
+        "confidence": 0.85,
+        "evidence": "We propose AMPEND-LS, an agentic multi-persona evidence-grounded framework with LLM-SLM synergy for multimodal fake news detection."
+      },
+      {
+        "category": "agent_tool_use",
+        "name": "api_orchestration",
+        "confidence": 0.75,
+        "evidence": "\u2026integrated with reverse image search, knowledge graph paths, and persuasion strategy analysis."
+      },
+      {
+        "category": "multi_agent",
+        "name": "role_specialization",
+        "confidence": 0.65,
+        "evidence": "\u2026integrated with reverse image search, knowledge graph paths, and persuasion strategy analysis."
+      }
+    ],
+    "issues": []
+  },
+  {
+    "arxiv_id": "2512.21024v1",
+    "title": "Policy-Conditioned Policies for Multi-Agent Task Solving",
+    "elapsed": 5.385177850723267,
+    "expected_agentic": true,
+    "got_agentic": true,
+    "expected_domain": "agent",
+    "got_primary": "agent_tool_use",
+    "patterns": [
+      {
+        "category": "agent_tool_use",
+        "name": "function_calling",
+        "confidence": 0.95,
+        "evidence": "utilizing LLMs as approximate interpreters"
+      },
+      {
+        "category": "agent_memory",
+        "name": "working_memory",
+        "confidence": 0.6,
+        "evidence": "utilizing LLMs as approximate interpreters"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "arxiv_id": "2512.21323v1",
+    "title": "Parallel Token Prediction for Language Models",
+    "elapsed": 5.449811935424805,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "inference",
+    "got_primary": "inference",
+    "patterns": [
+      {
+        "category": "inference",
+        "name": "speculative_decoding",
+        "confidence": 0.95,
+        "evidence": "We achieve state-of-the-art speculative decoding performance"
+      },
+      {
+        "category": "inference",
+        "name": "speculative_decoding",
+        "confidence": 0.85,
+        "evidence": "by accepting over four tokens per step"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "arxiv_id": "2512.21017v1",
+    "title": "Rethinking Supervised Fine-Tuning: Emphasizing Key Answer Tokens for I",
+    "elapsed": 5.468217849731445,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "training",
+    "got_primary": "training",
+    "patterns": [
+      {
+        "category": "training",
+        "name": "supervised_finetuning",
+        "confidence": 0.95,
+        "evidence": "conventional SFT is applied to ensure proper output format"
+      },
+      {
+        "category": "training",
+        "name": "supervised_finetuning",
+        "confidence": 0.85,
+        "evidence": "in the second stage, only the Key portion is fine-tuned"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "arxiv_id": "2512.21081v1",
+    "title": "Dyna-Style Reinforcement Learning Modeling and Control of Non-linear D",
+    "elapsed": 6.917815923690796,
+    "expected_agentic": false,
+    "got_agentic": true,
+    "expected_domain": "world_models",
+    "got_primary": "world_models",
+    "patterns": [
+      {
+        "category": "world_models",
+        "name": "learned_dynamics",
+        "confidence": 0.95,
+        "evidence": "identifying a data-driven model of the system, capturing its key dynamics without requiring an explicit physical model."
+      },
+      {
+        "category": "training",
+        "name": "synthetic_data",
+        "confidence": 0.6,
+        "evidence": "using this identified model to generate synthetic rollouts that are periodically injected into the reinforcement learning replay buffer during training"
+      },
+      {
+        "category": "agent_memory",
+        "name": "persistent_memory",
+        "confidence": 0.4,
+        "evidence": "periodicallly injected into the reinforcement learning replay buffer"
+      }
+    ],
+    "issues": []
+  },
+  {
+    "arxiv_id": "2512.21153v1",
+    "title": "ElfCore: A 28nm Neural Processor Enabling Dynamic Structured Sparse Tr",
+    "elapsed": 5.902052640914917,
+    "expected_agentic": false,
+    "got_agentic": true,
+    "expected_domain": "architecture",
+    "got_primary": "agent_memory",
+    "patterns": [
+      {
+        "category": "agent_memory",
+        "name": "persistent_memory",
+        "confidence": 0.85,
+        "evidence": "an activity-dependent sparse weight update mechanism that selectively updates weights based solely on input activity and network dynamics."
+      },
+      {
+        "category": "training",
+        "name": "synthetic_data",
+        "confidence": 0.6,
+        "evidence": "an activity-dependent sparse weight update mechanism that selectively updates weights based solely on input activity and network dynamics."
+      }
+    ],
+    "issues": []
+  },
+  {
+    "arxiv_id": "2512.21329v1",
+    "title": "Your Reasoning Benchmark May Not Test Reasoning: Revealing Perception ",
+    "elapsed": 6.014307022094727,
+    "expected_agentic": false,
+    "got_agentic": false,
+    "expected_domain": "agent_evaluation",
+    "got_primary": "agent_evaluation",
+    "patterns": [
+      {
+        "category": "agent_evaluation",
+        "name": "benchmarking",
+        "confidence": 0.85,
+        "evidence": "We introduce a two-stage experimental pipeline that explicitly separates perception and reasoning."
+      },
+      {
+        "category": "agent_evaluation",
+        "name": "capability_measurement",
+        "confidence": 0.75,
+        "evidence": "To verify this hypothesis, we introduce a two-stage experimental pipeline that explicitly separates perception and reasoning."
+      }
+    ],
+    "issues": []
+  }
+]

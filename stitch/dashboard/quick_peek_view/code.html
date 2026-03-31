@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scholarly Curator - Quick Peek</title>
+<!-- Google Fonts: Newsreader (Serif) and Inter (Sans) -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,200..800;1,200..800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#231a0c",
+              "on-background": "#1d1c16",
+              "background": "#fef9ef",
+              "surface-container-low": "#f8f3e9",
+              "inverse-primary": "#b4cdb8",
+              "inverse-surface": "#32302a",
+              "on-primary-container": "#819986",
+              "surface-container-high": "#ede8de",
+              "surface-bright": "#fef9ef",
+              "surface-container-highest": "#e7e2d8",
+              "tertiary-fixed": "#f2e0c8",
+              "on-primary-fixed-variant": "#364c3c",
+              "tertiary-fixed-dim": "#d5c4ad",
+              "surface-dim": "#dedad0",
+              "on-tertiary": "#ffffff",
+              "tertiary-container": "#342a1b",
+              "primary": "#061b0e",
+              "surface-container": "#f2ede3",
+              "surface": "#fef9ef",
+              "secondary": "#a03f30",
+              "on-secondary-container": "#741f13",
+              "primary-fixed-dim": "#b4cdb8",
+              "on-error": "#ffffff",
+              "error-container": "#ffdad6",
+              "surface-container-lowest": "#ffffff",
+              "inverse-on-surface": "#f5f0e6",
+              "secondary-fixed": "#ffdad4",
+              "primary-container": "#1b3022",
+              "on-secondary-fixed": "#400200",
+              "surface-tint": "#4d6453",
+              "on-primary-fixed": "#0b2013",
+              "on-surface": "#1d1c16",
+              "secondary-container": "#fe8672",
+              "outline": "#737973",
+              "on-primary": "#ffffff",
+              "on-error-container": "#93000a",
+              "surface-variant": "#e7e2d8",
+              "secondary-fixed-dim": "#ffb4a7",
+              "on-tertiary-fixed-variant": "#504534",
+              "error": "#ba1a1a",
+              "tertiary": "#1e1608",
+              "on-tertiary-container": "#a0917c",
+              "outline-variant": "#c3c8c1",
+              "on-secondary-fixed-variant": "#80281b",
+              "on-surface-variant": "#434843",
+              "primary-fixed": "#d0e9d4",
+              "on-secondary": "#ffffff"
+            },
+            fontFamily: {
+              "headline": ["Newsreader", "serif"],
+              "body": ["Inter", "sans-serif"],
+              "label": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .font-serif { font-family: 'Newsreader', serif; }
+      .font-sans { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-sans selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+<!-- Background Content Layer (The Main Dashboard Dimmed) -->
+<div class="fixed inset-0 z-0 overflow-hidden opacity-40 grayscale-[0.2] pointer-events-none">
+<!-- Replicating Shell Strategy -->
+<header class="flex justify-between items-center w-full px-12 py-6 bg-[#f8f3e9]">
+<span class="text-xl font-bold font-serif text-[#1b3022]">Scholarly Curator</span>
+<div class="flex gap-8 items-center">
+<span class="text-[#4d6453] font-sans">Library</span>
+<span class="text-[#4d6453] font-sans">Collections</span>
+<span class="text-[#4d6453] font-sans">Archive</span>
+<span class="material-symbols-outlined text-[#1b3022]">account_circle</span>
+</div>
+</header>
+<main class="p-12 max-w-7xl mx-auto">
+<h1 class="font-serif font-extrabold text-5xl mb-12 text-primary">Research Feed</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+<div class="bg-surface-container h-80 rounded-xl p-8 flex flex-col justify-end">
+<div class="w-1/3 h-4 bg-outline-variant/30 rounded-full mb-4"></div>
+<div class="w-full h-8 bg-outline-variant/20 rounded-lg mb-2"></div>
+<div class="w-2/3 h-8 bg-outline-variant/20 rounded-lg"></div>
+</div>
+<div class="bg-surface-container h-80 rounded-xl p-8 flex flex-col justify-end">
+<div class="w-1/3 h-4 bg-outline-variant/30 rounded-full mb-4"></div>
+<div class="w-full h-8 bg-outline-variant/20 rounded-lg mb-2"></div>
+<div class="w-2/3 h-8 bg-outline-variant/20 rounded-lg"></div>
+</div>
+</div>
+</main>
+</div>
+<!-- Backdrop Dimmer Overlay -->
+<div class="fixed inset-0 bg-on-surface/20 backdrop-blur-sm z-10"></div>
+<!-- Slide-Over Panel -->
+<div class="fixed inset-y-0 right-0 w-full md:w-[640px] bg-surface z-20 shadow-[0_0_80px_rgba(29,28,22,0.15)] flex flex-col overflow-hidden">
+<!-- Header Actions -->
+<div class="flex items-center justify-between px-8 py-6 sticky top-0 bg-surface/80 backdrop-blur-md z-30">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="text-[10px] uppercase tracking-[0.2em] font-bold text-secondary">Deep Work Peek</span>
+</div>
+<button class="p-2 hover:bg-surface-container rounded-full transition-colors group">
+<span class="material-symbols-outlined text-on-surface group-hover:rotate-90 transition-transform duration-300">close</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto px-8 md:px-12 pb-24">
+<!-- Headline Section -->
+<header class="mb-10">
+<div class="flex flex-wrap gap-3 mb-6">
+<span class="px-4 py-1.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant text-[11px] font-bold tracking-wider uppercase">cs.AI</span>
+<span class="px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-[11px] font-bold tracking-wider uppercase">Inference</span>
+</div>
+<h2 class="font-serif leading-tight text-primary">
+<span class="block text-2xl font-extralight italic mb-1 text-on-primary-container">Analysis of</span>
+<span class="text-5xl font-bold tracking-tight">Emergent Reasoning</span>
+</h2>
+<!-- Metadata Row -->
+<div class="mt-8 flex items-center gap-8 text-[12px] font-medium text-outline uppercase tracking-widest">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+<span>March 14, 2024</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span class="text-secondary font-bold">12 Min Read</span>
+</div>
+</div>
+</header>
+<!-- Sophisticated Abstract Visual -->
+<div class="mb-12 rounded-xl overflow-hidden bg-surface-container aspect-[21/9] relative group">
+<img alt="Abstract generative art representation of neural networks and logic flow" class="w-full h-full object-cover mix-blend-multiply opacity-80 group-hover:scale-105 transition-transform duration-1000" data-alt="abstract flowing organic lines in deep greens and terracottas representing neural pathways and complex cognitive data structures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZycp7CsgqdHbmKS3dPOVX6GVhCuJ_NIo7dc0HGsVAi5k8RN1F8cbhdT0I4CUXQ8y-KYbNPNiDF7fA1yYrh590JjFrf-QIzPtI6eX7FuECsXZoRfAz_qJvmWWXFD4dQk3XVr7l-f1J37vf7BqYYidHuDBxvkmj5J7fnVC1kelhfGUUhiAL2-8i5JnEFpLt8v8Z2_4HMkNmV-hQAi8_UIh6airYk8qRX_zzsw39CWQPA6URMf4sGPxvc-8pIuLggGJH9xVZSBwOGyqv"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface/40 to-transparent"></div>
+</div>
+<!-- Abstract Content -->
+<section class="mb-12">
+<h3 class="font-serif text-xl font-semibold mb-6 text-on-surface">Abstract</h3>
+<p class="font-serif text-xl leading-relaxed text-on-surface-variant/90 first-letter:text-5xl first-letter:font-bold first-letter:text-secondary first-letter:mr-3 first-letter:float-left">
+                    The paper investigates the phenomenon of "reasoning" in large-scale language models, questioning whether observed logical steps are truly emergent or simply sophisticated pattern matching. Through a series of novel benchmarks focused on non-linear deductive tasks, the authors demonstrate that scale alone does not guarantee semantic coherence, yet specific architectural bottlenecks appear to facilitate higher-order logic synthesis...
+                </p>
+</section>
+<!-- AI-Generated Summary (Signature Component) -->
+<section class="bg-primary-container rounded-xl p-8 md:p-10 mb-12 shadow-2xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-7xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="relative z-10">
+<h3 class="font-serif text-inverse-on-surface text-2xl font-bold mb-6 flex items-center gap-3">
+                        Synthesis Findings
+                    </h3>
+<ul class="space-y-6">
+<li class="flex gap-4 items-start">
+<span class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
+<span class="material-symbols-outlined text-[14px] text-white">check</span>
+</span>
+<div class="space-y-1">
+<p class="text-inverse-on-surface font-semibold leading-snug">Structural Bottlenecks</p>
+<p class="text-on-primary-container text-sm leading-relaxed">Identification of the specific transformer layers where logical consistency is either maintained or degraded.</p>
+</div>
+</li>
+<li class="flex gap-4 items-start">
+<span class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
+<span class="material-symbols-outlined text-[14px] text-white">check</span>
+</span>
+<div class="space-y-1">
+<p class="text-inverse-on-surface font-semibold leading-snug">The Scale Plateau</p>
+<p class="text-on-primary-container text-sm leading-relaxed">Evidence suggests diminishing returns for reasoning accuracy beyond 1.2 trillion parameters without heuristic intervention.</p>
+</div>
+</li>
+</ul>
+<button class="mt-10 w-full py-4 rounded-lg bg-secondary text-white font-bold tracking-widest text-[12px] uppercase hover:bg-secondary/90 transition-all active:scale-95">
+                        Generate Full Deep Analysis
+                    </button>
+</div>
+</section>
+<!-- Metadata Details Grid (No borders, only tonal shifts) -->
+<section class="grid grid-cols-2 gap-px bg-outline-variant/10 rounded-xl overflow-hidden mb-12">
+<div class="bg-surface-container-low p-6">
+<span class="text-[10px] font-bold text-outline tracking-widest uppercase block mb-2">Author</span>
+<p class="font-serif text-lg font-medium">Dr. Helena Vance</p>
+</div>
+<div class="bg-surface-container-low p-6">
+<span class="text-[10px] font-bold text-outline tracking-widest uppercase block mb-2">Institution</span>
+<p class="font-serif text-lg font-medium">Oxford AI Institute</p>
+</div>
+<div class="bg-surface-container-low p-6">
+<span class="text-[10px] font-bold text-outline tracking-widest uppercase block mb-2">Citations</span>
+<p class="font-serif text-lg font-medium">1,204</p>
+</div>
+<div class="bg-surface-container-low p-6">
+<span class="text-[10px] font-bold text-outline tracking-widest uppercase block mb-2">Peer Review</span>
+<p class="font-serif text-lg font-medium">Verified</p>
+</div>
+</section>
+</div>
+<!-- Sticky Footer Navigation -->
+<footer class="h-20 bg-surface/90 backdrop-blur-xl border-t border-outline-variant/10 flex items-center justify-between px-10 shrink-0">
+<button class="flex items-center gap-4 group text-[#4d6453] hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_back_ios</span>
+<div class="text-left">
+<span class="block text-[10px] font-bold uppercase tracking-wider opacity-60">Previous Paper</span>
+<span class="text-sm font-serif font-medium leading-none">Latent Space Mapping</span>
+</div>
+</button>
+<div class="h-8 w-px bg-outline-variant/30"></div>
+<button class="flex items-center gap-4 group text-[#4d6453] hover:text-secondary transition-colors text-right">
+<div class="text-right">
+<span class="block text-[10px] font-bold uppercase tracking-wider opacity-60">Next Paper</span>
+<span class="text-sm font-serif font-medium leading-none">Graph Neural Origins</span>
+</div>
+<span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>
+</button>
+</footer>
+</div>
+</body></html>

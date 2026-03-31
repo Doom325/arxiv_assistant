@@ -1,0 +1,102 @@
+[
+  {
+    "arxiv_id": "2601.13913v1",
+    "title": "On the Role of Rotation Equivariance in Monocular 3D Human Pose Estimation",
+    "current_count": 21,
+    "lite_count": 21,
+    "current_sample": {
+      "raw": "1. Assaad, S., Downey, C., Al-Rfou, R., Nayakanti, N., Sapp, B.: Vn-transformer:\nRotation-equivariant attention for vector neurons. TMLR (2023)",
+      "url": null,
+      "title": "Vn-transformer: Rotation-equivariant attention for vector neurons",
+      "authors": [
+        "Assaad, S.",
+        "Downey, C.",
+        "Al-Rfou, R.",
+        "Nayakanti, N.",
+        "Sapp, B."
+      ]
+    },
+    "lite_sample": {
+      "title": "Vn-transformer: Rotation-equivariant attention for vector neurons",
+      "authors": [
+        "Assaad, S.",
+        "Downey, C.",
+        "Al-Rfou, R.",
+        "Nayakanti, N.",
+        "Sapp, B."
+      ],
+      "url": null,
+      "raw": "1. Assaad, S., Downey, C., Al-Rfou, R., Nayakanti, N., Sapp, B.: Vn-transformer:\nRotation-equivariant attention for vector neurons. TMLR (2023)"
+    },
+    "raw_lite": "```json\n[\n  {\n    \"title\": \"Vn-transformer: Rotation-equivariant attention for vector neurons\",\n    \"authors\": [\n      \"Assaad, S.\",\n      \"Downey, C.\",\n      \"Al-Rfou, R.\",\n      \"Nayakanti, N.\",\n      \"Sapp, B.\"\n    ],\n    \"url\": null,\n    \"raw\": \"1. Assaad, S., Downey, C., Al-Rfou, R., Nayakanti, N., Sapp, B.: Vn-transformer:\\nRotation-equivariant attention for vector neurons. TMLR (2023)\"\n  },\n  {\n    \"title\": \"GotenNet: Rethinking Efficient 3D Equivariant Graph Neural\\nNetworks\",\n    \"autho"
+  },
+  {
+    "arxiv_id": "2601.15738v1",
+    "title": "LLM-Assisted Automatic Dispatching Rule Design for Dynamic Flexible Assembly Flow Shop Scheduling",
+    "current_count": 24,
+    "lite_count": 24,
+    "current_sample": {
+      "raw": "Allahverdi, A., Aydilek, H., Aydilek, A., 2016. Two-stageassemblyscheduling\nproblem for minimizing total tardiness with setup times. Applied mathe-\nmatical modelling 40, 7796\u20137815.",
+      "url": null,
+      "title": "Two-stageassemblyscheduling problem for minimizing total tardiness with setup times",
+      "authors": [
+        "Allahverdi, A.",
+        "Aydilek, H.",
+        "Aydilek, A."
+      ]
+    },
+    "lite_sample": {
+      "title": "Two-stageassemblyscheduling problem for minimizing total tardiness with setup times",
+      "authors": [
+        "Allahverdi, A.",
+        "Aydilek, H.",
+        "Aydilek, A."
+      ],
+      "url": null,
+      "raw": "Allahverdi, A., Aydilek, H., Aydilek, A., 2016. Two-stageassemblyscheduling\nproblem for minimizing total tardiness with setup times. Applied mathe-\nmatical modelling 40, 7796\u20137815."
+    },
+    "raw_lite": "```json\n[\n  {\n    \"title\": \"Two-stageassemblyscheduling problem for minimizing total tardiness with setup times\",\n    \"authors\": [\n      \"Allahverdi, A.\",\n      \"Aydilek, H.\",\n      \"Aydilek, A.\"\n    ],\n    \"url\": null,\n    \"raw\": \"Allahverdi, A., Aydilek, H., Aydilek, A., 2016. Two-stageassemblyscheduling\\nproblem for minimizing total tardiness with setup times. Applied mathe-\\nmatical modelling 40, 7796\u20137815.\"\n  },\n  {\n    \"title\": \"Multi-product pickup and delivery supply chain\\ndesign with l"
+  },
+  {
+    "arxiv_id": "2601.16032v1",
+    "title": "Sawtooth Wavefront Reordering: Enhanced CuTile FlashAttention on NVIDIA GB10",
+    "current_count": 14,
+    "lite_count": 14,
+    "current_sample": {
+      "raw": "[1] 2025.NVIDIA CUDA Tile. https://developer.nvidia.com/cuda/tile",
+      "url": "https://developer.nvidia.com/cuda/tile",
+      "title": "NVIDIA CUDA Tile",
+      "authors": []
+    },
+    "lite_sample": {
+      "title": "NVIDIA CUDA Tile",
+      "authors": [],
+      "url": "https://developer.nvidia.com/cuda/tile",
+      "raw": "[1] 2025.NVIDIA CUDA Tile. https://developer.nvidia.com/cuda/tile"
+    },
+    "raw_lite": "```json\n[\n  {\n    \"title\": \"NVIDIA CUDA Tile\",\n    \"authors\": [],\n    \"url\": \"https://developer.nvidia.com/cuda/tile\",\n    \"raw\": \"[1] 2025.NVIDIA CUDA Tile. https://developer.nvidia.com/cuda/tile\"\n  },\n  {\n    \"title\": \"Language Models are Few-Shot Learners\",\n    \"authors\": [\n      \"Tom Brown\",\n      \"Benjamin Mann\",\n      \"Nick Ryder\",\n      \"Melanie Subbiah\",\n      \"Jared D Kaplan\",\n      \"Prafulla Dhariwal\",\n      \"Arvind Neelakantan\",\n      \"Pranav Shyam\",\n      \"Girish Sastry\",\n      \"Aman"
+  },
+  {
+    "arxiv_id": "2601.12327v1",
+    "title": "The Expert Validation Framework (EVF): Enabling Domain Expert Control in AI Engineering",
+    "current_count": 15,
+    "lite_count": 15,
+    "current_sample": {
+      "raw": "[1] Zolt\u00e1n Bakonyi. 2024. How can companies handle paradoxes to enhance trust in artificial intelligence solutions? A qualitative research.Journal of Organizational Change Management37, 7\n(2024), 1405\u20131426.",
+      "url": null,
+      "title": "How can companies handle paradoxes to enhance trust in artificial intelligence solutions? A qualitative research",
+      "authors": [
+        "Zolt\u00e1n Bakonyi"
+      ]
+    },
+    "lite_sample": {
+      "title": "How can companies handle paradoxes to enhance trust in artificial intelligence solutions? A qualitative research",
+      "authors": [
+        "Zolt\u00e1n Bakonyi"
+      ],
+      "url": null,
+      "raw": "[1] Zolt\u00e1n Bakonyi. 2024. How can companies handle paradoxes to enhance trust in artificial intelligence solutions? A qualitative research.Journal of Organizational Change Management37, 7\n(2024), 1405\u20131426."
+    },
+    "raw_lite": "```json\n[\n  {\n    \"title\": \"How can companies handle paradoxes to enhance trust in artificial intelligence solutions? A qualitative research\",\n    \"authors\": [\n      \"Zolt\u00e1n Bakonyi\"\n    ],\n    \"url\": null,\n    \"raw\": \"[1] Zolt\u00e1n Bakonyi. 2024. How can companies handle paradoxes to enhance trust in artificial intelligence solutions? A qualitative research.Journal of Organizational Change Management37, 7\\n(2024), 1405\u20131426.\"\n  },\n  {\n    \"title\": \"Chatbots\",\n    \"authors\": [\n      \"Ada Maria Baro"
+  }
+]

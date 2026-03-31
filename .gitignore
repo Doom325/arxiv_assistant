@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+backend/venv/
+.venv/
+env/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.next/
+out/
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+
+# Data
+backend/data/
+mac_pgdata/
+.claude/
+
+# Secrets — NEVER commit these
+.env
+.env.local
+backend/.env
+frontend/.env.local
+credentials.json
+backend/credentials.json
+backend/token.json
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database backups
+backups/
+*.sql

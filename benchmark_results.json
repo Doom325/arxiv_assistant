@@ -1,0 +1,35 @@
+[
+  {
+    "arxiv_id": "2511.21692v1",
+    "title": "Revisiting Generalization Across Difficulty Levels: It's Not So Easy",
+    "current_count": 12,
+    "lite_count": 13,
+    "current_sample": {
+      "raw": "Frank B. Baker. 1985.The Basics of Item Response\nTheory. Heinemann.\nEdward Beeching, Cl\u00e9mentine Fourrier, Nathan",
+      "url": "https://www.heinemann.com/",
+      "title": "The Basics of Item Response Theory",
+      "authors": [
+        "Baker, E",
+        "Fourrier, C",
+        "Beeching, E"
+      ]
+    },
+    "lite_sample": {
+      "title": "Open llm leaderboard (2023-2024)",
+      "authors": [
+        "Edward Beeching",
+        "Cl\u00e9mentine Fourrier",
+        "Nathan Habib",
+        "Sheon Han",
+        "Nathan Lambert",
+        "Nazneen Rajani",
+        "Omar Sanseviero",
+        "Lewis Tunstall",
+        "Thomas Wolf"
+      ],
+      "url": "https://huggingface.co/spaces/open-llm-leaderboard-old/open_llm_leaderboard",
+      "raw": "Edward Beeching, Cl\u00e9mentine Fourrier, Nathan\nHabib, Sheon Han, Nathan Lambert, Nazneen\nRajani, Omar Sanseviero, Lewis Tunstall, and\nThomas Wolf. 2023. Open llm leaderboard\n(2023-2024). https://huggingface.co/\nspaces/open-llm-leaderboard-old/open_\nllm_leaderboard."
+    },
+    "raw_lite": "```json\n[\n  {\n    \"title\": \"Open llm leaderboard (2023-2024)\",\n    \"authors\": [\n      \"Edward Beeching\",\n      \"Cl\u00e9mentine Fourrier\",\n      \"Nathan Habib\",\n      \"Sheon Han\",\n      \"Nathan Lambert\",\n      \"Nazneen Rajani\",\n      \"Omar Sanseviero\",\n      \"Lewis Tunstall\",\n      \"Thomas Wolf\"\n    ],\n    \"url\": \"https://huggingface.co/spaces/open-llm-leaderboard-old/open_llm_leaderboard\",\n    \"raw\": \"Edward Beeching, Cl\u00e9mentine Fourrier, Nathan\\nHabib, Sheon Han, Nathan Lambert, Nazneen\\nRajani, Om"
+  }
+]
