@@ -3,6 +3,7 @@ set -e
 
 # Configuration (override with environment variables)
 KHADAS_IP="${KHADAS_IP:-192.168.1.49}"
+FRAMEWORK_IP="${FRAMEWORK_IP:-192.168.1.32}"
 PROJECT_DIR="${PROJECT_DIR:-/Users/sumanthgottipati/git/arxiv_assistant}"
 REMOTE_USER="${KHADAS_USER:-khadas}"
 export SSHPASS="${KHADAS_PASSWORD:-khadas}"
@@ -56,6 +57,7 @@ EOT
     # Pre-write API keys to root .env (DATA_DIR/DB_STORAGE appended by step 4)
     echo GEMINI_API_KEY=$GEMINI_KEY > ~/arxiv_assistant/.env
     echo RESEND_API_KEY=$RESEND_KEY >> ~/arxiv_assistant/.env
+    echo FRAMEWORK_IP=$FRAMEWORK_IP >> ~/arxiv_assistant/.env
 "
 
 # 4. Build and Run
@@ -63,9 +65,10 @@ echo "🏗️  Building and Running Container..."
 sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" << 'EOF'
     set -ex
     cd ~/arxiv_assistant
-    
+
     # Configuration
     SSHPASS="khadas"
+    COMPOSE_FILES="-f docker-compose.yml -f docker-compose.khadas-ollama.yml"
     
     # --- DB Storage Setup (Loopback for exFAT compatibility) ---
     IMG_PATH="/media/khadas/External1/postgres.img"
@@ -97,12 +100,12 @@ sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" << 'EOF'
     echo "DB_STORAGE=\"$MOUNT_POINT\"" >> .env
     
     echo "🔍 Verifying Docker Compose configuration..."
-    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose --env-file .env config
+    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env config
 
-    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose --env-file .env down --remove-orphans
+    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env down --remove-orphans
     # Force full rebuild (no-cache) to ensure frontend picks up all source changes
-    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose --env-file .env build --no-cache
-    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose --env-file .env up -d --force-recreate
+    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env build --no-cache
+    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env up -d --force-recreate
     
     # 🔍 Diagnostic: Verify the schema file INSIDE the running container
     echo "🔍 Verifying internal schema version..."
@@ -197,13 +200,13 @@ sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" << 'EOF'
         fi
         
         echo "📜 Backend Container Logs (Filtered for Errors/Tracebacks):"
-        echo "$SSHPASS" | sudo -S docker compose logs --tail 200 backend
+        echo "$SSHPASS" | sudo -S docker compose $COMPOSE_FILES logs --tail 200 backend
         
         echo "🖥️ Process check (ps aux):"
         echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_backend ps aux
         
         echo "📋 Container Status:"
-        echo "$SSHPASS" | sudo -S docker compose ps
+        echo "$SSHPASS" | sudo -S docker compose $COMPOSE_FILES ps
     else
         echo "✅ API is active and healthy."
     fi

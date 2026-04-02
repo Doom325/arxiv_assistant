@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     OLLAMA_CHAT_MODEL: str = "gemma3:27b"  # Summarization, chat, entity extraction
     OLLAMA_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification + citation parsing
     OLLAMA_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (nomic-embed-text supports ~8k tokens)
-    OLLAMA_NUM_CTX: int = 32768  # Context window for local models
+    OLLAMA_NUM_CTX: int = 65536  # Context window for local models
     PDF_SAVE_DIR: str = "data"
 
     # Entity extraction provider: "gliner" (default) or "llm"

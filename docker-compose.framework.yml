@@ -32,7 +32,7 @@ services:
       - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
       - OLLAMA_CHAT_MODEL=gemma3:27b
       - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
-      - OLLAMA_NUM_CTX=32768
+      - OLLAMA_NUM_CTX=65536
 
   worker:
     extra_hosts:
@@ -52,7 +52,7 @@ services:
       - OLLAMA_CHAT_MODEL=gemma3:27b
       - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
       - OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-      - OLLAMA_NUM_CTX=32768
+      - OLLAMA_NUM_CTX=65536
       - OLLAMA_EMBEDDING_TRUNCATION=8000
       # Use LLM for entity extraction instead of GLiNER
       - ENTITY_EXTRACTION_PROVIDER=llm
