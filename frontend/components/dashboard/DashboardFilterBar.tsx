@@ -165,19 +165,21 @@ export default function DashboardFilterBar(props: DashboardFilterBarProps) {
                   (cat) => {
                     const checked = selectedCategories.includes(cat)
                     return (
-                      <label
+                      <button
                         key={cat}
-                        className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer
-                                   hover:bg-surface-inset transition-colors text-sm"
+                        type="button"
+                        onClick={() => toggleCategory(cat)}
+                        className="w-full flex items-center justify-start gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer
+                                   hover:bg-surface-inset transition-colors text-sm text-left"
                       >
                         <span
-                          className={`flex items-center justify-center h-4 w-4 rounded
+                          className={`flex items-center justify-center min-w-4 min-h-4 h-4 w-4 rounded
                             ${checked ? 'bg-accent text-on-accent' : 'bg-surface-inset'}`}
                         >
                           {checked && <Check className="h-3 w-3" />}
                         </span>
                         <span className="text-foreground-secondary">{cat}</span>
-                      </label>
+                      </button>
                     )
                   },
                 )}
