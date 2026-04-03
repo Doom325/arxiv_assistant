@@ -1,0 +1,38 @@
+{
+  "model": "gemma3:12b",
+  "num_ctx": 32768,
+  "results": [
+    {
+      "prompt_tokens": 6932,
+      "completion_tokens": 813,
+      "prompt_eval_sec": 8.94,
+      "generation_sec": 35.73,
+      "total_sec": 45.05,
+      "load_sec": 0.12,
+      "wall_sec": 45.05,
+      "prompt_tokens_per_sec": 775.2,
+      "generation_tokens_per_sec": 22.8,
+      "output_chars": 3944,
+      "arxiv_id": "2603.30036v1",
+      "title": "Aligned, Orthogonal or In-conflict: When can we safely optimize Chain-of-Thought?",
+      "full_text_chars": 115636,
+      "num_sections": 112
+    },
+    {
+      "prompt_tokens": 8723,
+      "completion_tokens": 731,
+      "prompt_eval_sec": 11.46,
+      "generation_sec": 32.39,
+      "total_sec": 44.19,
+      "load_sec": 0.12,
+      "wall_sec": 44.19,
+      "prompt_tokens_per_sec": 761.3,
+      "generation_tokens_per_sec": 22.6,
+      "output_chars": 3337,
+      "arxiv_id": "2603.00573v1",
+      "title": "CoMoL: Efficient Mixture of LoRA Experts via Dynamic Core Space Merging",
+      "full_text_chars": 31515,
+      "num_sections": 37
+    }
+  ]
+}
