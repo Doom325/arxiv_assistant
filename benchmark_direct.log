@@ -1,0 +1,85 @@
+Connecting to DB: postgresql://user:password@localhost:5432/arxiv_db
+Fetching 10 random papers per category...
+Sampled 71 papers in total.
+
+══════════════════════════════════════════════════════════════════════
+  EVALUATING PROMPT: v6_direct on gemma3:27b
+  Total papers: 71
+══════════════════════════════════════════════════════════════════════
+
+  [  1/71] ✅  26.4s | 2512.20948v1 | Base: agent_evaluation -> Got: agent_evaluation
+  [  2/71] ✅  17.3s | 2512.21329v1 | Base: agent_evaluation -> Got: agent_evaluation
+  [  3/71] ✅  15.9s | 2512.21227v1 | Base: agent_evaluation -> Got: agent_evaluation
+  [  4/71] ✅  15.7s | 2512.21010v1 | Base: agent_evaluation -> Got: agent_evaluation
+  [  5/71] ✅  16.4s | 2512.21326v1 | Base: agent_evaluation -> Got: agent_evaluation
+  [  6/71] ⚠️  13.4s | 2512.16873v1 | Base: agent_evaluation -> Got: architecture
+  [  7/71] ⚠️  10.7s | 2512.16707v1 | Base: agent_evaluation -> Got: agent_planning
+  [  8/71] ✅  10.7s | 2512.21110v1 | Base: agent_evaluation -> Got: agent_evaluation
+  [  9/71] ⚠️  20.9s | 2512.16553v1 | Base: agent_evaluation -> Got: agent_tool_use
+  [ 10/71] ⚠️  19.9s | 2512.16698v1 | Base: agent_evaluation -> Got: multi_agent
+  [ 11/71] ⚠️  20.4s | 2512.20985v1 | Base: multi_agent -> Got: agent_planning
+  [ 12/71] ✅  13.9s | 2512.20996v1 | Base: multi_agent -> Got: multi_agent
+  [ 13/71] ✅  11.2s | 2512.20991v1 | Base: multi_agent -> Got: multi_agent
+  [ 14/71] ✅  17.7s | 2512.16279v1 | Base: multi_agent -> Got: multi_agent
+  [ 15/71] ✅  14.9s | 2512.16856v1 | Base: multi_agent -> Got: multi_agent
+  [ 16/71] ⚠️  14.9s | 2512.20612v1 | Base: architecture -> Got: inference
+  [ 17/71] ✅  14.8s | 2512.16919v1 | Base: architecture -> Got: architecture
+  [ 18/71] ✅  18.2s | 2512.20968v1 | Base: architecture -> Got: architecture
+  [ 19/71] ✅  13.4s | 2512.16873v1 | Base: architecture -> Got: architecture
+  [ 20/71] ⚠️   4.4s | 2512.21301v1 | Base: architecture -> Got: None
+  [ 21/71] ⚠️  15.0s | 2512.21102v1 | Base: architecture -> Got: world_models
+  [ 22/71] ✅  16.1s | 2512.16676v1 | Base: architecture -> Got: architecture
+  [ 23/71] ⚠️  10.3s | 2512.21024v1 | Base: architecture -> Got: multi_agent
+  [ 24/71] ⚠️  13.1s | 2512.21054v1 | Base: architecture -> Got: world_models
+  [ 25/71] ✅  14.9s | 2512.21332v1 | Base: architecture -> Got: architecture
+  [ 26/71] ⚠️  11.8s | 2512.16733v1 | Base: world_models -> Got: agent_planning
+  [ 27/71] ⚠️  17.8s | 2512.16701v1 | Base: world_models -> Got: agent_planning
+  [ 28/71] ⚠️  14.8s | 2512.21201v1 | Base: world_models -> Got: agent_planning
+  [ 29/71] ⚠️  13.4s | 2512.21113v1 | Base: world_models -> Got: architecture
+  [ 30/71] ✅  13.8s | 2512.21005v1 | Base: world_models -> Got: world_models
+  [ 31/71] ⚠️  14.3s | 2512.21335v1 | Base: world_models -> Got: agent_evaluation
+  [ 32/71] ✅  17.8s | 2512.20387v1 | Base: world_models -> Got: world_models
+  [ 33/71] ⚠️  11.3s | 2512.21029v1 | Base: world_models -> Got: training
+  [ 34/71] ⚠️  13.3s | 2512.16707v1 | Base: world_models -> Got: agent_planning
+  [ 35/71] ⚠️  20.2s | 2512.20985v1 | Base: agent_memory -> Got: agent_planning
+  [ 36/71] ⚠️  14.9s | 2512.21039v1 | Base: agent_memory -> Got: agent_planning
+  [ 37/71] ⚠️  17.3s | 2512.20991v1 | Base: agent_memory -> Got: agent_planning
+  [ 38/71] ⚠️  16.3s | 2512.20959v1 | Base: agent_memory -> Got: agent_evaluation
+  [ 39/71] ⚠️  27.8s | 2512.20848v1 | Base: agent_memory -> Got: architecture
+  [ 40/71] ⚠️  24.6s | 2512.20491v2 | Base: agent_memory -> Got: agent_planning
+  [ 41/71] ⚠️  11.3s | 2512.16171v1 | Base: agent_memory -> Got: agent_tool_use
+  [ 42/71] ⚠️  14.7s | 2512.21220v1 | Base: agent_memory -> Got: agent_planning
+  [ 43/71] ⚠️  14.1s | 2512.16301v1 | Base: agent_planning -> Got: agent_planning
+  [ 44/71] ⚠️  10.1s | 2512.21243v1 | Base: agent_planning -> Got: agent_planning
+  [ 45/71] ✅  15.7s | 2512.20586v1 | Base: agent_planning -> Got: agent_planning
+  [ 46/71] ✅  16.4s | 2512.21066v1 | Base: agent_planning -> Got: agent_planning
+  [ 47/71] ✅  13.8s | 2512.20578v1 | Base: inference -> Got: inference
+  [ 48/71] ✅  15.4s | 2512.16650v1 | Base: inference -> Got: inference
+  [ 49/71] ✅  12.5s | 2512.16855v1 | Base: inference -> Got: inference
+  [ 50/71] ⚠️   8.9s | 2512.20929v1 | Base: inference -> Got: world_models
+  [ 51/71] ✅  12.2s | 2512.21336v1 | Base: inference -> Got: inference
+  [ 52/71] ✅   8.8s | 2512.20949v1 | Base: inference -> Got: inference
+  [ 53/71] ❌  17.5s | 2512.21323v1 | Base: inference -> Got: inference
+  [ 54/71] ❌  12.5s | 2512.21076v1 | Base: inference -> Got: architecture
+  [ 55/71] ✅  13.5s | 2512.20908v1 | Base: training -> Got: training
+  [ 56/71] ✅  13.5s | 2512.21107v1 | Base: training -> Got: training
+  [ 57/71] ❌  12.6s | 2512.21288v1 | Base: training -> Got: training
+  [ 58/71] ⚠️  14.1s | 2512.21021v1 | Base: training -> Got: inference
+  [ 59/71] ⚠️  17.1s | 2512.21075v1 | Base: training -> Got: architecture
+  [ 60/71] ⚠️  12.6s | 2512.21311v1 | Base: training -> Got: architecture
+  [ 61/71] ⚠️  16.9s | 2512.21316v1 | Base: training -> Got: agent_evaluation
+  [ 62/71] ⚠️  16.5s | 2512.16656v1 | Base: training -> Got: agent_evaluation
+  [ 63/71] ✅  13.6s | 2512.21152v1 | Base: training -> Got: training
+  [ 64/71] ⚠️  13.7s | 2512.21020v1 | Base: training -> Got: architecture
+  [ 65/71] ⚠️  11.3s | 2512.16171v1 | Base: agent_tool_use -> Got: agent_tool_use
+  [ 66/71] ⚠️  13.7s | 2512.20996v1 | Base: agent_tool_use -> Got: multi_agent
+  [ 67/71] ✅  20.3s | 2512.20745v1 | Base: agent_tool_use -> Got: agent_tool_use
+  [ 68/71] ✅  19.1s | 2512.20745v1 | Base: agent_tool_use -> Got: agent_tool_use
+  [ 69/71] ✅  15.1s | 2512.20957v1 | Base: agent_tool_use -> Got: agent_tool_use
+  [ 70/71] ⚠️  14.0s | 2512.16301v1 | Base: agent_tool_use -> Got: agent_planning
+  [ 71/71] ❌  24.3s | 2512.20856v1 | Base: agent_tool_use -> Got: agent_tool_use
+
+======================================================================
+Done! Results entirely written to prompt_evaluation_results_direct.md
+Final Category Match Rate: 50.7%
+Final Agentic Match Rate: 84.5%

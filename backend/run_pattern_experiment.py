@@ -22,7 +22,7 @@ from taxonomy import (
 # ─────────────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────────────
-MODEL = "gemma3:4b"
+MODEL = "gemma3:27b"
 OLLAMA_URL = "http://localhost:11434/api/chat"
 BATCH_COMMIT_SIZE = 10  # Commit to DB every N papers
 

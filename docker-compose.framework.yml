@@ -31,7 +31,7 @@ services:
       # Ollama config (for any local LLM calls from backend, e.g. chat)
       - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
       - OLLAMA_CHAT_MODEL=gemma3:27b
-      - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
+      - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
       - OLLAMA_NUM_CTX=65536
 
   worker:
@@ -50,7 +50,7 @@ services:
       - EMBEDDING_PROVIDER=gemini
       - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
       - OLLAMA_CHAT_MODEL=gemma3:27b
-      - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
+      - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
       - OLLAMA_EMBEDDING_MODEL=nomic-embed-text
       - OLLAMA_NUM_CTX=65536
       - OLLAMA_EMBEDDING_TRUNCATION=8000

@@ -161,6 +161,43 @@ Then output the classification fields.
 Output format:
 {{"reasoning": "Step 1: This paper is about... Step 2: It is/is not agentic because... Step 3: The matching categories are...", "is_agentic": true/false, "primary_category": "...", "patterns": [{{"category": "...", "name": "...", "confidence": 0.9, "evidence": "quote from abstract"}}]}}"""
 
+# ─────────────────────────────────────────────────────
+# V6 DIRECT PROMPT TEMPLATE (No CoT)
+# ─────────────────────────────────────────────────────
+
+V6_DIRECT_PROMPT = """You are a precise AI/ML research paper classifier.
+
+TASK: Read the paper below and classify it directly.
+
+RULES:
+1. ONLY use exact category/name values from the taxonomy. Never invent new ones.
+2. Only include patterns with confidence >= 0.7.
+3. If no category fits, return an empty patterns list.
+4. "is_agentic" = true ONLY if the paper builds a system where an AI agent autonomously decides, acts, and interacts with tools/environments in a loop. Training methods, model architectures, benchmarks, hardware, and standard RL (TD3, PPO, Q-learning) are NOT agentic.
+
+TAXONOMY:
+- agent_memory: [retrieval_augmented, persistent_memory, working_memory, episodic]
+- agent_planning: [reasoning_acting, tree_search, goal_decomposition, chain_of_thought]
+- agent_tool_use: [function_calling, code_execution, api_orchestration, browser_use]
+- multi_agent: [collaboration, debate, hierarchical_control, role_specialization]
+- agent_evaluation: [benchmarking, safety, capability_measurement]
+- training: [rlhf, dpo, supervised_finetuning, reward_modeling, synthetic_data]
+  (rlhf = RL from Human Feedback ONLY, not general RL)
+- inference: [speculative_decoding, quantization, distillation, efficient_attention]
+- architecture: [attention_mechanism, mixture_of_experts, hybrid_architecture, transformers]
+- world_models: [learned_dynamics, model_based_rl, environment_simulation, predictive_modeling]
+- state_space_models: [mamba, s4, linear_recurrence, selective_state_spaces]
+
+PAPER:
+Title: {title}
+Abstract: {abstract}
+
+You must respond with a single JSON object. DO NOT include any reasoning. Output ONLY the raw JSON classification.
+
+Output format:
+{{"is_agentic": true/false, "primary_category": "...", "patterns": [{{"category": "...", "name": "...", "confidence": 0.9, "evidence": "quote from abstract"}}]}}"""
+
+
 
 # ─────────────────────────────────────────────────────
 # VALIDATION HELPERS
