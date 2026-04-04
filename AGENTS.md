@@ -77,3 +77,41 @@ For Antigravity-specific overrides, see `GEMINI.md`. For Claude Code context, se
 - New frontend pages: create in `frontend/app/<route>/page.tsx`, add to Sidebar navigation.
 - Provider changes: extend `LLMProvider` base class in `llm_service.py`. Never hard-code provider-specific logic in routers.
 - All paper processing goes through the worker pipeline — never process PDFs synchronously in API handlers.
+
+---
+
+## Reviewer Agent Integration
+
+This repo is tracked by the [Reviewer Agent](https://github.com/Doom325/reviewer-agent), an autonomous AI code review system. PRs labeled `reviewer:pending` are automatically picked up for review.
+
+### PR Review Workflow
+
+1. Create a feature branch from `main`
+2. Implement changes, commit, and open a PR
+3. Apply the `reviewer:pending` label to trigger AI review
+4. The agent removes `reviewer:pending`, adds `reviewer:in-progress`, and posts a structured review
+5. After review, address findings and re-apply `reviewer:pending` for re-review if needed
+
+### After Review
+
+| Verdict | Action |
+|---|---|
+| **APPROVED / CONDITIONAL** | Merge (address CONDITIONAL items first) |
+| **REJECTED** | Fix findings, push, re-apply `reviewer:pending` |
+| **HARD_REJECTED** | Redesign the approach before resubmitting |
+| **ESCALATED** | Cycle limit reached — human reviewer must step in |
+
+### Labels
+
+| Label | Meaning |
+|---|---|
+| `reviewer:pending` | Ready for AI review |
+| `reviewer:in-progress` | AI review currently running |
+| `reviewer:complete` | Review posted |
+| `reviewer:escalated` | Needs human review |
+
+### Notes
+
+- Do NOT remove `reviewer:in-progress` manually — the agent manages the label lifecycle
+- Each re-review cycle produces a DELTA report showing what changed
+- Maximum review cycles: 3 (CRITICAL), 4 (MAJOR), 5 (MINOR) before escalation
