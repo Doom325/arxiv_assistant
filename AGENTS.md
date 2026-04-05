@@ -67,8 +67,8 @@ For Antigravity-specific overrides, see `GEMINI.md`. For Claude Code context, se
 
 - Conventional Commits: `feat:`, `fix:`, `refactor:`, `chore:`, `test:`, `config:`, `security:`, `docs:`
 - Subject line under 72 characters. One logical change per commit.
-- Never commit directly to `main` for multi-file changes — use feature branches.
-- Run `make test-unit` and `make lint` before suggesting a commit.
+- **NEVER commit directly to `main`.** Always use feature branches + pull requests.
+- Run `make test-unit` and `make lint` before committing.
 
 ## Architecture Rules
 
@@ -80,38 +80,70 @@ For Antigravity-specific overrides, see `GEMINI.md`. For Claude Code context, se
 
 ---
 
-## Reviewer Agent Integration
+## Reviewer Agent Integration (MANDATORY)
 
-This repo is tracked by the [Reviewer Agent](https://github.com/Doom325/reviewer-agent), an autonomous AI code review system. PRs labeled `reviewer:pending` are automatically picked up for review.
+This repo is tracked by the [Reviewer Agent](https://github.com/Doom325/reviewer-agent), an autonomous AI code review system. **Every code change must go through a PR and be reviewed by the Reviewer Agent before merging.**
 
-### PR Review Workflow
+### Identity: CoderAgent GitHub App
 
-1. Create a feature branch from `main`
-2. Implement changes, commit, and open a PR
-3. Apply the `reviewer:pending` label to trigger AI review
-4. The agent removes `reviewer:pending`, adds `reviewer:in-progress`, and posts a structured review
-5. After review, address findings and re-apply `reviewer:pending` for re-review if needed
+All agents (Claude Code, Antigravity) act as `coder-agent[bot]` when creating PRs. Before performing git/GitHub operations, generate a token:
 
-### After Review
+```bash
+export GITHUB_TOKEN=$(python ~/git/reviewer_agent/scripts/generate_app_token.py \
+  --app-id 3275701 \
+  --private-key ~/.config/reviewer-agent/keys/coder-agent.pem \
+  --installation-id 121415198)
+```
 
-| Verdict | Action |
+Configure git identity for commits:
+
+```bash
+git config user.name "coder-agent[bot]"
+git config user.email "3275701+Doom325-CoderAgent[bot]@users.noreply.github.com"
+```
+
+### PR Submission Workflow (follow this for EVERY task)
+
+After completing implementation:
+
+1. **Create a feature branch:**
+   ```bash
+   git checkout -b feat/short-description
+   ```
+
+2. **Commit changes** with conventional commit messages:
+   ```bash
+   git add <specific files>
+   git commit -m "feat: short description of change"
+   ```
+
+3. **Push and create a PR:**
+   ```bash
+   git push -u origin feat/short-description
+   gh pr create --title "feat: short description" --body "## Summary\n- ...\n\n## Test plan\n- [ ] ..."
+   ```
+
+4. **Apply the `reviewer:pending` label** to trigger AI review:
+   ```bash
+   gh pr edit --add-label "reviewer:pending"
+   ```
+
+5. **Do NOT merge.** Wait for the Reviewer Agent to post its review.
+
+### After Reviewer Agent Posts Its Review
+
+| Verdict | What to do |
 |---|---|
-| **APPROVED / CONDITIONAL** | Merge (address CONDITIONAL items first) |
-| **REJECTED** | Fix findings, push, re-apply `reviewer:pending` |
+| **APPROVED** | Merge the PR |
+| **CONDITIONAL** | Address minor items, then merge |
+| **REJECTED** | Fix each finding in new commits, push, re-apply `reviewer:pending` |
 | **HARD_REJECTED** | Redesign the approach before resubmitting |
-| **ESCALATED** | Cycle limit reached — human reviewer must step in |
+| **ESCALATED** | Cycle limit reached — notify the human for manual review |
 
-### Labels
+### Rules
 
-| Label | Meaning |
-|---|---|
-| `reviewer:pending` | Ready for AI review |
-| `reviewer:in-progress` | AI review currently running |
-| `reviewer:complete` | Review posted |
-| `reviewer:escalated` | Needs human review |
-
-### Notes
-
-- Do NOT remove `reviewer:in-progress` manually — the agent manages the label lifecycle
-- Each re-review cycle produces a DELTA report showing what changed
-- Maximum review cycles: 3 (CRITICAL), 4 (MAJOR), 5 (MINOR) before escalation
+- **NEVER** push directly to `main` — always use feature branches + PRs
+- **NEVER** merge a PR without a Reviewer Agent verdict
+- **NEVER** remove `reviewer:in-progress` manually — the agent manages labels
+- **ALWAYS** apply `reviewer:pending` after creating a PR or pushing fixes
+- Maximum review cycles before escalation: 3 (CRITICAL), 4 (MAJOR), 5 (MINOR)
