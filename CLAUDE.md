@@ -1,5 +1,7 @@
 # arxiv_assistant
 
+> **IMPORTANT:** You MUST also follow all rules in `AGENTS.md` — especially the **Reviewer Agent Integration** section. Never push directly to `main`. Always use feature branches + PRs and apply the `reviewer:pending` label.
+
 AI-powered arXiv paper discovery and analysis platform. Automatically ingests papers, generates embeddings, extracts entities, builds citation graphs, classifies agentic patterns, and provides semantic search + RAG chat over a research paper library.
 
 ## Architecture
