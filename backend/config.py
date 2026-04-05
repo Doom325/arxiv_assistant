@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     EMBEDDING_PROVIDER: str = ""  # Override for embeddings only. If empty, falls back to AI_PROVIDER. Set to "gemini" to keep Gemini embeddings while using local LLMs.
     OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
     OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
-    OLLAMA_CHAT_MODEL: str = "gemma3:27b"  # Summarization, chat, entity extraction
+    OLLAMA_CHAT_MODEL: str = "gemma4:31b"  # Summarization, chat, entity extraction
     OLLAMA_CLASSIFICATION_MODEL: str = "gemma3:27b"  # Classification + citation parsing
     OLLAMA_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (nomic-embed-text supports ~8k tokens)
     OLLAMA_NUM_CTX: int = 65536  # Context window for local models
