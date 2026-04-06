@@ -67,8 +67,9 @@ def classify_paper_raw(title: str, abstract: str, session: requests.Session) -> 
     }
     
     try:
-        # T2.3: POST through mitmproxy locally port 8434
-        url = "http://localhost:8434/api/chat"
+        # Use configured OLLAMA base, fallback if missing
+        base = getattr(settings, "OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
+        url = base.replace("/v1", "/api/chat") if base.endswith("/v1") else base + "/api/chat"
         res = session.post(url, json=payload, timeout=120)
         res.raise_for_status()
         data = res.json()
