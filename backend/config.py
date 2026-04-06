@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # AI Provider Config
     AI_PROVIDER: str = "local" # "local" or "gemini" — controls LLM tasks (summarization, classification, etc.)
     EMBEDDING_PROVIDER: str = ""  # Override for embeddings only. If empty, falls back to AI_PROVIDER. Set to "gemini" to keep Gemini embeddings while using local LLMs.
-    OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
+    OLLAMA_BASE_URL: str = "http://192.168.1.32:8434/v1"
     OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
     OLLAMA_CHAT_MODEL: str = "gemma4:31b"  # Summarization, chat, entity extraction
     OLLAMA_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification + citation parsing
