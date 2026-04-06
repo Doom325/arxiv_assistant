@@ -1132,3 +1132,62 @@ Phase 5: Testing (depends on all)
 | **Paper Timeline** | 27 | 50 | 7 | 15 |
 | **Query Embedding Cache** | 12 | 20 | 4 | 5 |
 | **Grand Total** | **64** | **126** | **18** | **36** |
+
+---
+---
+
+# Feature 4: Parallel Pattern Backfill Optimization
+
+## Overview
+Scale the ArXiv pattern classification pipeline by implementing a robust, multithreaded backfill process. Optimizes Ollama for parallel inference (`OLLAMA_NUM_PARALLEL=4`, `q8_0` KV cache), uses a hash-partitioned `backfill_parallel.py` script for fault-tolerant execution, and tracks performance with mitmproxy/Prometheus/Grafana.
+
+## Dependencies
+
+```
+Phase 0: Observability ──→ Phase 1: Environment Tuning ──→ Phase 2: Backfill Script ──→ Phase 3: Unit Tests ──→ Phase 4: Production Run
+```
+
+## Phase 0: Observability Stack (PR 1)
+| ID | Task | Status |
+|---|---|---|
+| T0.1 | Create `ollama_metrics_addon.py` | DONE |
+| T0.2 | Create `prometheus.yml` | DONE |
+| T0.3 | Create Grafana datasource | DONE |
+| T0.4 | Update `docker-compose.framework.yml` | DONE |
+| T0.5 | Start monitoring stack | PENDING |
+| T0.6 | PR 1: Submit `feat/mitmproxy-metrics-addon` | DONE |
+
+## Phase 1: Environment & Host Configuration (PR 2)
+| ID | Task | Status |
+|---|---|---|
+| T1.1 | Update Ollama `override.conf` | PENDING |
+| T1.2 | Diagnostics: single baseline | DONE |
+| T1.3 | Diagnostics: parallel stress | DONE |
+| T1.4 | Verify mitmproxy under load | PENDING |
+| T1.5 | PR 2: Submit `config/ollama-parallel` | DONE |
+
+## Phase 2: Backend Script Implementation (PR 3)
+| ID | Task | Status |
+|---|---|---|
+| T2.1 | `backfill_parallel.py` boilerplate | DONE |
+| T2.2 | Deterministic partitioning (MD5 map) | DONE |
+| T2.3 | Direct HTTP POST | DONE |
+| T2.4 | DB Micro-commits & tagging | DONE |
+| T2.5 | Queue-based JSONL observer | DONE |
+| T2.6 | Progress metrics | DONE |
+| T2.7 | PR 3: Submit `feat/backfill-parallel-script` | PENDING |
+
+## Phase 3: Testing & Verification (PR 4)
+| ID | Task | Status |
+|---|---|---|
+| T3.1 | Test partition distribution | DONE |
+| T3.2 | Test concurrent sessions | DONE |
+| T3.3 | Test worker recovery/resume | DONE |
+| T3.4 | PR 4: Submit `test/backfill-parallel` | DONE |
+
+## Phase 4: Production Backfill
+| ID | Task | Status |
+|---|---|---|
+| T4.1 | Execute Dry-run | PENDING |
+| T4.2 | Monitor memory spike | PENDING |
+| T4.3 | Execute real batch (`--category cs.AI`) | PENDING |
