@@ -10,6 +10,7 @@ Modular monolith deployed via Docker Compose (4 containers). Supports two deploy
 - **Framework Desktop** (AMD Ryzen AI Max+ 395, 128GB, x86_64) — primary, with local LLM processing via Ollama
 - **Khadas Edge 2** (ARM64) — original deployment target
 
+
 - **backend/** — FastAPI (Python 3.12) API server on port 8000 (9 routers, 10 services, 12 ORM models)
 - **worker** — `production_worker.py` running in a separate container (PDF processing, 3072D embeddings, entity extraction, citation parsing, pattern classification)
 - **frontend/** — Next.js 16 (React 19, TypeScript, Tailwind v4) on port 3000 — dark-themed with space background, glassmorphism, Framer Motion, Three.js

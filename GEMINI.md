@@ -19,6 +19,18 @@ Deployment targets:
 - **Framework Desktop** (AMD Ryzen AI Max+ 395, 128GB, x86_64) — primary, local LLM via Ollama
 - **Khadas Edge 2** (ARM64) — original deployment target
 
+### Framework Desktop Deployment Constraints
+
+The Framework Desktop runs **Fedora 43 with SELinux enforcing**. These constraints are MANDATORY for any Docker/Podman configuration targeting this machine:
+
+- **SELinux `:z` on ALL bind-mount volumes** — every volume mount MUST use the `:z` suffix (e.g. `./config.yml:/etc/config.yml:z`). Without it, containers get `Permission denied` when reading mounted files. This applies to config files, scripts, provisioning directories — everything.
+- **Port 9090 is reserved (Cockpit)** — Fedora's web admin panel (Cockpit) runs on port 9090. NEVER map container ports to 9090. Use 9091 for Prometheus or any other service that defaults to 9090.
+- **Podman (rootless), not Docker** — the host uses `podman compose` via the docker-compose CLI plugin. Rootless containers run under user `gsumanth`. Container networking uses Podman bridge networks.
+- **Ollama is a systemd service on the host** — NOT a container. Runs at `0.0.0.0:11434` with Vulkan backend (`OLLAMA_LLM_LIBRARY=vulkan`), flash attention, and debug logging. Configured via `/etc/systemd/system/ollama.service` and override at `/etc/systemd/system/ollama.service.d/override.conf`. Use `sudo systemctl edit ollama` to modify, `sudo systemctl restart ollama` to apply.
+- **External drive required** — PostgreSQL data and PDF storage live on an external drive. Set `EXTERNAL_DRIVE_PATH` env var when running compose.
+- **Python venv for bare-metal scripts** — `backend/venv/` contains all Python dependencies. Run scripts with `PYTHONPATH=. venv/bin/python scripts/foo.py` from the `backend/` directory.
+- **Standalone monitoring stack** — a separate `~/ollama-monitoring/docker-compose.yml` stack may be running with containers `ollama-mitmproxy`, `ollama-prometheus`, `ollama-grafana`, `ollama-metrics`. These occupy ports 3000, 8081, 8082, 8434, 9091. **Stop it before starting arxiv_assistant monitoring services** to avoid port conflicts: `cd ~/ollama-monitoring && podman compose down`.
+
 ## Tech Stack
 
 ### Backend
