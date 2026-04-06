@@ -16,6 +16,8 @@ services:
     volumes:
       - "${EXTERNAL_DRIVE_PATH}/PDFs/Arxiv Assistant:/app/data"
       - ./backend:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
       - PDF_SAVE_DIR=/app/data

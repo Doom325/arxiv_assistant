@@ -17,17 +17,25 @@ ACTIVE = Gauge("ollama_active_requests", "Currently active requests routing to O
 class OllamaMetricsAddon:
     def __init__(self):
         # Start Prometheus metrics server natively on initialization
-        start_http_server(8765)
-        logging.info("Mitmproxy Prometheus metrics server started on port 8765")
+        try:
+            start_http_server(8765)
+            logging.info("Mitmproxy Prometheus metrics server started on port 8765")
+        except OSError as e:
+            if "Address already in use" in str(e):
+                logging.warning("Metrics server port 8765 already in use (likely reloaded)")
+            else:
+                raise
 
     def request(self, flow: http.HTTPFlow):
         # We only care about generation/chat endpoints
         if "/api/chat" in flow.request.path or "/api/generate" in flow.request.path:
             ACTIVE.inc()
+            flow.metadata["tracked_active"] = True
 
     def response(self, flow: http.HTTPFlow):
         if "/api/chat" in flow.request.path or "/api/generate" in flow.request.path:
-            ACTIVE.dec()
+            if flow.metadata.get("tracked_active"):
+                ACTIVE.dec()
             
             model = "unknown"
             status = "success" if 200 <= flow.response.status_code < 300 else "error"
