@@ -63,3 +63,45 @@ services:
     volumes:
       - "${EXTERNAL_DRIVE_PATH}/postgres/pgdata:/var/lib/postgresql/data"
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  ollama-mitmproxy:
+    image: mitmproxy/mitmproxy:latest
+    container_name: arxiv_assistant_mitmproxy
+    ports:
+      - "8434:8080"
+      - "8081:8081"
+      - "8765:8765"
+    volumes:
+      - ./backend/monitoring/ollama_metrics_addon.py:/addon.py
+    # mitmproxy image includes Python. We install prometheus-client dynamically, then start mitmweb
+    command: >
+      bash -c "pip install prometheus-client --break-system-packages && mitmweb --mode reverse:http://host.docker.internal:11434 --web-host 0.0.0.0 --set termlog_verbosity=error -s /addon.py"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: arxiv_assistant_prometheus
+    volumes:
+      - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    depends_on:
+      - ollama-mitmproxy
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: arxiv_assistant_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_HTTP_PORT=3000
+    volumes:
+      - ./backend/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./backend/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    restart: unless-stopped
+    depends_on:
+      - prometheus
