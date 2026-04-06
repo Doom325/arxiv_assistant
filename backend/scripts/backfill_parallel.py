@@ -23,7 +23,8 @@ from taxonomy import PROMPT_VERSION, V6_COT_PROMPT, validate_classification_outp
 from core.text_utils import sanitize_text
 
 # Global DB Engine
-engine = create_engine(settings.DATABASE_URL, pool_size=20, max_overflow=30)
+engine_kwargs = {"pool_size": 20, "max_overflow": 30} if "postgresql" in settings.DATABASE_URL else {}
+engine = create_engine(settings.DATABASE_URL, **engine_kwargs)
 PatternExperimentResult.__table__.create(engine, checkfirst=True)
 SessionLocal = sessionmaker(bind=engine)
 
