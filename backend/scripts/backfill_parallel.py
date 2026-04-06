@@ -104,63 +104,64 @@ def worker_process(worker_id: int, papers: list, is_dry_run: bool):
         parsed = classify_paper_raw(title, abstract, http_session)
         elapsed = time.time() - start_time
         
-        if is_dry_run:
-            print(f"[Worker {worker_id}] DRY RUN: {arxiv_id} processed in {elapsed:.2f}s")
-            continue
-            
         error_msg = parsed.get("_error") if parsed else "Failed to parse json"
         meta = parsed.pop("_meta", {}) if parsed and not error_msg else {}
-        
+
         icon = "✅"
-        result = None
-        
+
         if error_msg:
-            result = PatternExperimentResult(
-                arxiv_id=arxiv_id,
-                paper_title=title[:200] if title else None,
-                prompt_version=PROMPT_VERSION,
-                model_name="gemma3:12b-parallel-backfill",  # T2.4: Safely tagged
-                num_violations=1,
-                taxonomy_violations=["PARSE_FAILED"],
-                elapsed_seconds=elapsed,
-                error=error_msg,
-            )
             icon = "💥"
-        else:
+        elif not is_dry_run:
             issues = validate_classification_output(parsed)
-            result = PatternExperimentResult(
-                arxiv_id=arxiv_id,
-                paper_title=title[:200] if title else None,
-                prompt_version=PROMPT_VERSION,
-                model_name="gemma3:12b-parallel-backfill",
-                is_agentic=parsed.get("is_agentic"),
-                primary_category=parsed.get("primary_category"),
-                reasoning=parsed.get("reasoning"),
-                patterns=parsed.get("patterns"),
-                raw_json=parsed,
-                num_patterns=len(parsed.get("patterns", [])),
-                taxonomy_violations=issues if issues else None,
-                num_violations=len(issues),
-                elapsed_seconds=elapsed,
-            )
-            if issues: 
+            if issues:
                 icon = "⚠️"
 
-        # Micro-commit directly
-        db = SessionLocal()
-        try:
-            db.add(result)
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            error_msg = str(e)
-            icon = "💥"
-        finally:
-            db.close()
-        
+        # DB commit (skip in dry-run)
+        if not is_dry_run:
+            if error_msg:
+                result = PatternExperimentResult(
+                    arxiv_id=arxiv_id,
+                    paper_title=title[:200] if title else None,
+                    prompt_version=PROMPT_VERSION,
+                    model_name="gemma3:12b-parallel-backfill",
+                    num_violations=1,
+                    taxonomy_violations=["PARSE_FAILED"],
+                    elapsed_seconds=elapsed,
+                    error=error_msg,
+                )
+            else:
+                issues = validate_classification_output(parsed)
+                result = PatternExperimentResult(
+                    arxiv_id=arxiv_id,
+                    paper_title=title[:200] if title else None,
+                    prompt_version=PROMPT_VERSION,
+                    model_name="gemma3:12b-parallel-backfill",
+                    is_agentic=parsed.get("is_agentic"),
+                    primary_category=parsed.get("primary_category"),
+                    reasoning=parsed.get("reasoning"),
+                    patterns=parsed.get("patterns"),
+                    raw_json=parsed,
+                    num_patterns=len(parsed.get("patterns", [])),
+                    taxonomy_violations=issues if issues else None,
+                    num_violations=len(issues),
+                    elapsed_seconds=elapsed,
+                )
+
+            db = SessionLocal()
+            try:
+                db.add(result)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                error_msg = str(e)
+                icon = "💥"
+            finally:
+                db.close()
+
+        # JSONL logging (always — including dry-run)
         eval_count = meta.get("eval_count", 0)
         tps = (eval_count / meta.get("eval_duration", 1)) if meta.get("eval_duration", 0) > 0 else 0
-        
+
         log_msg = {
             "timestamp": datetime.now().isoformat(),
             "worker_id": worker_id,
@@ -184,7 +185,8 @@ def worker_process(worker_id: int, papers: list, is_dry_run: bool):
             
             avg_lat = stats["total_elapsed"] / stats["processed"]
             eta_mins = ((stats["total"] - stats["processed"]) * avg_lat) / 60 / 4 # approximated
-            print(f"[Worker {worker_id}] {idx+1:>3}/{len(papers)} {icon} {elapsed:>4.1f}s | {arxiv_id} | ETA: {eta_mins:.1f}m")
+            prefix = "DRY RUN " if is_dry_run else ""
+            print(f"[Worker {worker_id}] {prefix}{idx+1:>3}/{len(papers)} {icon} {elapsed:>4.1f}s | {arxiv_id} | ETA: {eta_mins:.1f}m")
 
 def main():
     parser = argparse.ArgumentParser()
