@@ -110,9 +110,14 @@ export default function PaperDetail() {
                         clearInterval(pollInterval);
 
                         if ("Notification" in window && Notification.permission === "granted") {
-                            new Notification("Summarization Complete", {
+                            const notification = new Notification("Summarization Complete", {
                                 body: `The summary for "${updatedPaper.title}" is ready.`,
+                                tag: `summary-${updatedPaper.id}`,
                             });
+                            notification.onclick = () => {
+                                window.focus();
+                                notification.close();
+                            };
                         }
                     }
                 } catch (e) {
@@ -126,7 +131,7 @@ export default function PaperDetail() {
                     setSummarizing(false);
                     alert("Summarization timed out. Check backend logs for details.");
                 }
-            }, 180000);
+            }, 1800000);
         } catch (e) {
             console.error(e);
             setSummarizing(false);

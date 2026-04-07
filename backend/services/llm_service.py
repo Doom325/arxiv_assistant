@@ -194,7 +194,7 @@ class OllamaProvider(LLMProvider):
             "options": {"num_ctx": self.num_ctx}
         }
         try:
-            response = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=900)
+            response = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=1800)
             response.raise_for_status()
             return response.json()['choices'][0]['message']['content']
         except Exception as e:
@@ -211,7 +211,7 @@ class OllamaProvider(LLMProvider):
             "options": {"num_ctx": self.num_ctx}
         }
         try:
-            response = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=900)
+            response = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=1800)
             response.raise_for_status()
             data = response.json()
             content = data['choices'][0]['message']['content']

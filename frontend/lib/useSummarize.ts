@@ -72,7 +72,7 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
                     cleanup();
                     setSummarizing(false);
                     setError("Summarization timed out. Check backend logs.");
-                }, 180000);
+                }, 1800000);
             } catch (e) {
                 console.error("Summarization error:", e);
                 setSummarizing(false);
