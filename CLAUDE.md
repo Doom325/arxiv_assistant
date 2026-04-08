@@ -40,8 +40,13 @@ Split provider design — `llm_service` handles LLM tasks, `embedding_service` h
 - `AI_PROVIDER` — controls summarization, classification, citations, chat, entity extraction ("gemini" or "local")
 - `EMBEDDING_PROVIDER` — controls embeddings only (defaults to AI_PROVIDER, set to "gemini" to keep Gemini embeddings while using local LLMs)
 - `ENTITY_EXTRACTION_PROVIDER` — "gliner" (default) or "llm" for LLM-based extraction
-- `OLLAMA_CHAT_MODEL` — Gemma 3 27B (summarization, chat, entity extraction)
+- `OLLAMA_CHAT_MODEL` — Primary RAG chat model and default fallback for others
+- `OLLAMA_SUMMARIZATION_MODEL` — Dedicated summarization model (optional)
+- `OLLAMA_ENTITY_MODEL` — Dedicated entity extraction model (optional)
 - `OLLAMA_CLASSIFICATION_MODEL` — Gemma 3 12B (classification, citation parsing)
+
+> [!WARNING]
+> **Naming Gotcha**: `OLLAMA_CHAT_MODEL` is the primary fallback for summarization and entity extraction. Ensure this is set to a capable model if dedicated models are not configured.
 
 ## Key Features
 

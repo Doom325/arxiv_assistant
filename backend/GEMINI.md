@@ -165,4 +165,12 @@ All config via environment variables, loaded in `config.py` (Pydantic BaseSettin
 - `AI_PROVIDER` — "gemini" or "local" (Ollama)
 - `PDF_SAVE_DIR` — Local PDF storage path
 - `RESEND_API_KEY` — Email service
-- `OLLAMA_BASE_URL`, `OLLAMA_EMBEDDING_MODEL`, `OLLAMA_CHAT_MODEL` — Ollama config
+- `OLLAMA_BASE_URL` — Ollama API entry point
+- `OLLAMA_EMBEDDING_MODEL` — model used for 3072D embeddings
+- `OLLAMA_CHAT_MODEL` — Primary RAG chat model and default fallback for others
+- `OLLAMA_SUMMARIZATION_MODEL` — Dedicated summarization model (falls back to `OLLAMA_CHAT_MODEL`)
+- `OLLAMA_ENTITY_MODEL` — Dedicated entity extraction model (falls back to `OLLAMA_CHAT_MODEL`)
+- `OLLAMA_CLASSIFICATION_MODEL` — Citation parsing and Pattern Taxonomy classification (defaults to `OLLAMA_CHAT_MODEL`)
+
+> [!WARNING]
+> **Naming Gotcha**: `OLLAMA_CHAT_MODEL` is the primary fallback for summarization and entity extraction. Ensure this is set to a capable model if dedicated models are not configured.
