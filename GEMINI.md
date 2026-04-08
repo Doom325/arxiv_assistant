@@ -99,8 +99,25 @@ All via env vars in `backend/config.py` (Pydantic BaseSettings):
 - `GEMINI_API_KEY` / `GOOGLE_API_KEY`
 - `AI_PROVIDER` — "gemini" or "local" (Ollama)
 - `EMBEDDING_PROVIDER` — override for embeddings only
-- `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL` (gemma3:27b), `OLLAMA_CLASSIFICATION_MODEL` (gemma3:12b)
+- `OLLAMA_BASE_URL` — Ollama API entry point (e.g. `http://localhost:11434/v1`)
+- `OLLAMA_EMBEDDING_MODEL` — model used for 3072D embeddings (e.g. `nomic-embed-text`)
+- `OLLAMA_CHAT_MODEL` — Primary RAG chat model and default fallback for others
+- `OLLAMA_SUMMARIZATION_MODEL` — Dedicated summarization model (falls back to `OLLAMA_CHAT_MODEL`)
+- `OLLAMA_ENTITY_MODEL` — Dedicated entity extraction model (falls back to `OLLAMA_CHAT_MODEL`)
+- `OLLAMA_CLASSIFICATION_MODEL` — Citation parsing and Pattern Taxonomy classification (defaults to `OLLAMA_CHAT_MODEL`)
 - `PDF_SAVE_DIR`, `RESEND_API_KEY`, `ENTITY_EXTRACTION_PROVIDER`
+
+### OLLAMA Model Mapping
+
+| Env Var | Provider Attribute | Implementation Path |
+|---------|--------------------|---------------------|
+| `OLLAMA_CHAT_MODEL` | `self.chat_model` | `OllamaProvider.chat` |
+| `OLLAMA_SUMMARIZATION_MODEL` | `self.summarization_model` | `OllamaProvider.summarize_text[_with_metrics]` |
+| `OLLAMA_ENTITY_MODEL` | `self.entity_model` | `OllamaProvider.extract_entities` |
+| `OLLAMA_CLASSIFICATION_MODEL` | `self.classification_model` | `OllamaProvider.classify_paper`, `parse_citations` |
+
+> [!WARNING]
+> **Naming Gotcha**: `OLLAMA_CHAT_MODEL` is the primary fallback for summarization and entity extraction. Ensure this is set to a capable model (e.g., Gemma 3 27B) if dedicated models are not configured.
 
 ## Conventions
 
