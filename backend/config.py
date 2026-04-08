@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     EMBEDDING_PROVIDER: str = ""  # Override for embeddings only. If empty, falls back to AI_PROVIDER. Set to "gemini" to keep Gemini embeddings while using local LLMs.
     OLLAMA_BASE_URL: str = "http://192.168.1.32:8434/v1"
     OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
-    OLLAMA_CHAT_MODEL: str = "gemma4:31b"  # RAG chat ONLY (after refactor)
+    OLLAMA_CHAT_MODEL: str = "gemma4:31b"  # RAG chat + universal fallback for dedicated *_MODEL vars
     OLLAMA_SUMMARIZATION_MODEL: str | None = None  # Falls back to OLLAMA_CHAT_MODEL if unset
     OLLAMA_ENTITY_MODEL: str | None = None  # Falls back to OLLAMA_CHAT_MODEL if unset
     OLLAMA_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification + citation parsing
