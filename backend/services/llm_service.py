@@ -159,8 +159,10 @@ class GeminiProvider(LLMProvider):
 class OllamaProvider(LLMProvider):
     def __init__(self):
         self.base_url = settings.OLLAMA_BASE_URL
-        self.chat_model = settings.OLLAMA_CHAT_MODEL  # Gemma 3 27B: summarization, chat, entity extraction
-        self.classification_model = settings.OLLAMA_CLASSIFICATION_MODEL or self.chat_model  # Gemma 3 12B: classification, citations
+        self.chat_model = settings.OLLAMA_CHAT_MODEL
+        self.summarization_model = settings.OLLAMA_SUMMARIZATION_MODEL or self.chat_model
+        self.entity_model = settings.OLLAMA_ENTITY_MODEL or self.chat_model
+        self.classification_model = settings.OLLAMA_CLASSIFICATION_MODEL or self.chat_model
         self.embedding_model = settings.OLLAMA_EMBEDDING_MODEL
         self.num_ctx = settings.OLLAMA_NUM_CTX
 
@@ -188,7 +190,7 @@ class OllamaProvider(LLMProvider):
     def summarize_text(self, text: str) -> str:
         prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text))
         payload = {
-            "model": self.chat_model,
+            "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
             "options": {"num_ctx": self.num_ctx}
@@ -205,7 +207,7 @@ class OllamaProvider(LLMProvider):
         """Returns {text, num_input_tokens, num_output_tokens}"""
         prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text))
         payload = {
-            "model": self.chat_model,
+            "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
             "options": {"num_ctx": self.num_ctx}
@@ -349,7 +351,7 @@ Example: [{{"type": "Model", "value": "GPT-4"}}, {{"type": "Dataset", "value": "
 Return ONLY the JSON list."""
         ollama_native_url = self._ollama_native_url()
         payload = {
-            "model": self.chat_model,
+            "model": self.entity_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
             "format": "json",
