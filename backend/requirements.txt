@@ -15,7 +15,6 @@ google-generativeai
 google-genai
 apscheduler
 python-multipart
-ollama
 jinja2
 pytz
 markdown

@@ -48,40 +48,40 @@ def get_partition(arxiv_id: str, num_workers: int) -> int:
     return int(digest[:8], 16) % num_workers
 
 def classify_paper_raw(title: str, abstract: str, session: requests.Session) -> dict | None:
-    """Format prompt & raw POST to Ollama. Bypass singleton llm_service."""
+    """Format prompt & raw POST to the LiteLLM gateway. Bypass singleton llm_service."""
     safe_title = sanitize_text(title or "")
     safe_abstract = sanitize_text(abstract or "")
-    
+
     prompt = V6_COT_PROMPT.format(title=safe_title, abstract=safe_abstract)
-    
+
     payload = {
         "model": "gemma3:12b",  # Hardcoded model
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
-        "options": {
-            "num_ctx": 4096,
-            "temperature": 0.1
-        },
-        "format": "json",
-        "keep_alive": "30m"
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"},
     }
-    
+
     try:
-        # Use configured OLLAMA base, fallback if missing
-        base = getattr(settings, "OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
-        url = base.replace("/v1", "/api/chat") if base.endswith("/v1") else base + "/api/chat"
-        res = session.post(url, json=payload, timeout=120)
+        base = getattr(settings, "LITELLM_BASE_URL", "http://host.docker.internal:4000/v1")
+        url = f"{base.rstrip('/')}/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        api_key = getattr(settings, "LITELLM_API_KEY", "")
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        res = session.post(url, headers=headers, json=payload, timeout=120)
         res.raise_for_status()
         data = res.json()
-        content = data.get("message", {}).get("content", "{}")
-        # Ensure json load works
+        content = data['choices'][0]['message']['content']
         parsed_content = json.loads(content)
-        
-        # Include metadata for telemetry
+
+        # Telemetry: OpenAI-schema usage block; the gateway may omit
+        # duration so we leave it at 0 when unavailable.
+        usage = data.get("usage", {})
         parsed_content["_meta"] = {
-            "eval_count": data.get("eval_count"),
-            "prompt_eval_count": data.get("prompt_eval_count"),
-            "eval_duration": data.get("eval_duration", 0) / 1e9, # Nanoseconds -> seconds
+            "eval_count": usage.get("completion_tokens"),
+            "prompt_eval_count": usage.get("prompt_tokens"),
+            "eval_duration": 0,
         }
         return parsed_content
     except Exception as e:

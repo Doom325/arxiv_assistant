@@ -1,13 +1,15 @@
-# Khadas override: use Gemma 3 12B on Framework Desktop for LLM tasks
+# Khadas override: proxy to Gemma 3 12B on the Framework Desktop's LiteLLM gateway
 # Usage: docker compose -f docker-compose.yml -f docker-compose.khadas-ollama.yml up
 #
 # Prerequisites:
-#   1. Ollama running on Framework Desktop (192.168.1.32) with OLLAMA_HOST=0.0.0.0
-#   2. Model pulled: ollama pull gemma3:12b
-#   3. Framework Desktop reachable from Khadas on the local network
+#   1. LiteLLM gateway running on Framework Desktop (192.168.1.32) on port 4000 with
+#      gemma3:12b registered.
+#   2. Framework Desktop reachable from Khadas on the local network.
+#   3. Set LITELLM_API_KEY in the Khadas env before invoking docker compose.
 #
 # Override FRAMEWORK_IP if the Framework Desktop IP changes:
-#   FRAMEWORK_IP=192.168.1.100 docker compose -f docker-compose.yml -f docker-compose.khadas-ollama.yml up
+#   FRAMEWORK_IP=192.168.1.100 LITELLM_API_KEY=sk-... docker compose \
+#     -f docker-compose.yml -f docker-compose.khadas-ollama.yml up
 
 services:
   backend:
@@ -22,11 +24,11 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - EMAIL_SENDER=onboarding@resend.dev
       - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
-      # Ollama on Framework Desktop
-      - OLLAMA_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:11434/v1
+      # LiteLLM gateway on Framework Desktop
+      - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
+      - LITELLM_API_KEY=${LITELLM_API_KEY}
       - OLLAMA_CHAT_MODEL=gemma3:12b
       - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
-      - OLLAMA_NUM_CTX=65536
 
   worker:
     environment:
@@ -36,9 +38,9 @@ services:
       # Worker uses local LLM for all tasks except embeddings
       - AI_PROVIDER=local
       - EMBEDDING_PROVIDER=gemini
-      - OLLAMA_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:11434/v1
+      - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
+      - LITELLM_API_KEY=${LITELLM_API_KEY}
       - OLLAMA_CHAT_MODEL=gemma3:12b
       - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
-      - OLLAMA_NUM_CTX=65536
       - ENTITY_EXTRACTION_PROVIDER=llm
       - GEMINI_API_KEY=${GEMINI_API_KEY}

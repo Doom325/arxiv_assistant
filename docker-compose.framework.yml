@@ -2,14 +2,15 @@
 # Usage: docker compose -f docker-compose.yml -f docker-compose.framework.yml up
 #
 # Prerequisites:
-#   1. Ollama running on host with Vulkan backend
-#   2. Models pulled: ollama pull gemma3:27b && ollama pull gemma3:12b
-#   3. External drive mounted (same drive from Khadas with DB + papers)
-#   4. Set EXTERNAL_DRIVE_PATH env var to the mount point
+#   1. LiteLLM gateway running on host on port 4000 with gemma3:27b,
+#      gemma3:12b, and embeddinggemma:latest registered.
+#   2. External drive mounted (same drive from Khadas with DB + papers)
+#   3. Set EXTERNAL_DRIVE_PATH env var to the mount point
+#   4. Set LITELLM_API_KEY in the host env before invoking docker compose.
 #
 # Example:
-#   EXTERNAL_DRIVE_PATH=/mnt/external GEMINI_API_KEY=xxx docker compose \
-#     -f docker-compose.yml -f docker-compose.framework.yml up
+#   EXTERNAL_DRIVE_PATH=/mnt/external GEMINI_API_KEY=xxx LITELLM_API_KEY=sk-... \
+#     docker compose -f docker-compose.yml -f docker-compose.framework.yml up
 
 services:
   backend:
@@ -28,11 +29,11 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - EMAIL_SENDER=onboarding@resend.dev
       - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
-      # Ollama config (for any local LLM calls from backend, e.g. chat)
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
+      # LiteLLM gateway (for any local LLM calls from backend, e.g. chat)
+      - LITELLM_BASE_URL=http://host.docker.internal:4000/v1
+      - LITELLM_API_KEY=${LITELLM_API_KEY}
       - OLLAMA_CHAT_MODEL=gemma3:27b
       - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
-      - OLLAMA_NUM_CTX=65536
 
   worker:
     extra_hosts:
@@ -48,11 +49,11 @@ services:
       # but keeps Gemini for embeddings (MRL support, better retrieval quality)
       - AI_PROVIDER=local
       - EMBEDDING_PROVIDER=gemini
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
+      - LITELLM_BASE_URL=http://host.docker.internal:4000/v1
+      - LITELLM_API_KEY=${LITELLM_API_KEY}
       - OLLAMA_CHAT_MODEL=gemma3:27b
       - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
-      - OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-      - OLLAMA_NUM_CTX=65536
+      - OLLAMA_EMBEDDING_MODEL=embeddinggemma:latest
       - OLLAMA_EMBEDDING_TRUNCATION=8000
       # Use LLM for entity extraction instead of GLiNER
       - ENTITY_EXTRACTION_PROVIDER=llm
