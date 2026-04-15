@@ -48,7 +48,11 @@ def run_single_paper(title, abstract):
     try:
         resp = requests.post(GATEWAY_URL, headers=headers, json=payload, timeout=300)
         elapsed = time.time() - start
-        content = resp.json()['choices'][0]['message']['content']
+        data = resp.json()
+        choices = data.get("choices") or []
+        if not choices:
+            return elapsed, None, f"gateway response missing choices: {data}"
+        content = (choices[0].get("message") or {}).get("content", "")
         parsed = json.loads(content)
         return elapsed, parsed, None
     except Exception as e:

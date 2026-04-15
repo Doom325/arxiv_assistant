@@ -62,6 +62,7 @@ def classify_paper_raw(title: str, abstract: str, session: requests.Session) -> 
         "response_format": {"type": "json_object"},
     }
 
+    start = time.time()
     try:
         base = getattr(settings, "LITELLM_BASE_URL", "http://host.docker.internal:4000/v1")
         url = f"{base.rstrip('/')}/chat/completions"
@@ -72,16 +73,20 @@ def classify_paper_raw(title: str, abstract: str, session: requests.Session) -> 
         res = session.post(url, headers=headers, json=payload, timeout=120)
         res.raise_for_status()
         data = res.json()
-        content = data['choices'][0]['message']['content']
+        choices = data.get("choices") or []
+        if not choices:
+            return {"_error": f"gateway response missing choices: {data}"}
+        content = (choices[0].get("message") or {}).get("content", "")
         parsed_content = json.loads(content)
 
-        # Telemetry: OpenAI-schema usage block; the gateway may omit
-        # duration so we leave it at 0 when unavailable.
-        usage = data.get("usage", {})
+        # Telemetry: OpenAI usage gives token counts; the gateway omits
+        # the Ollama-native eval_duration, so fall back to client-side
+        # wall-clock so tokens-per-sec stays meaningful.
+        usage = data.get("usage", {}) or {}
         parsed_content["_meta"] = {
             "eval_count": usage.get("completion_tokens"),
             "prompt_eval_count": usage.get("prompt_tokens"),
-            "eval_duration": 0,
+            "eval_duration": time.time() - start,
         }
         return parsed_content
     except Exception as e:
