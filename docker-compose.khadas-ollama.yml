@@ -12,35 +12,35 @@
 #     -f docker-compose.yml -f docker-compose.khadas-ollama.yml up
 
 services:
-  backend:
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
-      - PDF_SAVE_DIR=/app/data
-      - PYTHONUNBUFFERED=1
-      # Backend uses Gemini for search embeddings, local LLM for chat/summarization
-      - AI_PROVIDER=local
-      - EMBEDDING_PROVIDER=gemini
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - RESEND_API_KEY=${RESEND_API_KEY}
-      - EMAIL_SENDER=onboarding@resend.dev
-      - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
-      # LiteLLM gateway on Framework Desktop
-      - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
-      - LITELLM_API_KEY=${LITELLM_API_KEY}
-      - LLM_CHAT_MODEL=gemma3:27b
-      - LLM_CLASSIFICATION_MODEL=gemma3:27b
+      backend:
+            environment:
+                  - DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
+                  - PDF_SAVE_DIR=/app/data
+                  - PYTHONUNBUFFERED=1
+                  # Backend uses Gemini for search embeddings, local LLM for chat/summarization
+                  - AI_PROVIDER=local
+                  - EMBEDDING_PROVIDER=gemini
+                  - GEMINI_API_KEY=${GEMINI_API_KEY}
+                  - RESEND_API_KEY=${RESEND_API_KEY}
+                  - EMAIL_SENDER=onboarding@resend.dev
+                  - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
+                  # LiteLLM gateway on Framework Desktop
+                  - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
+                  - LITELLM_API_KEY=${LITELLM_API_KEY}
+                  - LLM_CHAT_MODEL=gemma3:27b
+                  - LLM_CLASSIFICATION_MODEL=gemma3:27b
 
-  worker:
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
-      - PDF_SAVE_DIR=/app/data
-      - PYTHONUNBUFFERED=1
-      # Worker uses local LLM for all tasks except embeddings
-      - AI_PROVIDER=local
-      - EMBEDDING_PROVIDER=gemini
-      - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
-      - LITELLM_API_KEY=${LITELLM_API_KEY}
-      - LLM_CHAT_MODEL=gemma3:27b
-      - LLM_CLASSIFICATION_MODEL=gemma3:27b
-      - ENTITY_EXTRACTION_PROVIDER=llm
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      worker:
+            environment:
+                  - DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
+                  - PDF_SAVE_DIR=/app/data
+                  - PYTHONUNBUFFERED=1
+                  # Worker uses local LLM for all tasks except embeddings
+                  - AI_PROVIDER=local
+                  - EMBEDDING_PROVIDER=gemini
+                  - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
+                  - LITELLM_API_KEY=${LITELLM_API_KEY}
+                  - LLM_CHAT_MODEL=gemma3:27b
+                  - LLM_CLASSIFICATION_MODEL=gemma3:27b
+                  - ENTITY_EXTRACTION_PROVIDER=llm
+                  - GEMINI_API_KEY=${GEMINI_API_KEY}
