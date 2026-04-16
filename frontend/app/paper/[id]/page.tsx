@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { generateSummary, addBookmark, removeBookmark, getBookmarkedIds, Paper, getPaper, getSimilarPapers, getPaperPatterns, PaperPattern, emailPaperSummary } from "../../../lib/api";
+import { showSummaryCompleteNotification, requestNotificationPermission } from "../../../lib/notifications";
 import { ArrowLeft } from "lucide-react";
 import ErrorBoundary from "../../../components/ErrorBoundary";
 import PaperHero from "@/components/paper/PaperHero";
@@ -87,9 +88,7 @@ export default function PaperDetail() {
         try {
             await generateSummary(paper.db_id, isRegenerate);
 
-            if ("Notification" in window && Notification.permission !== "granted") {
-                Notification.requestPermission();
-            }
+            requestNotificationPermission();
 
             const pollInterval = setInterval(async () => {
                 try {
@@ -109,16 +108,10 @@ export default function PaperDetail() {
                         setSummarizing(false);
                         clearInterval(pollInterval);
 
-                        if ("Notification" in window && Notification.permission === "granted") {
-                            const notification = new Notification("Summarization Complete", {
-                                body: `The summary for "${updatedPaper.title}" is ready.`,
-                                tag: `summary-${updatedPaper.id}`,
-                            });
-                            notification.onclick = () => {
-                                window.focus();
-                                notification.close();
-                            };
-                        }
+                        void showSummaryCompleteNotification(
+                            updatedPaper.title,
+                            updatedPaper.arxiv_id ?? updatedPaper.id,
+                        );
                     }
                 } catch (e) {
                     console.error("Polling error:", e);
