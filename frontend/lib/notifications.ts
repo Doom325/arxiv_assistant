@@ -30,18 +30,38 @@ export async function showSummaryCompleteNotification(
     const tag = `summary-${paperId}`;
     const data = { url: `/paper/${paperId}` };
 
-    try {
-        if ("serviceWorker" in navigator) {
-            const registration = await navigator.serviceWorker.ready;
+    // Try the Service Worker path first (required on Android Chrome).
+    if ("serviceWorker" in navigator) {
+        try {
+            // `navigator.serviceWorker.ready` only resolves once a Service
+            // Worker is controlling the page. If registration silently failed
+            // (insecure origin, 404 on /sw.js, browser policy), it never
+            // resolves. Race with a short timeout so we fall back to the
+            // desktop constructor instead of hanging forever.
+            const READY_TIMEOUT_MS = 3000;
+            const registration = await Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error("serviceWorker.ready timeout")),
+                        READY_TIMEOUT_MS,
+                    ),
+                ),
+            ]);
             await registration.showNotification("Summarization Complete", {
                 body,
                 tag,
                 data,
             });
             return;
+        } catch (err) {
+            console.warn("Service Worker notification failed, falling back:", err);
+            // fall through to desktop constructor
         }
+    }
 
-        // Desktop fallback if Service Worker is unavailable for any reason.
+    // Desktop fallback if Service Worker is unavailable or failed.
+    try {
         new Notification("Summarization Complete", { body, tag });
     } catch (err) {
         console.warn("Notification failed:", err);
