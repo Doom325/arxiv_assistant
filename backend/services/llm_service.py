@@ -165,11 +165,11 @@ class OllamaProvider(LLMProvider):
     def __init__(self):
         self.base_url = settings.LITELLM_BASE_URL
         self.api_key = settings.LITELLM_API_KEY
-        self.chat_model = settings.OLLAMA_CHAT_MODEL
-        self.summarization_model = settings.OLLAMA_SUMMARIZATION_MODEL or self.chat_model
-        self.entity_model = settings.OLLAMA_ENTITY_MODEL or self.chat_model
-        self.classification_model = settings.OLLAMA_CLASSIFICATION_MODEL or self.chat_model
-        self.embedding_model = settings.OLLAMA_EMBEDDING_MODEL
+        self.chat_model = settings.LLM_CHAT_MODEL
+        self.summarization_model = settings.LLM_SUMMARIZATION_MODEL or self.chat_model
+        self.entity_model = settings.LLM_ENTITY_MODEL or self.chat_model
+        self.classification_model = settings.LLM_CLASSIFICATION_MODEL or self.chat_model
+        self.embedding_model = settings.LLM_EMBEDDING_MODEL
 
     def _headers(self) -> dict:
         h = {"Content-Type": "application/json"}
@@ -249,7 +249,7 @@ class OllamaProvider(LLMProvider):
         the gateway-registered model decides the vector dimensionality.
         """
         text = text.replace("\x00", "")
-        truncated_text = text[:settings.OLLAMA_EMBEDDING_TRUNCATION]
+        truncated_text = text[:settings.LLM_EMBEDDING_TRUNCATION]
         logger.info(f"Generating embedding for text ({len(truncated_text)} chars): {truncated_text[:100]}...")
 
         payload = {
