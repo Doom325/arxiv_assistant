@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://user:password@localhost/arxiv_db"
     GOOGLE_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
-    
+
     @property
     def FINAL_GOOGLE_API_KEY(self) -> str:
         return self.GEMINI_API_KEY or self.GOOGLE_API_KEY
@@ -20,18 +20,20 @@ class Settings(BaseSettings):
     @property
     def RECIPIENT_LIST(self) -> list[str]:
         return [email.strip() for email in self.EMAIL_RECIPIENTS.split(",") if email.strip()]
-    
+
     # AI Provider Config
     AI_PROVIDER: str = "local" # "local" or "gemini" — controls LLM tasks (summarization, classification, etc.)
     EMBEDDING_PROVIDER: str = ""  # Override for embeddings only. If empty, falls back to AI_PROVIDER. Set to "gemini" to keep Gemini embeddings while using local LLMs.
-    OLLAMA_BASE_URL: str = "http://192.168.1.32:8434/v1"
-    OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
-    OLLAMA_CHAT_MODEL: str = "gemma4:31b"  # RAG chat + universal fallback for dedicated *_MODEL vars
+    # LiteLLM gateway (replaces the old direct-to-Ollama connection). Model
+    # names below stay Ollama-compatible — the gateway aliases them.
+    LITELLM_BASE_URL: str = "http://192.168.1.32:4000/v1"
+    LITELLM_API_KEY: str = ""
+    OLLAMA_EMBEDDING_MODEL: str = "embeddinggemma:latest"
+    OLLAMA_CHAT_MODEL: str = "gemma3:27b"  # RAG chat + universal fallback for dedicated *_MODEL vars
     OLLAMA_SUMMARIZATION_MODEL: str | None = None  # Falls back to OLLAMA_CHAT_MODEL if unset
     OLLAMA_ENTITY_MODEL: str | None = None  # Falls back to OLLAMA_CHAT_MODEL if unset
     OLLAMA_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification + citation parsing
-    OLLAMA_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (nomic-embed-text supports ~8k tokens)
-    OLLAMA_NUM_CTX: int = 65536  # Context window for local models
+    OLLAMA_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (client-side truncation)
     PDF_SAVE_DIR: str = "data"
 
     # Entity extraction provider: "gliner" (default) or "llm"

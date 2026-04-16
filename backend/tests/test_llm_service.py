@@ -81,13 +81,13 @@ def test_get_llm_service_factory():
 def test_ollama_model_fallbacks():
     # Reset settings to ensure no leftover state
     with patch('services.llm_service.settings') as mock_settings:
-        mock_settings.OLLAMA_BASE_URL = "http://localhost:11434/v1"
+        mock_settings.LITELLM_BASE_URL = "http://localhost:4000/v1"
+        mock_settings.LITELLM_API_KEY = ""
         mock_settings.OLLAMA_CHAT_MODEL = "chat-model"
         mock_settings.OLLAMA_SUMMARIZATION_MODEL = None
         mock_settings.OLLAMA_ENTITY_MODEL = None
         mock_settings.OLLAMA_CLASSIFICATION_MODEL = None
         mock_settings.OLLAMA_EMBEDDING_MODEL = "embed-model"
-        mock_settings.OLLAMA_NUM_CTX = 4096
 
         provider = OllamaProvider()
         assert provider.chat_model == "chat-model"
@@ -97,13 +97,13 @@ def test_ollama_model_fallbacks():
 
 def test_ollama_custom_models():
     with patch('services.llm_service.settings') as mock_settings:
-        mock_settings.OLLAMA_BASE_URL = "http://localhost:11434/v1"
+        mock_settings.LITELLM_BASE_URL = "http://localhost:4000/v1"
+        mock_settings.LITELLM_API_KEY = ""
         mock_settings.OLLAMA_CHAT_MODEL = "chat-model"
         mock_settings.OLLAMA_SUMMARIZATION_MODEL = "sum-model"
         mock_settings.OLLAMA_ENTITY_MODEL = "ent-model"
         mock_settings.OLLAMA_CLASSIFICATION_MODEL = "class-model"
         mock_settings.OLLAMA_EMBEDDING_MODEL = "embed-model"
-        mock_settings.OLLAMA_NUM_CTX = 4096
 
         provider = OllamaProvider()
         assert provider.chat_model == "chat-model"

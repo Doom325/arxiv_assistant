@@ -157,18 +157,31 @@ class GeminiProvider(LLMProvider):
             return None
 
 class OllamaProvider(LLMProvider):
+    """Local-LLM provider that talks to the LiteLLM gateway via OpenAI-
+    compatible endpoints. Named `OllamaProvider` for continuity with the
+    `AI_PROVIDER=local` code paths; the backing gateway is LiteLLM.
+    """
+
     def __init__(self):
-        self.base_url = settings.OLLAMA_BASE_URL
+        self.base_url = settings.LITELLM_BASE_URL
+        self.api_key = settings.LITELLM_API_KEY
         self.chat_model = settings.OLLAMA_CHAT_MODEL
         self.summarization_model = settings.OLLAMA_SUMMARIZATION_MODEL or self.chat_model
         self.entity_model = settings.OLLAMA_ENTITY_MODEL or self.chat_model
         self.classification_model = settings.OLLAMA_CLASSIFICATION_MODEL or self.chat_model
         self.embedding_model = settings.OLLAMA_EMBEDDING_MODEL
-        self.num_ctx = settings.OLLAMA_NUM_CTX
 
-    def _ollama_native_url(self) -> str:
-        """Get the native Ollama API URL (without /v1 suffix)."""
-        return self.base_url.replace("/v1", "")
+    def _headers(self) -> dict:
+        h = {"Content-Type": "application/json"}
+        if self.api_key:
+            h["Authorization"] = f"Bearer {self.api_key}"
+        return h
+
+    def _chat_url(self) -> str:
+        return f"{self.base_url.rstrip('/')}/chat/completions"
+
+    def _embed_url(self) -> str:
+        return f"{self.base_url.rstrip('/')}/embeddings"
 
     def _unwrap_json_list(self, content: str) -> list:
         """Parse JSON that may be a bare list or wrapped in an object."""
@@ -176,11 +189,11 @@ class OllamaProvider(LLMProvider):
         if isinstance(parsed, list):
             return parsed
         if isinstance(parsed, dict):
-            # Ollama's format:json may wrap the list in an object
+            # response_format=json_object forces a top-level object, so the
+            # list is usually keyed by an obvious name.
             for key in ("citations", "references", "results", "data", "entities"):
                 if key in parsed and isinstance(parsed[key], list):
                     return parsed[key]
-            # Last resort: return first list value found
             for v in parsed.values():
                 if isinstance(v, list):
                     return v
@@ -193,14 +206,13 @@ class OllamaProvider(LLMProvider):
             "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "options": {"num_ctx": self.num_ctx}
         }
         try:
-            response = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=1800)
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=1800)
             response.raise_for_status()
             return response.json()['choices'][0]['message']['content']
         except Exception as e:
-            logger.error(f"Ollama summarization error: {e}")
+            logger.error(f"Gateway summarization error: {e}")
             raise e
 
     def summarize_text_with_metrics(self, text: str) -> dict:
@@ -210,10 +222,9 @@ class OllamaProvider(LLMProvider):
             "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "options": {"num_ctx": self.num_ctx}
         }
         try:
-            response = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=1800)
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=1800)
             response.raise_for_status()
             data = response.json()
             content = data['choices'][0]['message']['content']
@@ -222,25 +233,20 @@ class OllamaProvider(LLMProvider):
             prompt_tokens = usage.get('prompt_tokens', 0)
             completion_tokens = usage.get('completion_tokens', 0)
 
-            # Fallback for native Ollama API keys if not using OpenAI compat
-            if not prompt_tokens:
-                prompt_tokens = data.get('prompt_eval_count', 0)
-            if not completion_tokens:
-                completion_tokens = data.get('eval_count', 0)
-
             return {
                 "text": content,
                 "num_input_tokens": prompt_tokens,
                 "num_output_tokens": completion_tokens
             }
         except Exception as e:
-            logger.error(f"Ollama metrics error: {e}")
+            logger.error(f"Gateway metrics error: {e}")
             raise e
 
     def generate_embedding(self, text: str, output_dimensionality: int = None) -> list[float]:
-        """
-        Generates an embedding. output_dimensionality is ignored for Ollama
-        as it depends on the model, but included for interface compatibility.
+        """Generate an embedding through the gateway's /v1/embeddings endpoint.
+
+        output_dimensionality is accepted for interface parity but ignored —
+        the gateway-registered model decides the vector dimensionality.
         """
         text = text.replace("\x00", "")
         truncated_text = text[:settings.OLLAMA_EMBEDDING_TRUNCATION]
@@ -251,11 +257,11 @@ class OllamaProvider(LLMProvider):
             "input": self.sanitize_text(truncated_text)
         }
         try:
-            response = requests.post(f"{self.base_url}/embeddings", json=payload, timeout=900)
+            response = requests.post(self._embed_url(), headers=self._headers(), json=payload, timeout=900)
             response.raise_for_status()
             return response.json()['data'][0]['embedding']
         except Exception as e:
-            logger.error(f"Ollama embedding error: {e}")
+            logger.error(f"Gateway embedding error: {e}")
             if 'response' in locals():
                 logger.error(f"Response body: {response.text}")
             return []
@@ -267,24 +273,21 @@ class OllamaProvider(LLMProvider):
 
         Text: {self.sanitize_text(text)}
 
-        Respond ONLY with a JSON list.
+        Respond ONLY with a JSON object containing a single key "citations" whose value is the list.
         """
-        # Use classification model (Gemma 3 12B) for citation parsing
-        ollama_native_url = self._ollama_native_url()
         payload = {
             "model": self.classification_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "format": "json",
-            "options": {"num_ctx": self.num_ctx}
+            "response_format": {"type": "json_object"},
         }
         try:
-            response = requests.post(f"{ollama_native_url}/api/chat", json=payload, timeout=600)
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
             response.raise_for_status()
-            content = response.json().get("message", {}).get("content", "")
+            content = response.json()['choices'][0]['message']['content']
             return self._unwrap_json_list(content)
         except Exception as e:
-            logger.error(f"Ollama citation parsing error: {e}")
+            logger.error(f"Gateway citation parsing error: {e}")
             return []
 
     def chat(self, history: list, user_message: str, context: str) -> str:
@@ -302,42 +305,39 @@ class OllamaProvider(LLMProvider):
             "model": self.chat_model,
             "messages": messages,
             "stream": False,
-            "options": {"num_ctx": self.num_ctx}
         }
         try:
-            response = requests.post(f"{self.base_url}/chat/completions", json=payload, timeout=900)
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=900)
             response.raise_for_status()
             return response.json()['choices'][0]['message']['content']
         except Exception as e:
-            logger.error(f"Ollama chat error: {e}")
+            logger.error(f"Gateway chat error: {e}")
             return "Error generating response."
 
     def classify_paper(self, title: str, abstract: str) -> dict:
-        """Classify a paper using V6 CoT prompt via Ollama with JSON output mode."""
+        """Classify a paper using V6 CoT prompt through the gateway."""
         prompt = V6_COT_PROMPT.format(
             title=self.sanitize_text(title),
             abstract=self.sanitize_text(abstract[:800])
         )
-        # Use classification model (Gemma 3 12B) via native Ollama API for JSON format
-        ollama_native_url = self._ollama_native_url()
         payload = {
             "model": self.classification_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "format": "json",
-            "options": {"num_ctx": self.num_ctx, "temperature": 0.1}
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1,
         }
         try:
-            response = requests.post(f"{ollama_native_url}/api/chat", json=payload, timeout=600)
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
             response.raise_for_status()
-            content = response.json().get("message", {}).get("content", "")
+            content = response.json()['choices'][0]['message']['content']
             return json.loads(content)
         except Exception as e:
-            logger.error(f"Ollama classify_paper error: {e}")
+            logger.error(f"Gateway classify_paper error: {e}")
             return None
 
     def extract_entities(self, text: str) -> list[dict]:
-        """Extract entities using LLM instead of GLiNER. Uses chat model (Gemma 3 27B)."""
+        """Extract entities using LLM instead of GLiNER."""
         prompt = f"""Extract technical entities from the following research paper text.
 For each entity, provide its type and value.
 
@@ -346,23 +346,19 @@ Valid entity types: Software, Dataset, Model, Loss Function, Metric, Task, Organ
 Text:
 {self.sanitize_text(text[:8000])}
 
-Return a JSON list of objects, each with "type" and "value" keys.
-Example: [{{"type": "Model", "value": "GPT-4"}}, {{"type": "Dataset", "value": "ImageNet"}}]
-Return ONLY the JSON list."""
-        ollama_native_url = self._ollama_native_url()
+Return a JSON object with a single key "entities" whose value is a list of objects, each with "type" and "value" keys.
+Example: {{"entities": [{{"type": "Model", "value": "GPT-4"}}, {{"type": "Dataset", "value": "ImageNet"}}]}}"""
         payload = {
             "model": self.entity_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "format": "json",
-            "options": {"num_ctx": self.num_ctx}
+            "response_format": {"type": "json_object"},
         }
         try:
-            response = requests.post(f"{ollama_native_url}/api/chat", json=payload, timeout=600)
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
             response.raise_for_status()
-            content = response.json().get("message", {}).get("content", "")
+            content = response.json()['choices'][0]['message']['content']
             entities = self._unwrap_json_list(content)
-            # Deduplicate
             seen = set()
             unique = []
             for ent in entities:
@@ -373,7 +369,7 @@ Return ONLY the JSON list."""
                         seen.add(pair)
             return unique
         except Exception as e:
-            logger.error(f"Ollama entity extraction error: {e}")
+            logger.error(f"Gateway entity extraction error: {e}")
             return []
 
 def get_llm_service():

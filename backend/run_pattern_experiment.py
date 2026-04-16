@@ -23,7 +23,7 @@ from taxonomy import (
 # CONFIG
 # ─────────────────────────────────────────────────────
 MODEL = "gemma3:27b"
-OLLAMA_URL = "http://localhost:11434/api/chat"
+GATEWAY_URL = f"{settings.LITELLM_BASE_URL.rstrip('/')}/chat/completions"
 BATCH_COMMIT_SIZE = 10  # Commit to DB every N papers
 
 
@@ -38,14 +38,21 @@ def run_single_paper(title, abstract):
         "model": MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
-        "format": "json",
-        "options": {"num_ctx": 8192, "temperature": 0.1}
+        "response_format": {"type": "json_object"},
+        "temperature": 0.1,
     }
+    headers = {"Content-Type": "application/json"}
+    if settings.LITELLM_API_KEY:
+        headers["Authorization"] = f"Bearer {settings.LITELLM_API_KEY}"
     start = time.time()
     try:
-        resp = requests.post(OLLAMA_URL, json=payload, timeout=300)
+        resp = requests.post(GATEWAY_URL, headers=headers, json=payload, timeout=300)
         elapsed = time.time() - start
-        content = resp.json().get("message", {}).get("content", "")
+        data = resp.json()
+        choices = data.get("choices") or []
+        if not choices:
+            return elapsed, None, f"gateway response missing choices: {data}"
+        content = (choices[0].get("message") or {}).get("content", "")
         parsed = json.loads(content)
         return elapsed, parsed, None
     except Exception as e:

@@ -2,17 +2,22 @@
 set -e
 
 # Configuration (override with environment variables)
-KHADAS_IP="${KHADAS_IP:-192.168.1.49}"
-FRAMEWORK_IP="${FRAMEWORK_IP:-192.168.1.32}"
+KHADAS_IP="${KHADAS_IP:-192.168.86.26}"
+FRAMEWORK_IP="${FRAMEWORK_IP:-192.168.86.24}"
 PROJECT_DIR="${PROJECT_DIR:-/Users/sumanthgottipati/git/arxiv_assistant}"
 REMOTE_USER="${KHADAS_USER:-khadas}"
 export SSHPASS="${KHADAS_PASSWORD:-khadas}"
 
 echo "🚀 Starting Deployment to Khadas Edge 2 ($KHADAS_IP)..."
 
-# 0. Get API keys from local backend/.env
+# 0. Get API keys from local backend/.env and root .env
 GEMINI_KEY=$(grep GEMINI_API_KEY "$PROJECT_DIR/backend/.env" | cut -d'=' -f2 | tr -d '"')
 RESEND_KEY=$(grep RESEND_API_KEY "$PROJECT_DIR/backend/.env" | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
+LITELLM_KEY=$(grep '^LITELLM_API_KEY=' "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
+if [ -z "$LITELLM_KEY" ]; then
+    echo "❌ LITELLM_API_KEY not found in $PROJECT_DIR/.env — aborting."
+    exit 1
+fi
 
 # 1. Install Docker on Khadas (if not present)
 echo "🐳 Installing Docker on Khadas..."
@@ -53,10 +58,12 @@ DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
 PDF_SAVE_DIR=/app/data/pdfs
 CHROME_PATH=/usr/bin/google-chrome
 GEMINI_API_KEY=$GEMINI_KEY
+LITELLM_API_KEY=$LITELLM_KEY
 EOT
     # Pre-write API keys to root .env (DATA_DIR/DB_STORAGE appended by step 4)
     echo GEMINI_API_KEY=$GEMINI_KEY > ~/arxiv_assistant/.env
     echo RESEND_API_KEY=$RESEND_KEY >> ~/arxiv_assistant/.env
+    echo LITELLM_API_KEY=$LITELLM_KEY >> ~/arxiv_assistant/.env
     echo FRAMEWORK_IP=$FRAMEWORK_IP >> ~/arxiv_assistant/.env
 "
 
