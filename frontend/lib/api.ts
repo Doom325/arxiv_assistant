@@ -12,6 +12,15 @@ export interface Citation {
     resolved_id?: string | null;
 }
 
+export type SummaryStatus = "pending" | "running" | "succeeded" | "failed";
+
+export interface SummaryError {
+    code: string;
+    message: string;
+    attempted_at?: string | null;
+    attempt_count?: number;
+}
+
 export interface Paper {
     id: string; // This is arxiv_id in the frontend transformation
     db_id?: number; // Numeric PK from database
@@ -26,6 +35,9 @@ export interface Paper {
     list_name?: string;
     citations?: Citation[];
     added_at?: string;
+    summary_status?: SummaryStatus | null;
+    summary_error?: SummaryError | null;
+    summary_attempted_at?: string | null;
 }
 
 export interface UserConfig {

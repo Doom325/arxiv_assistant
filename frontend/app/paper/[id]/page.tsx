@@ -84,6 +84,14 @@ export default function PaperDetail() {
     const handleGenerateSummary = async () => {
         if (!paper?.db_id) return;
         const isRegenerate = !!paper.generated_summary;
+        // Capture the moment this session started polling. Any failure whose
+        // ``summary_attempted_at`` predates this is stale (left over from a
+        // previous session or a prior reload) and must not re-alert.
+        // See useSummarize.ts for the clock-skew caveat — this client-local
+        // timestamp is compared against a server-side timestamp. Safe here
+        // because the gate only suppresses re-alerting, never drives data
+        // correctness.
+        const sessionStartedAt = new Date();
         setSummarizing(true);
         try {
             await generateSummary(paper.db_id, isRegenerate);
@@ -93,17 +101,33 @@ export default function PaperDetail() {
             const pollInterval = setInterval(async () => {
                 try {
                     const updatedPaper = await getPaper(id);
-                    if (updatedPaper.generated_summary) {
-                        // Check if backend returned an error
-                        if (updatedPaper.generated_summary.startsWith("__ERROR__")) {
-                            const errorMsg = updatedPaper.generated_summary.replace("__ERROR__: ", "");
-                            console.error("Summarization error:", errorMsg);
-                            setSummarizing(false);
-                            clearInterval(pollInterval);
-                            setPaper(transformPaper({ ...updatedPaper, generated_summary: null }));
-                            alert(`Summarization failed: ${errorMsg}`);
+
+                    if (updatedPaper.summary_status === "failed") {
+                        const attemptedAt = updatedPaper.summary_attempted_at
+                            ? new Date(updatedPaper.summary_attempted_at)
+                            : null;
+                        const isFresh =
+                            !!attemptedAt && attemptedAt >= sessionStartedAt;
+                        if (!isFresh) {
+                            // Stale failure from a prior session — ignore and
+                            // keep polling for this session's real result.
                             return;
                         }
+                        const errorMsg =
+                            updatedPaper.summary_error?.message ??
+                            "Summarization failed.";
+                        console.error("Summarization error:", errorMsg);
+                        setSummarizing(false);
+                        clearInterval(pollInterval);
+                        setPaper(transformPaper(updatedPaper));
+                        alert(`Summarization failed: ${errorMsg}`);
+                        return;
+                    }
+
+                    if (
+                        updatedPaper.summary_status === "succeeded" &&
+                        updatedPaper.generated_summary
+                    ) {
                         setPaper(transformPaper(updatedPaper));
                         setSummarizing(false);
                         clearInterval(pollInterval);

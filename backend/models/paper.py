@@ -1,4 +1,18 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Date, Boolean, ForeignKey, Float, Index, Computed
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    JSON,
+    Date,
+    Boolean,
+    ForeignKey,
+    Float,
+    Index,
+    Computed,
+    CheckConstraint,
+)
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -10,8 +24,20 @@ except ImportError:
         return JSON
 
 from config import settings
-from sqlalchemy.dialects.postgresql import TSVECTOR
+from sqlalchemy.dialects.postgresql import TSVECTOR, JSONB
 from .base import Base
+
+# Canonical summary status values.
+SUMMARY_STATUS_PENDING = "pending"
+SUMMARY_STATUS_RUNNING = "running"
+SUMMARY_STATUS_SUCCEEDED = "succeeded"
+SUMMARY_STATUS_FAILED = "failed"
+SUMMARY_STATUS_VALUES = (
+    SUMMARY_STATUS_PENDING,
+    SUMMARY_STATUS_RUNNING,
+    SUMMARY_STATUS_SUCCEEDED,
+    SUMMARY_STATUS_FAILED,
+)
 
 
 class Paper(Base):
@@ -23,6 +49,20 @@ class Paper(Base):
     authors = Column(JSON)  # List of strings
     summary = Column(Text)
     generated_summary = Column(Text, nullable=True)
+
+    # Summarization state machine.
+    # generated_summary holds ONLY successful output or NULL.
+    # Status transitions: None -> pending -> running -> succeeded|failed.
+    summary_status = Column(String(20), nullable=True)
+    # Structured error payload, shape:
+    #   {"code": str, "message": str, "attempted_at": iso8601, "attempt_count": int}
+    if "sqlite" in settings.DATABASE_URL:
+        summary_error = Column(JSON, nullable=True)
+    else:
+        summary_error = Column(JSONB, nullable=True)
+    # Wall-clock timestamp of the most recent attempt (success or failure).
+    # Kept as a standalone column so the frontend can compare freshness cheaply.
+    summary_attempted_at = Column(DateTime, nullable=True)
     published_date = Column(DateTime)
     updated_date = Column(DateTime)
     category = Column(String)
@@ -65,6 +105,11 @@ class Paper(Base):
 
     __table_args__ = (
         Index("idx_papers_search", "search_vector", postgresql_using="gin"),
+        CheckConstraint(
+            "summary_status IS NULL OR summary_status IN "
+            "('pending', 'running', 'succeeded', 'failed')",
+            name="ck_papers_summary_status",
+        ),
     )
 
 
