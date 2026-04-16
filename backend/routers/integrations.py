@@ -5,6 +5,7 @@ Extracted from papers.py (summarize/email) and library.py (GDrive).
 
 import logging
 import os
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -15,6 +16,12 @@ from sqlalchemy.orm.attributes import flag_modified
 from config import settings
 from database import get_db, SessionLocal
 from models import Paper, UserLibrary
+from models.paper import (
+    SUMMARY_STATUS_FAILED,
+    SUMMARY_STATUS_PENDING,
+    SUMMARY_STATUS_RUNNING,
+    SUMMARY_STATUS_SUCCEEDED,
+)
 from services.arxiv_service import arxiv_service
 from services.email_service import email_service
 from services.gdrive import GoogleDriveService, NeedAuthException
@@ -30,6 +37,34 @@ USER_ID = 1
 
 # --- Summarization ---
 
+def _record_summary_failure(
+    db: Session,
+    paper: Paper,
+    *,
+    code: str,
+    message: str,
+) -> None:
+    """Persist a structured failure for the paper's summarization attempt.
+
+    Does NOT touch ``generated_summary`` — that column is reserved for
+    successful model output (or NULL).
+    """
+    now = datetime.utcnow()
+    prior_count = 0
+    if isinstance(paper.summary_error, dict):
+        prior_count = int(paper.summary_error.get("attempt_count") or 0)
+    paper.summary_status = SUMMARY_STATUS_FAILED
+    paper.summary_error = {
+        "code": code,
+        "message": message,
+        "attempted_at": now.isoformat(),
+        "attempt_count": prior_count + 1,
+    }
+    paper.summary_attempted_at = now
+    flag_modified(paper, "summary_error")
+    db.commit()
+
+
 def run_summarization(paper_id: int, pdf_url: str):
     """Background task: uses its own DB session (request session may be closed)."""
     db = SessionLocal()
@@ -37,6 +72,11 @@ def run_summarization(paper_id: int, pdf_url: str):
         paper = db.query(Paper).filter(Paper.id == paper_id).first()
         if not paper:
             return
+
+        # Transition to running so the frontend can distinguish "queued" from
+        # "actively processing" if we ever surface it.
+        paper.summary_status = SUMMARY_STATUS_RUNNING
+        db.commit()
 
         # Use configured save directory
         pdf_dir = settings.PDF_SAVE_DIR
@@ -57,23 +97,36 @@ def run_summarization(paper_id: int, pdf_url: str):
                     break
 
         if not found:
-            logger.warning(f"PDF not found for paper {paper.arxiv_id} in {pdf_dir}. Attempting download...")
+            logger.warning(
+                f"PDF not found for paper {paper.arxiv_id} in {pdf_dir}. "
+                "Attempting download..."
+            )
             filename = f"{paper.arxiv_id}.pdf"
             pdf_path = os.path.join(pdf_dir, filename)
             try:
                 arxiv_service.download_pdf(paper.pdf_url, pdf_path)
                 found = True
             except Exception as e:
-                logger.error(f"Failed to download PDF for {paper.arxiv_id}: {e}")
-                paper.generated_summary = f"__ERROR__: Failed to download PDF: {e}"
-                db.commit()
+                logger.error(
+                    f"Failed to download PDF for {paper.arxiv_id}: {e}"
+                )
+                _record_summary_failure(
+                    db,
+                    paper,
+                    code="pdf_download_failed",
+                    message=f"Failed to download PDF: {e}",
+                )
                 return
 
         pdf_path = os.path.join(pdf_dir, filename)
 
         summary = summarization_service.generate_summary(pdf_path)
 
+        now = datetime.utcnow()
         paper.generated_summary = summary
+        paper.summary_status = SUMMARY_STATUS_SUCCEEDED
+        paper.summary_error = None
+        paper.summary_attempted_at = now
         db.commit()
         logger.info(f"Generated summary for paper {paper_id}")
 
@@ -82,8 +135,12 @@ def run_summarization(paper_id: int, pdf_url: str):
         try:
             paper = db.query(Paper).filter(Paper.id == paper_id).first()
             if paper:
-                paper.generated_summary = f"__ERROR__: Summarization failed: {e}"
-                db.commit()
+                _record_summary_failure(
+                    db,
+                    paper,
+                    code="summarization_failed",
+                    message=f"Summarization failed: {e}",
+                )
         except Exception:
             pass
     finally:
@@ -91,18 +148,32 @@ def run_summarization(paper_id: int, pdf_url: str):
 
 
 @router.post("/papers/{paper_id}/summarize")
-def summarize_paper(paper_id: int, background_tasks: BackgroundTasks, force: bool = False, db: Session = Depends(get_db)):
+def summarize_paper(
+    paper_id: int,
+    background_tasks: BackgroundTasks,
+    force: bool = False,
+    db: Session = Depends(get_db),
+):
     paper = db.query(Paper).filter(Paper.id == paper_id).first()
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
 
-    if paper.generated_summary and not force:
-        return {"message": "Summary already exists", "summary": paper.generated_summary}
+    # A prior failed attempt is retry-eligible without ``force=True``. Only a
+    # truly successful summary (generated_summary populated) short-circuits.
+    has_success = (
+        paper.generated_summary is not None
+        and paper.summary_status != SUMMARY_STATUS_FAILED
+    )
+    if has_success and not force:
+        return {
+            "message": "Summary already exists",
+            "summary": paper.generated_summary,
+        }
 
-    # Clear any previous error state
-    if paper.generated_summary and paper.generated_summary.startswith("__ERROR__"):
-        paper.generated_summary = None
-        db.commit()
+    # Clear prior failure state before scheduling a retry.
+    paper.summary_status = SUMMARY_STATUS_PENDING
+    paper.summary_error = None
+    db.commit()
 
     background_tasks.add_task(run_summarization, paper_id, paper.pdf_url)
     return {"message": "Summarization started"}

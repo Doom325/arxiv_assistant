@@ -16,6 +16,9 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
     const [error, setError] = useState<string | null>(null);
     const pollRef = useRef<NodeJS.Timeout | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Moment the most recent triggerSummarize call kicked off polling.
+    // Used to reject stale failures from a prior session/reload.
+    const sessionStartRef = useRef<Date | null>(null);
 
     const cleanup = useCallback(() => {
         if (pollRef.current) {
@@ -34,6 +37,7 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
         setSummarizing(false);
         setUpdatedSummary(null);
         setError(null);
+        sessionStartRef.current = null;
     }, [paperId, cleanup]);
 
     // Cleanup on unmount
@@ -42,6 +46,8 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
     const triggerSummarize = useCallback(
         async (force?: boolean) => {
             if (!paperId) return;
+            const sessionStartedAt = new Date();
+            sessionStartRef.current = sessionStartedAt;
             setSummarizing(true);
             setError(null);
 
@@ -51,14 +57,31 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
                 pollRef.current = setInterval(async () => {
                     try {
                         const updated = await api.getPaper(String(paperId));
-                        if (updated.generated_summary) {
-                            if (updated.generated_summary.startsWith("__ERROR__")) {
-                                const errorMsg = updated.generated_summary.replace("__ERROR__: ", "");
-                                setError(errorMsg);
-                                setSummarizing(false);
-                                cleanup();
+
+                        if (updated.summary_status === "failed") {
+                            const attemptedAt = updated.summary_attempted_at
+                                ? new Date(updated.summary_attempted_at)
+                                : null;
+                            const isFresh =
+                                !!attemptedAt &&
+                                attemptedAt >= sessionStartedAt;
+                            if (!isFresh) {
+                                // Stale failure — keep polling.
                                 return;
                             }
+                            const errorMsg =
+                                updated.summary_error?.message ??
+                                "Summarization failed.";
+                            setError(errorMsg);
+                            setSummarizing(false);
+                            cleanup();
+                            return;
+                        }
+
+                        if (
+                            updated.summary_status === "succeeded" &&
+                            updated.generated_summary
+                        ) {
                             setUpdatedSummary(updated.generated_summary);
                             setSummarizing(false);
                             cleanup();
