@@ -5,7 +5,7 @@ Extracted from papers.py (summarize/email) and library.py (GDrive).
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -49,7 +49,9 @@ def _record_summary_failure(
     Does NOT touch ``generated_summary`` — that column is reserved for
     successful model output (or NULL).
     """
-    now = datetime.utcnow()
+    # Naive UTC to match the existing DateTime column (no tzinfo).
+    # datetime.utcnow() is deprecated in 3.12+; use aware-then-strip.
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     prior_count = 0
     if isinstance(paper.summary_error, dict):
         prior_count = int(paper.summary_error.get("attempt_count") or 0)
@@ -122,7 +124,8 @@ def run_summarization(paper_id: int, pdf_url: str):
 
         summary = summarization_service.generate_summary(pdf_path)
 
-        now = datetime.utcnow()
+        # Naive UTC (see _record_summary_failure).
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         paper.generated_summary = summary
         paper.summary_status = SUMMARY_STATUS_SUCCEEDED
         paper.summary_error = None
@@ -142,7 +145,13 @@ def run_summarization(paper_id: int, pdf_url: str):
                     message=f"Summarization failed: {e}",
                 )
         except Exception:
-            pass
+            # Recovery-path failure (e.g. DB unavailable when trying to
+            # record the failure itself). Surface it instead of silently
+            # swallowing so operators can find these in logs.
+            logger.exception(
+                "Failed to record summarization failure for paper %s",
+                paper_id,
+            )
     finally:
         db.close()
 

@@ -86,6 +86,10 @@ export default function PaperDetail() {
         // Capture the moment this session started polling. Any failure whose
         // ``summary_attempted_at`` predates this is stale (left over from a
         // previous session or a prior reload) and must not re-alert.
+        // See useSummarize.ts for the clock-skew caveat — this client-local
+        // timestamp is compared against a server-side timestamp. Safe here
+        // because the gate only suppresses re-alerting, never drives data
+        // correctness.
         const sessionStartedAt = new Date();
         setSummarizing(true);
         try {

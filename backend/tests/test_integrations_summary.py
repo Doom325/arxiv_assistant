@@ -5,7 +5,7 @@ Covers the move from the legacy ``__ERROR__`` sentinel in
 ``summary_status`` / ``summary_error`` / ``summary_attempted_at`` columns.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -120,7 +120,7 @@ class TestRunSummarizationSuccess:
         sample_paper.summary_error = {
             "code": "summarization_failed",
             "message": "prior failure",
-            "attempted_at": datetime.utcnow().isoformat(),
+            "attempted_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "attempt_count": 1,
         }
         db_session.commit()
@@ -157,7 +157,7 @@ class TestSummarizePaperEndpoint:
         sample_paper.summary_error = {
             "code": "summarization_failed",
             "message": "prior failure",
-            "attempted_at": datetime.utcnow().isoformat(),
+            "attempted_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "attempt_count": 1,
         }
         sample_paper.generated_summary = None

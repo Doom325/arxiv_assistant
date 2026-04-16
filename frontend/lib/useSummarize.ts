@@ -18,6 +18,16 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     // Moment the most recent triggerSummarize call kicked off polling.
     // Used to reject stale failures from a prior session/reload.
+    //
+    // Caveat (tracked in #17 reviewer feedback F3): this compares a
+    // client-local timestamp to a server-side ``summary_attempted_at``. With
+    // significant clock skew between the user's device and the backend, a
+    // genuinely fresh failure could look stale (or vice versa). Acceptable
+    // today because the polling window is seconds and the staleness gate
+    // is only used to suppress re-alerting — never to accept/reject data.
+    // If this ever drives user-visible correctness, swap for a server-issued
+    // polling token or a baseline ``summary_attempted_at`` captured at the
+    // polling-start API response.
     const sessionStartRef = useRef<Date | null>(null);
 
     const cleanup = useCallback(() => {

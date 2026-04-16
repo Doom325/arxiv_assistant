@@ -9,6 +9,7 @@ Idempotent — safe to run multiple times. Each DDL guard checks the live
 schema before mutating.
 """
 
+import json
 import logging
 
 from sqlalchemy import inspect, text
@@ -124,8 +125,8 @@ def _backfill_legacy_error_rows() -> int:
                 "attempt_count": 1,
             }
 
+            err_json = json.dumps(error_payload)
             if _is_sqlite():
-                import json as _json
                 conn.execute(text(
                     "UPDATE papers SET "
                     "  summary_status = 'failed', "
@@ -133,7 +134,7 @@ def _backfill_legacy_error_rows() -> int:
                     "  summary_attempted_at = COALESCE(updated_date, CURRENT_TIMESTAMP), "
                     "  generated_summary = NULL "
                     "WHERE id = :pid"
-                ), {"err": _json.dumps(error_payload), "pid": paper_id})
+                ), {"err": err_json, "pid": paper_id})
             else:
                 conn.execute(text(
                     "UPDATE papers SET "
@@ -142,10 +143,7 @@ def _backfill_legacy_error_rows() -> int:
                     "  summary_attempted_at = COALESCE(updated_date, NOW()), "
                     "  generated_summary = NULL "
                     "WHERE id = :pid"
-                ), {
-                    "err": __import__("json").dumps(error_payload),
-                    "pid": paper_id,
-                })
+                ), {"err": err_json, "pid": paper_id})
             rows_touched += 1
 
     return rows_touched
