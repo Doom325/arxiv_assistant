@@ -7,6 +7,7 @@ import AppShell from "../components/AppShell";
 import { LibraryProvider } from "../components/LibraryContext";
 import { Toaster } from "sonner";
 import CommandPalette from "../components/CommandPalette";
+import { ServiceWorkerRegister } from "../components/ServiceWorkerRegister";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
@@ -38,6 +39,7 @@ export default function RootLayout({
             </PageTransition>
           </AppShell>
           <CommandPalette />
+          <ServiceWorkerRegister />
           <Toaster
             position="bottom-right"
             toastOptions={{
