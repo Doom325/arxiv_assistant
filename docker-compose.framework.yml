@@ -32,8 +32,8 @@ services:
       # LiteLLM gateway (for any local LLM calls from backend, e.g. chat)
       - LITELLM_BASE_URL=http://host.docker.internal:4000/v1
       - LITELLM_API_KEY=${LITELLM_API_KEY}
-      - OLLAMA_CHAT_MODEL=gemma3:27b
-      - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
+      - LLM_CHAT_MODEL=gemma3:27b
+      - LLM_CLASSIFICATION_MODEL=gemma3:27b
 
   worker:
     extra_hosts:
@@ -51,10 +51,10 @@ services:
       - EMBEDDING_PROVIDER=gemini
       - LITELLM_BASE_URL=http://host.docker.internal:4000/v1
       - LITELLM_API_KEY=${LITELLM_API_KEY}
-      - OLLAMA_CHAT_MODEL=gemma3:27b
-      - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
-      - OLLAMA_EMBEDDING_MODEL=embeddinggemma:latest
-      - OLLAMA_EMBEDDING_TRUNCATION=8000
+      - LLM_CHAT_MODEL=gemma3:27b
+      - LLM_CLASSIFICATION_MODEL=gemma3:27b
+      - LLM_EMBEDDING_MODEL=embeddinggemma:latest
+      - LLM_EMBEDDING_TRUNCATION=8000
       # Use LLM for entity extraction instead of GLiNER
       - ENTITY_EXTRACTION_PROVIDER=llm
       # Keep Gemini key available for embedding generation in worker
