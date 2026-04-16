@@ -3,7 +3,7 @@
 #
 # Prerequisites:
 #   1. LiteLLM gateway running on Framework Desktop (192.168.1.32) on port 4000 with
-#      gemma3:12b registered.
+#      gemma3:27b registered.
 #   2. Framework Desktop reachable from Khadas on the local network.
 #   3. Set LITELLM_API_KEY in the Khadas env before invoking docker compose.
 #
@@ -27,8 +27,8 @@ services:
       # LiteLLM gateway on Framework Desktop
       - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
       - LITELLM_API_KEY=${LITELLM_API_KEY}
-      - OLLAMA_CHAT_MODEL=gemma3:12b
-      - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
+      - OLLAMA_CHAT_MODEL=gemma3:27b
+      - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
 
   worker:
     environment:
@@ -40,7 +40,7 @@ services:
       - EMBEDDING_PROVIDER=gemini
       - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
       - LITELLM_API_KEY=${LITELLM_API_KEY}
-      - OLLAMA_CHAT_MODEL=gemma3:12b
-      - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
+      - OLLAMA_CHAT_MODEL=gemma3:27b
+      - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
       - ENTITY_EXTRACTION_PROVIDER=llm
       - GEMINI_API_KEY=${GEMINI_API_KEY}
