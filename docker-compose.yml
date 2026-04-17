@@ -13,6 +13,7 @@ services:
     restart: unless-stopped
     depends_on:
       - db
+      - grobid
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -24,6 +25,7 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - EMAIL_SENDER=onboarding@resend.dev
       - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
+      - GROBID_URL=http://grobid:8070
 
   worker:
     build:
@@ -37,9 +39,23 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
       - PDF_SAVE_DIR=/app/data
       - PYTHONUNBUFFERED=1
+      - GROBID_URL=http://grobid:8070
     restart: unless-stopped
     depends_on:
       - db
+      - grobid
+
+  grobid:
+    # CRF-only, no CUDA/DL libs — lightweight (~300MB vs ~2GB for the full
+    # image). Runs on CPU only, which is exactly what we need on both
+    # Khadas (ARM64, no GPU) and Framework Desktop (CPU inference).
+    image: grobid/grobid:0.8.0-crf
+    container_name: arxiv_assistant_grobid
+    ports:
+      - "8070:8070"
+    environment:
+      - JAVA_OPTS=-Xmx2g
+    restart: unless-stopped
 
   db:
     image: pgvector/pgvector:pg16

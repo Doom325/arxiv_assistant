@@ -32,9 +32,13 @@ class Settings(BaseSettings):
     OLLAMA_CHAT_MODEL: str = "gemma3:27b"  # RAG chat + universal fallback for dedicated *_MODEL vars
     OLLAMA_SUMMARIZATION_MODEL: str | None = None  # Falls back to OLLAMA_CHAT_MODEL if unset
     OLLAMA_ENTITY_MODEL: str | None = None  # Falls back to OLLAMA_CHAT_MODEL if unset
-    OLLAMA_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification + citation parsing
+    OLLAMA_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification (pattern taxonomy)
     OLLAMA_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (client-side truncation)
     PDF_SAVE_DIR: str = "data"
+
+    # GROBID (academic PDF → structured references). Replaces the old LLM-
+    # based citation extraction. Runs as a Docker service; see docker-compose.yml.
+    GROBID_URL: str = "http://grobid:8070"
 
     # Entity extraction provider: "gliner" (default) or "llm"
     ENTITY_EXTRACTION_PROVIDER: str = "gliner"
