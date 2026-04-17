@@ -136,11 +136,6 @@ class OllamaProvider(LLMProvider):
     def _embed_url(self) -> str:
         return f"{self.base_url.rstrip('/')}/embeddings"
 
-    # Markdown fences emitted by some local models (e.g. gemma3:12b) even
-    # when response_format=json_object is set. Match optional leading/trailing
-    # ```json / ``` wrappers so json.loads sees only the payload.
-    _MD_FENCE_RE = re.compile(r"^\s*```(?:json|JSON)?\s*\n?|\n?\s*```\s*$")
-
     def _strip_md_fences(self, content: str) -> str:
         """Strip leading ```json and trailing ``` if present. Idempotent."""
         if not content:

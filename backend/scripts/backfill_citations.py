@@ -37,6 +37,7 @@ _BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _BACKEND_ROOT not in sys.path:
     sys.path.insert(0, _BACKEND_ROOT)
 
+from sqlalchemy import func
 from database import SessionLocal
 from models import Paper
 from config import settings
@@ -73,20 +74,26 @@ def filter_needing_citations(pdf_list: list[dict], overwrite: bool) -> list[dict
     """
     db = SessionLocal()
     try:
-        # Batch-fetch all arxiv_ids that exist in DB, with their citation status
         arxiv_ids = [p["arxiv_id"] for p in pdf_list]
 
-        # Process in batches of 1000 to avoid huge IN clauses
+        # Batch-fetch paper IDs + citation status using a DB-side length
+        # check (avoids pulling full JSONB blobs into Python).
         db_info: dict[str, dict] = {}
         batch_size = 1000
         for i in range(0, len(arxiv_ids), batch_size):
             batch = arxiv_ids[i:i + batch_size]
-            rows = db.query(Paper.id, Paper.arxiv_id, Paper.citations).filter(
+            rows = db.query(
+                Paper.id,
+                Paper.arxiv_id,
+                func.jsonb_array_length(Paper.citations),
+            ).filter(
                 Paper.arxiv_id.in_(batch)
             ).all()
-            for paper_id, arxiv_id, citations in rows:
-                has_cits = citations is not None and len(citations) > 0 if isinstance(citations, list) else citations is not None
-                db_info[arxiv_id] = {"id": paper_id, "has_citations": has_cits}
+            for paper_id, arxiv_id, cit_count in rows:
+                db_info[arxiv_id] = {
+                    "id": paper_id,
+                    "has_citations": cit_count is not None and cit_count > 0,
+                }
 
         result = []
         n_not_in_db = 0
@@ -128,9 +135,9 @@ def process_one(paper_info: dict) -> dict:
             return result
 
         paper.citations = citations
-        db.commit()
-
         n_links = resolve_citations(paper, citations, db)
+        # Single commit after both citations + links are written,
+        # so a resolve_citations failure doesn't leave partial state.
 
         result["status"] = "ok"
         result["n_citations"] = len(citations)
