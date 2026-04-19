@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     LLM_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (client-side truncation)
     PDF_SAVE_DIR: str = "data"
 
+    # GROBID (academic PDF → structured references). Replaces the old LLM-
+    # based citation extraction. Runs as a Docker service; see docker-compose.yml.
+    GROBID_URL: str = "http://grobid:8070"
+
     # Entity extraction provider: "gliner" (default) or "llm"
     ENTITY_EXTRACTION_PROVIDER: str = "gliner"
 

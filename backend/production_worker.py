@@ -62,8 +62,8 @@ class PDFProcessorLite:
     def extract_sections(self, full_text: str) -> dict:
         return extract_sections(full_text)
 
-    def extract_citations(self, full_text: str) -> list:
-        return extract_citations(full_text)
+    def extract_citations(self, pdf_path: str) -> list:
+        return extract_citations(pdf_path)
 
     def process_pdf(self, pdf_path: str):
         return _process_pdf(pdf_path)

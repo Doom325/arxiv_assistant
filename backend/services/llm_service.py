@@ -2,6 +2,7 @@ from google import genai
 from google.genai import types
 import requests
 import json
+import re
 from abc import ABC, abstractmethod
 from config import settings
 from core.text_utils import sanitize_text as _sanitize_text
@@ -22,10 +23,6 @@ class LLMProvider(ABC):
 
     @abstractmethod
     def generate_embedding(self, text: str, output_dimensionality: int = None) -> list[float]:
-        pass
-
-    @abstractmethod
-    def parse_citations(self, text: str) -> list[dict]:
         pass
 
     @abstractmethod
@@ -71,50 +68,6 @@ class GeminiProvider(LLMProvider):
             return result.embeddings[0].values
         except Exception as e:
             logger.error(f"Gemini embedding error: {e}")
-            return []
-
-    def parse_citations(self, text: str) -> list[dict]:
-        import json
-        prompt = f"""
-        Extract the papers cited in the following text. 
-        For each citation, extract:
-        1. Title: The title of the paper.
-        2. Authors: A list of author names.
-        3. URL: Any URL or link mentioned.
-        4. Raw: The full original citation text.
-
-        Text:
-        {self.sanitize_text(text)}
-
-        Return the result as a JSON list of objects. Each object should have keys: "title", "authors", "url", "raw".
-        If you cannot find specific fields, use null or empty list for authors.
-        Respond ONLY with the JSON.
-        """
-        try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt
-            )
-            # Find JSON block
-            # Find JSON block - non-greedy to avoid capturing extra data
-            import re
-            # Try to find the first balanced [ ] block
-            # This is safer than greedy .*
-            match = re.search(r'(\[[\s\S]*\])', response.text)
-            if match:
-                try:
-                    return json.loads(match.group(1))
-                except json.JSONDecodeError:
-                    # Retry with a stricter match if first one failed
-                    # Often Gemini adds text after the block
-                    clean_json = match.group(1)
-                    # Simple attempt to find the last closing bracket
-                    last_bracket = clean_json.rfind(']')
-                    if last_bracket != -1:
-                        return json.loads(clean_json[:last_bracket+1])
-            return []
-        except Exception as e:
-            logger.error(f"Gemini citation parsing error: {e}")
             return []
 
     def chat(self, history: list, user_message: str, context: str) -> str:
@@ -184,8 +137,10 @@ class OllamaProvider(LLMProvider):
         return f"{self.base_url.rstrip('/')}/embeddings"
 
     def _unwrap_json_list(self, content: str) -> list:
-        """Parse JSON that may be a bare list or wrapped in an object."""
-        parsed = json.loads(content)
+        """Parse JSON that may be a bare list, wrapped in an object, or
+        wrapped in markdown code fences (some local models do this even
+        with response_format=json_object)."""
+        parsed = json.loads(self._strip_md_fences(content))
         if isinstance(parsed, list):
             return parsed
         if isinstance(parsed, dict):
