@@ -30,6 +30,12 @@ services:
                   - LLM_CHAT_MODEL=gemma3:27b
                   - LLM_CLASSIFICATION_MODEL=gemma3:27b
 
+      grobid:
+            # GROBID official image is x86_64 only; disable on ARM64 Khadas.
+            # Citation extraction falls back gracefully (returns empty list).
+            deploy:
+                  replicas: 0
+
       worker:
             environment:
                   - DATABASE_URL=postgresql://user:password@db:5432/arxiv_db

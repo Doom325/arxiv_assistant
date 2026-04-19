@@ -164,6 +164,10 @@ sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" << 'EOF'
     echo "🛠️ Running reading queue migration..."
     echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_backend python migrate_reading_queue.py
 
+    # ✅ Add summary_status / summary_error / summary_attempted_at columns (idempotent)
+    echo "🛠️ Running summary status migration..."
+    echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_backend python migrate_add_summary_status.py
+
     # ✅ Add full-text and image extraction columns (idempotent)
     echo "🛠️ Running full-text extraction migration..."
     echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_db psql -U user -d arxiv_db -c "ALTER TABLE papers ADD COLUMN IF NOT EXISTS full_text_sections JSONB;"
