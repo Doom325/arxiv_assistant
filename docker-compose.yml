@@ -49,7 +49,7 @@ services:
     # CRF-only, no CUDA/DL libs — lightweight (~300MB vs ~2GB for the full
     # image). Runs on CPU only, which is exactly what we need on both
     # Khadas (ARM64, no GPU) and Framework Desktop (CPU inference).
-    image: grobid/grobid:0.8.0-crf
+    image: grobid/grobid:0.8.2-crf
     container_name: arxiv_assistant_grobid
     ports:
       - "8070:8070"
