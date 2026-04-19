@@ -40,13 +40,13 @@ Split provider design — `llm_service` handles LLM tasks, `embedding_service` h
 - `AI_PROVIDER` — controls summarization, classification, citations, chat, entity extraction ("gemini" or "local")
 - `EMBEDDING_PROVIDER` — controls embeddings only (defaults to AI_PROVIDER, set to "gemini" to keep Gemini embeddings while using local LLMs)
 - `ENTITY_EXTRACTION_PROVIDER` — "gliner" (default) or "llm" for LLM-based extraction
-- `OLLAMA_CHAT_MODEL` — Primary RAG chat model and default fallback for others
-- `OLLAMA_SUMMARIZATION_MODEL` — Dedicated summarization model (optional)
-- `OLLAMA_ENTITY_MODEL` — Dedicated entity extraction model (optional)
-- `OLLAMA_CLASSIFICATION_MODEL` — Gemma 3 12B (classification, citation parsing)
+- `LLM_CHAT_MODEL` — Primary RAG chat model and default fallback for others
+- `LLM_SUMMARIZATION_MODEL` — Dedicated summarization model (optional)
+- `LLM_ENTITY_MODEL` — Dedicated entity extraction model (optional)
+- `LLM_CLASSIFICATION_MODEL` — Gemma 3 12B (classification, citation parsing)
 
 > [!WARNING]
-> **Naming Gotcha**: `OLLAMA_CHAT_MODEL` is the primary fallback for summarization and entity extraction. Ensure this is set to a capable model if dedicated models are not configured.
+> **Naming Gotcha**: `LLM_CHAT_MODEL` is the primary fallback for summarization and entity extraction. Ensure this is set to a capable model if dedicated models are not configured.
 
 ## Key Features
 
@@ -67,7 +67,7 @@ cp .env.example .env              # Root .env (DB credentials, general config)
 cp backend/.env.example backend/.env  # Backend .env (API keys)
 ```
 
-Key variables: `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `RESEND_API_KEY`, `DATABASE_URL`, `AI_PROVIDER` (gemini|local), `PDF_SAVE_DIR`, `OLLAMA_BASE_URL`.
+Key variables: `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `RESEND_API_KEY`, `DATABASE_URL`, `AI_PROVIDER` (gemini|local), `PDF_SAVE_DIR`, `LITELLM_BASE_URL`.
 
 ## Development
 

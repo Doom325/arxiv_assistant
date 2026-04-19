@@ -118,11 +118,11 @@ class OllamaProvider(LLMProvider):
     def __init__(self):
         self.base_url = settings.LITELLM_BASE_URL
         self.api_key = settings.LITELLM_API_KEY
-        self.chat_model = settings.OLLAMA_CHAT_MODEL
-        self.summarization_model = settings.OLLAMA_SUMMARIZATION_MODEL or self.chat_model
-        self.entity_model = settings.OLLAMA_ENTITY_MODEL or self.chat_model
-        self.classification_model = settings.OLLAMA_CLASSIFICATION_MODEL or self.chat_model
-        self.embedding_model = settings.OLLAMA_EMBEDDING_MODEL
+        self.chat_model = settings.LLM_CHAT_MODEL
+        self.summarization_model = settings.LLM_SUMMARIZATION_MODEL or self.chat_model
+        self.entity_model = settings.LLM_ENTITY_MODEL or self.chat_model
+        self.classification_model = settings.LLM_CLASSIFICATION_MODEL or self.chat_model
+        self.embedding_model = settings.LLM_EMBEDDING_MODEL
 
     def _headers(self) -> dict:
         h = {"Content-Type": "application/json"}
@@ -135,15 +135,6 @@ class OllamaProvider(LLMProvider):
 
     def _embed_url(self) -> str:
         return f"{self.base_url.rstrip('/')}/embeddings"
-
-    def _strip_md_fences(self, content: str) -> str:
-        """Strip leading ```json and trailing ``` if present. Idempotent."""
-        if not content:
-            return content
-        # Two-pass: leading then trailing.
-        stripped = re.sub(r"^\s*```(?:json|JSON)?\s*\n?", "", content)
-        stripped = re.sub(r"\n?\s*```\s*$", "", stripped)
-        return stripped.strip()
 
     def _unwrap_json_list(self, content: str) -> list:
         """Parse JSON that may be a bare list, wrapped in an object, or
@@ -213,7 +204,7 @@ class OllamaProvider(LLMProvider):
         the gateway-registered model decides the vector dimensionality.
         """
         text = text.replace("\x00", "")
-        truncated_text = text[:settings.OLLAMA_EMBEDDING_TRUNCATION]
+        truncated_text = text[:settings.LLM_EMBEDDING_TRUNCATION]
         logger.info(f"Generating embedding for text ({len(truncated_text)} chars): {truncated_text[:100]}...")
 
         payload = {
@@ -228,6 +219,30 @@ class OllamaProvider(LLMProvider):
             logger.error(f"Gateway embedding error: {e}")
             if 'response' in locals():
                 logger.error(f"Response body: {response.text}")
+            return []
+
+    def parse_citations(self, text: str) -> list[dict]:
+        prompt = f"""
+        Extract paper citations from the text below as a JSON list.
+        Provide: title, authors (list), url (string or null), raw (full text).
+
+        Text: {self.sanitize_text(text)}
+
+        Respond ONLY with a JSON object containing a single key "citations" whose value is the list.
+        """
+        payload = {
+            "model": self.classification_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "response_format": {"type": "json_object"},
+        }
+        try:
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
+            response.raise_for_status()
+            content = response.json()['choices'][0]['message']['content']
+            return self._unwrap_json_list(content)
+        except Exception as e:
+            logger.error(f"Gateway citation parsing error: {e}")
             return []
 
     def chat(self, history: list, user_message: str, context: str) -> str:

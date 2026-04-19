@@ -4,7 +4,7 @@ from config import settings
 
 def test_embedding():
     print(f"Testing embedding with provider: {settings.AI_PROVIDER}")
-    print(f"Model: {settings.OLLAMA_EMBEDDING_MODEL}")
+    print(f"Model: {settings.LLM_EMBEDDING_MODEL}")
     
     text = "This is a test sentence for EmbeddingGemma."
     try:
