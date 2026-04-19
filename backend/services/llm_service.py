@@ -160,6 +160,7 @@ class OllamaProvider(LLMProvider):
         payload = {
             "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 3000,
             "stream": False,
         }
         try:
@@ -176,6 +177,7 @@ class OllamaProvider(LLMProvider):
         payload = {
             "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 3000,
             "stream": False,
         }
         try:
