@@ -1,0 +1,21 @@
+# Local Mac dev override — db + backend only, summarization through the LiteLLM gateway.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.mac.yml up db backend
+services:
+  backend:
+    volumes:
+      - ./data:/app/data
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
+      - PDF_SAVE_DIR=/app/data
+      - PYTHONUNBUFFERED=1
+      - AI_PROVIDER=local
+      - LITELLM_BASE_URL=${LITELLM_BASE_URL}
+      - LITELLM_API_KEY=${LITELLM_API_KEY}
+      - OLLAMA_CHAT_MODEL=gemma3:27b
+      - OLLAMA_SUMMARIZATION_MODEL=gemma3:27b
+      - OLLAMA_CLASSIFICATION_MODEL=gemma3:12b
+      - OLLAMA_EMBEDDING_MODEL=embeddinggemma:latest
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}

@@ -162,15 +162,15 @@ make check         # Verify imports work
 All config via environment variables, loaded in `config.py` (Pydantic BaseSettings). Key vars:
 - `DATABASE_URL` — PostgreSQL connection string
 - `GEMINI_API_KEY` / `GOOGLE_API_KEY` — Google API credentials
-- `AI_PROVIDER` — "gemini" or "local" (Ollama)
+- `AI_PROVIDER` — "gemini" or "local" (LiteLLM gateway)
 - `PDF_SAVE_DIR` — Local PDF storage path
 - `RESEND_API_KEY` — Email service
-- `OLLAMA_BASE_URL` — Ollama API entry point
-- `OLLAMA_EMBEDDING_MODEL` — model used for 3072D embeddings
-- `OLLAMA_CHAT_MODEL` — Primary RAG chat model and default fallback for others
-- `OLLAMA_SUMMARIZATION_MODEL` — Dedicated summarization model (falls back to `OLLAMA_CHAT_MODEL`)
-- `OLLAMA_ENTITY_MODEL` — Dedicated entity extraction model (falls back to `OLLAMA_CHAT_MODEL`)
-- `OLLAMA_CLASSIFICATION_MODEL` — Citation parsing and Pattern Taxonomy classification (defaults to `OLLAMA_CHAT_MODEL`)
+- `LITELLM_BASE_URL` — LiteLLM gateway entry point (e.g. `http://192.168.1.32:4000/v1`)
+- `LLM_EMBEDDING_MODEL` — model used for 3072D embeddings
+- `LLM_CHAT_MODEL` — Primary RAG chat model and default fallback for others
+- `LLM_SUMMARIZATION_MODEL` — Dedicated summarization model (falls back to `LLM_CHAT_MODEL`)
+- `LLM_ENTITY_MODEL` — Dedicated entity extraction model (falls back to `LLM_CHAT_MODEL`)
+- `LLM_CLASSIFICATION_MODEL` — Citation parsing and Pattern Taxonomy classification (defaults to `LLM_CHAT_MODEL`)
 
 > [!WARNING]
-> **Naming Gotcha**: `OLLAMA_CHAT_MODEL` is the primary fallback for summarization and entity extraction. Ensure this is set to a capable model if dedicated models are not configured.
+> **Naming Gotcha**: `LLM_CHAT_MODEL` is the primary fallback for summarization and entity extraction. Ensure this is set to a capable model if dedicated models are not configured.

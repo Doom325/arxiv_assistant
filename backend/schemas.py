@@ -21,6 +21,9 @@ class PaperResponse(BaseModel):
     pdf_url: str
     citations: Any = None
     entities: Any = None
+    summary_status: Optional[str] = None
+    summary_error: Optional[Any] = None
+    summary_attempted_at: Optional[datetime] = None
 
 class PaperSection(BaseModel):
     title: str

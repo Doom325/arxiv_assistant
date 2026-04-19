@@ -28,12 +28,12 @@ class Settings(BaseSettings):
     # names below stay Ollama-compatible — the gateway aliases them.
     LITELLM_BASE_URL: str = "http://192.168.1.32:4000/v1"
     LITELLM_API_KEY: str = ""
-    OLLAMA_EMBEDDING_MODEL: str = "embeddinggemma:latest"
-    OLLAMA_CHAT_MODEL: str = "gemma3:27b"  # RAG chat + universal fallback for dedicated *_MODEL vars
-    OLLAMA_SUMMARIZATION_MODEL: str | None = None  # Falls back to OLLAMA_CHAT_MODEL if unset
-    OLLAMA_ENTITY_MODEL: str | None = None  # Falls back to OLLAMA_CHAT_MODEL if unset
-    OLLAMA_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification (pattern taxonomy)
-    OLLAMA_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (client-side truncation)
+    LLM_EMBEDDING_MODEL: str = "embeddinggemma:latest"
+    LLM_CHAT_MODEL: str = "gemma3:27b"  # RAG chat + universal fallback for dedicated *_MODEL vars
+    LLM_SUMMARIZATION_MODEL: str | None = None  # Falls back to LLM_CHAT_MODEL if unset
+    LLM_ENTITY_MODEL: str | None = None  # Falls back to LLM_CHAT_MODEL if unset
+    LLM_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification + citation parsing
+    LLM_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (client-side truncation)
     PDF_SAVE_DIR: str = "data"
 
     # GROBID (academic PDF → structured references). Replaces the old LLM-

@@ -27,8 +27,8 @@ services:
       # LiteLLM gateway on Framework Desktop
       - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
       - LITELLM_API_KEY=${LITELLM_API_KEY}
-      - OLLAMA_CHAT_MODEL=gemma3:27b
-      - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
+      - LLM_CHAT_MODEL=gemma3:27b
+      - LLM_CLASSIFICATION_MODEL=gemma3:27b
 
   worker:
     environment:
@@ -40,7 +40,7 @@ services:
       - EMBEDDING_PROVIDER=gemini
       - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
       - LITELLM_API_KEY=${LITELLM_API_KEY}
-      - OLLAMA_CHAT_MODEL=gemma3:27b
-      - OLLAMA_CLASSIFICATION_MODEL=gemma3:27b
+      - LLM_CHAT_MODEL=gemma3:27b
+      - LLM_CLASSIFICATION_MODEL=gemma3:27b
       - ENTITY_EXTRACTION_PROVIDER=llm
       - GEMINI_API_KEY=${GEMINI_API_KEY}
