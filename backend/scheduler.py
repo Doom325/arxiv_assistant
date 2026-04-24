@@ -13,6 +13,7 @@ from database import SessionLocal
 from ingestion import process_paper_entry
 import models
 from models import CategoryPollState, JobLog, Paper, UserConfig
+from poll_constants import INITIAL_BACKFILL_DAYS, REPOLL_OVERLAP_DAYS
 from services.arxiv_service import arxiv_service
 from services.batch_service import batch_service
 from services.email_service import email_service
@@ -24,14 +25,6 @@ DEFAULT_CATEGORIES = {
     "cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.RO",
     "cs.MA", "cs.NE", "cs.IR", "cs.SI", "cs.HC", "cs.CY",
 }
-
-# On first run (no prior state), look back this many days. Bounded so we don't
-# accidentally request 7 years of history against arXiv.
-INITIAL_BACKFILL_DAYS = 14
-
-# Always re-query one day before the last successful submittedDate to absorb
-# same-day publications that arrived after our previous run.
-REPOLL_OVERLAP_DAYS = 1
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -52,10 +45,17 @@ def _get_or_create_poll_state(
     state = db.query(CategoryPollState).filter(
         CategoryPollState.category == category
     ).first()
-    if state is None:
-        state = CategoryPollState(category=category)
-        db.add(state)
-        db.flush()
+    if state is not None:
+        return state
+    # Commit the fresh row before the paper loop runs so that
+    # process_paper_entry's per-paper rollback on the first paper cannot
+    # reverse this INSERT and orphan subsequent state.last_error writes.
+    # The session-attached state object still receives later attribute
+    # writes, which the end-of-category commit picks up.
+    state = CategoryPollState(category=category)
+    db.add(state)
+    db.commit()
+    db.refresh(state)
     return state
 
 
@@ -77,7 +77,7 @@ def _poll_category(db: Session, category: str, today: datetime.date) -> dict:
     which means a failed category self-heals on the next run.
     """
     state = _get_or_create_poll_state(db, category)
-    state.last_run_at = datetime.datetime.utcnow()
+    state.last_run_at = datetime.datetime.now(datetime.timezone.utc)
     since = _since_date_for(state, today)
 
     new_count = 0
@@ -116,7 +116,7 @@ def _poll_category(db: Session, category: str, today: datetime.date) -> dict:
         prior = state.last_successful_submitted_date or datetime.date.min
         if max_submitted > prior:
             state.last_successful_submitted_date = max_submitted
-    state.last_success_at = datetime.datetime.utcnow()
+    state.last_success_at = datetime.datetime.now(datetime.timezone.utc)
     state.last_error = None
     return {
         "category": category,
@@ -132,10 +132,12 @@ def _poll_category(db: Session, category: str, today: datetime.date) -> dict:
 def process_papers():
     """Daily arXiv poll with per-category high-water-mark backfill.
 
-    arXiv announces once per day (~20:00 ET Sun–Thu). This job runs at
-    05:30 IST, uses a date-range query per category, and persists the max
-    observed ``submittedDate``. Missed runs self-heal because the next run
-    simply re-queries from the last success date onwards.
+    arXiv announces once per day at ~20:00 ET Sun–Thu. That converts to
+    ~05:30 IST in EDT (summer) and ~06:30 IST in EST (winter), so this
+    job runs at 09:00 IST to sit safely after both DST windows. It uses
+    a date-range query per category and persists the max observed
+    ``submittedDate``. Missed runs self-heal because the next run simply
+    re-queries from the last success date onwards.
     """
     logger.info("Starting daily arXiv paper poll...")
     db: Session = SessionLocal()
@@ -143,7 +145,7 @@ def process_papers():
     job_log = JobLog(
         job_name="scheduler_poll",
         status="RUNNING",
-        start_time=datetime.datetime.utcnow(),
+        start_time=datetime.datetime.now(datetime.timezone.utc),
         job_details={},
     )
     db.add(job_log)
@@ -154,7 +156,10 @@ def process_papers():
         categories = _collect_categories(db)
         logger.info("Polling %d categories: %s", len(categories), categories)
 
-        today = datetime.date.today()
+        # arXiv's ``submittedDate`` is UTC — anchor ``today`` in UTC so the
+        # initial-backfill window and overlap math don't shift by a day
+        # when the host's system timezone isn't UTC.
+        today = datetime.datetime.now(datetime.timezone.utc).date()
         per_category: list = []
         for category in sorted(categories):
             summary = _poll_category(db, category, today)
@@ -321,22 +326,25 @@ scheduler = BackgroundScheduler()
 
 ist_timezone = pytz.timezone('Asia/Kolkata')
 
-# 1. Ingestion Job: Daily at 05:30 IST.
-#    arXiv announces once per day at 20:00 ET — ~05:30 IST (EST) or
-#    ~04:30 IST (EDT). 05:30 IST catches both windows. Must run before the
-#    email-digest job below so yesterday's papers are ingested first.
+# 1. Ingestion Job: Daily at 09:00 IST.
+#    arXiv announces once per day at 20:00 ET. Correct conversion:
+#    20:00 EDT (summer) → 05:30 IST next day; 20:00 EST (winter) →
+#    06:30 IST next day. 09:00 IST sits ~2.5h after the EST announce
+#    and ~3.5h after the EDT announce — safely past both DST windows.
+#    Must run before the email-digest job below so yesterday's papers
+#    are ingested first.
 scheduler.add_job(
     process_papers,
-    CronTrigger(hour=5, minute=30, timezone=ist_timezone),
+    CronTrigger(hour=9, minute=0, timezone=ist_timezone),
 )
 
-# 2. Email Job: Daily at 07:00 IST.
-#    Runs after the 05:30 IST paper poll — ordering matters because the
-#    digest reads yesterday's cs.AI papers from the local DB, which the
-#    poll is responsible for populating.
+# 2. Email Job: Daily at 10:00 IST.
+#    Runs one hour after the 09:00 IST paper poll — ordering matters
+#    because the digest reads yesterday's cs.AI papers from the local
+#    DB, which the poll is responsible for populating.
 scheduler.add_job(
     send_daily_email_digest,
-    CronTrigger(hour=7, minute=0, timezone=ist_timezone),
+    CronTrigger(hour=10, minute=0, timezone=ist_timezone),
 )
 
 # 3. Batch Summarization Job: Daily at 11:00 PM IST

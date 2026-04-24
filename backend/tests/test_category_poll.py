@@ -203,7 +203,7 @@ class TestProcessPapers:
         scheduler = patched_scheduler
         captured = {}
 
-        def fake_fetch(category, since_date, safety_cap=50000):
+        def fake_fetch(category, since_date, safety_cap=10000):
             captured["category"] = category
             captured["since_date"] = since_date
             return iter([])
@@ -215,7 +215,10 @@ class TestProcessPapers:
         ):
             scheduler.process_papers()
 
-        expected_since = datetime.date.today() - datetime.timedelta(days=14)
+        expected_since = (
+            datetime.datetime.now(datetime.timezone.utc).date()
+            - datetime.timedelta(days=14)
+        )
         assert captured["category"] == "cs.AI"
         assert captured["since_date"] == expected_since
 
@@ -231,7 +234,7 @@ class TestProcessPapers:
 
         captured = {}
 
-        def fake_fetch(category, since_date, safety_cap=50000):
+        def fake_fetch(category, since_date, safety_cap=10000):
             captured["since_date"] = since_date
             return iter([])
 
@@ -286,7 +289,7 @@ class TestProcessPapers:
         ))
         db_session.commit()
 
-        def raise_fetch(category, since_date, safety_cap=50000):
+        def raise_fetch(category, since_date, safety_cap=10000):
             raise RuntimeError("arxiv.org is down")
 
         with patch.object(
@@ -336,3 +339,52 @@ class TestProcessPapers:
         assert state.last_successful_submitted_date == datetime.date(
             2026, 4, 25
         )
+
+    def test_poll_state_row_survives_process_paper_entry_rollback(
+        self, patched_scheduler, db_session
+    ):
+        """R2 regression: if ``process_paper_entry`` rolls back on the very
+        first paper, the freshly INSERTed ``CategoryPollState`` row must
+        still exist after the outer commit, with ``last_error`` recorded.
+
+        Before the fix, ``_get_or_create_poll_state`` only ``flush()``ed
+        the new row, so the first paper's rollback reversed that INSERT
+        and subsequent ``state.last_error = ...`` writes landed on a
+        transient (unattached) object — no durable state row.
+        """
+        scheduler = patched_scheduler
+
+        # No existing state row for cs.AI — force the create path.
+        assert db_session.query(CategoryPollState).filter_by(
+            category="cs.AI"
+        ).first() is None
+
+        papers = [_make_paper_data("2604.9999", datetime.date(2026, 4, 22))]
+
+        def raise_on_first_paper(db, paper_data):
+            db.rollback()
+            raise RuntimeError("simulated failure on first paper")
+
+        with patch.object(
+            scheduler, "_collect_categories", return_value={"cs.AI"}
+        ), patch.object(
+            scheduler.arxiv_service,
+            "fetch_papers_since",
+            return_value=iter(papers),
+        ), patch.object(
+            scheduler, "process_paper_entry", side_effect=raise_on_first_paper
+        ):
+            scheduler.process_papers()
+
+        # Fresh query — prove the row is persisted, not transient.
+        db_session.expire_all()
+        state = db_session.query(CategoryPollState).filter_by(
+            category="cs.AI"
+        ).first()
+        assert state is not None, (
+            "poll state row was rolled back with the paper — "
+            "should have been committed before the paper loop"
+        )
+        assert state.last_error is not None
+        assert "simulated failure on first paper" in state.last_error
+        assert state.last_successful_submitted_date is None

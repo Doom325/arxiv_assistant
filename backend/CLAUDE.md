@@ -17,7 +17,7 @@ FastAPI backend serving the arxiv_assistant API, background workers, and schedul
 
 - `main.py` — FastAPI app (CORS, lifespan, router registration, error handling, static files, scheduler startup)
 - `production_worker.py` — Background worker (PDF download/extraction, embedding generation, entity extraction, citation parsing, pattern classification)
-- `scheduler.py` — APScheduler daemon: paper poll (daily 05:30 IST, date-range query with per-category high-water mark), email digest (7 AM IST), batch summarization (11 PM IST)
+- `scheduler.py` — APScheduler daemon: paper poll (daily 09:00 IST, date-range query with per-category high-water mark), email digest (10:00 IST), batch summarization (11 PM IST)
 - `batch_embed_manager.py` — Bulk embedding processing via Gemini Batch API
 - `mac_worker.py` — Development worker for Apple Silicon using local MLX models
 
@@ -142,10 +142,10 @@ backend/
 
 ## Processing Pipeline
 
-1. **Ingestion:** Scheduler polls arXiv daily at 05:30 IST using a `submittedDate` range query with a per-category high-water mark (`CategoryPollState`) → `ingestion.process_paper_entry()` → creates Paper record (metadata only). Missed runs self-heal because the next run re-queries from the last success date onwards.
+1. **Ingestion:** Scheduler polls arXiv daily at 09:00 IST using a `submittedDate` range query with a per-category high-water mark (`CategoryPollState`) → `ingestion.process_paper_entry()` → creates Paper record (metadata only). Missed runs self-heal because the next run re-queries from the last success date onwards.
 2. **Worker Processing:** `production_worker` polls for unprocessed papers (batch of 5, last 20 days) → downloads PDF → extracts text/sections → generates 3072D embedding → extracts entities (GLiNER) → parses citations (LLM) → resolves citations → classifies patterns (V6 CoT taxonomy)
 3. **Batch Summarization:** Nightly job (11 PM IST) collects unsummarized papers → submits to Gemini Batch API → polls for completion
-4. **Email Digest:** Daily at 7 AM IST (after the 05:30 IST poll) → queries yesterday's cs.AI papers → sends via Resend
+4. **Email Digest:** Daily at 10:00 IST (after the 09:00 IST poll) → queries yesterday's cs.AI papers → sends via Resend
 
 ## Testing
 

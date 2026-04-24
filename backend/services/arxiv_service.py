@@ -2,12 +2,13 @@ import arxiv
 import logging
 import requests
 import os
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import Iterator
 
 import time
 from config import settings
 from core.pdf_utils import extract_text_from_pdf
+from poll_constants import POLL_SAFETY_CAP
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class ArxivService:
         self,
         category: str,
         since_date: date,
-        safety_cap: int = 50000,
+        safety_cap: int = POLL_SAFETY_CAP,
     ) -> Iterator[dict]:
         """Yield papers in ``category`` with ``submittedDate >= since_date``.
 

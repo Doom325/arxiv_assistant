@@ -11,12 +11,14 @@ Usage:
     python migrate_category_poll_state.py
 """
 
+import datetime
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
 
 from sqlalchemy import inspect, text
 
 from database import engine
+from poll_constants import INITIAL_BACKFILL_DAYS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,8 +27,6 @@ DEFAULT_CATEGORIES = [
     "cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.RO",
     "cs.MA", "cs.NE", "cs.IR", "cs.SI", "cs.HC", "cs.CY",
 ]
-
-INITIAL_BACKFILL_DAYS = 14
 
 
 def run_migration() -> None:
@@ -50,7 +50,11 @@ def run_migration() -> None:
                 "Table category_poll_state already exists — skipping create."
             )
 
-    seed_date = date.today() - timedelta(days=INITIAL_BACKFILL_DAYS)
+    # arXiv's ``submittedDate`` is UTC — anchor the seed in UTC so the
+    # bounded 14-day backfill window doesn't shift by a day on hosts
+    # whose system timezone isn't UTC.
+    today_utc = datetime.datetime.now(datetime.timezone.utc).date()
+    seed_date = today_utc - timedelta(days=INITIAL_BACKFILL_DAYS)
     with engine.begin() as conn:
         for category in DEFAULT_CATEGORIES:
             # INSERT ... ON CONFLICT DO NOTHING keeps re-runs safe and never
