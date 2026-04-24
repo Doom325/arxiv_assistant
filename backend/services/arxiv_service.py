@@ -1,11 +1,16 @@
 import arxiv
+import logging
 import requests
 import os
-from datetime import datetime, timedelta
+from datetime import date
+from typing import Iterator
 
 import time
 from config import settings
 from core.pdf_utils import extract_text_from_pdf
+from poll_constants import POLL_SAFETY_CAP
+
+logger = logging.getLogger(__name__)
 
 class ArxivService:
     def __init__(self):
@@ -40,6 +45,56 @@ class ArxivService:
                 "category": result.primary_category
             })
         return results
+
+    def fetch_papers_since(
+        self,
+        category: str,
+        since_date: date,
+        safety_cap: int = POLL_SAFETY_CAP,
+    ) -> Iterator[dict]:
+        """Yield papers in ``category`` with ``submittedDate >= since_date``.
+
+        Uses arXiv's ``submittedDate`` range query and iterates oldest → newest
+        so a caller can track a running high-water mark as it consumes the
+        stream. Papers are yielded as dicts in the same shape as
+        :meth:`fetch_papers`. This is a generator — it does not materialise
+        the full result list.
+
+        ``safety_cap`` is a hard ceiling to guard against runaway loops from
+        malformed queries or a pathological date range. Under normal operation
+        (daily poll, a handful of categories) we expect at most a few hundred
+        results per category per call.
+        """
+        since_str = since_date.strftime("%Y%m%d0000")
+        query = (
+            f"cat:{category} AND "
+            f"submittedDate:[{since_str} TO *]"
+        )
+        search = arxiv.Search(
+            query=query,
+            sort_by=arxiv.SortCriterion.SubmittedDate,
+            sort_order=arxiv.SortOrder.Ascending,
+        )
+        count = 0
+        for result in self.client.results(search):
+            if count >= safety_cap:
+                logger.warning(
+                    "fetch_papers_since hit safety_cap=%d for "
+                    "category=%s since=%s — stopping early",
+                    safety_cap, category, since_date,
+                )
+                break
+            count += 1
+            yield {
+                "arxiv_id": result.entry_id.split('/')[-1],
+                "title": result.title,
+                "authors": [author.name for author in result.authors],
+                "summary": result.summary,
+                "published_date": result.published,
+                "updated_date": result.updated,
+                "pdf_url": result.pdf_url,
+                "category": result.primary_category,
+            }
 
     def get_paper_by_id(self, arxiv_id: str):
         """

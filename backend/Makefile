@@ -14,7 +14,7 @@ test-fast:
 
 # Syntax check critical files
 lint:
-	python -m py_compile models.py
+	python -m compileall -q models
 	python -m py_compile config.py
 	python -m py_compile database.py
 	python -m py_compile main.py
