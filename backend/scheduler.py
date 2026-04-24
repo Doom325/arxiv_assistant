@@ -5,7 +5,6 @@ import logging
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -13,7 +12,7 @@ from config import settings
 from database import SessionLocal
 from ingestion import process_paper_entry
 import models
-from models import JobLog, Paper, UserConfig
+from models import CategoryPollState, JobLog, Paper, UserConfig
 from services.arxiv_service import arxiv_service
 from services.batch_service import batch_service
 from services.email_service import email_service
@@ -21,73 +20,164 @@ from services.summarization_service import summarization_service
 from services import reading_queue_service as rqs
 from services.query_embedding_cache import query_cache
 
+DEFAULT_CATEGORIES = {
+    "cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.RO",
+    "cs.MA", "cs.NE", "cs.IR", "cs.SI", "cs.HC", "cs.CY",
+}
+
+# On first run (no prior state), look back this many days. Bounded so we don't
+# accidentally request 7 years of history against arXiv.
+INITIAL_BACKFILL_DAYS = 14
+
+# Always re-query one day before the last successful submittedDate to absorb
+# same-day publications that arrived after our previous run.
+REPOLL_OVERLAP_DAYS = 1
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def _collect_categories(db: Session) -> set:
+    """Union of user-configured categories, falling back to defaults."""
+    configs = db.query(UserConfig).all()
+    categories: set = set()
+    for config in configs:
+        if config.categories:
+            categories.update(config.categories)
+    return categories or set(DEFAULT_CATEGORIES)
+
+
+def _get_or_create_poll_state(
+    db: Session, category: str
+) -> CategoryPollState:
+    state = db.query(CategoryPollState).filter(
+        CategoryPollState.category == category
+    ).first()
+    if state is None:
+        state = CategoryPollState(category=category)
+        db.add(state)
+        db.flush()
+    return state
+
+
+def _since_date_for(state: CategoryPollState, today: datetime.date) -> datetime.date:
+    """Derive the arXiv ``submittedDate`` lower bound for this category."""
+    if state.last_successful_submitted_date is None:
+        return today - datetime.timedelta(days=INITIAL_BACKFILL_DAYS)
+    return state.last_successful_submitted_date - datetime.timedelta(
+        days=REPOLL_OVERLAP_DAYS
+    )
+
+
+def _poll_category(db: Session, category: str, today: datetime.date) -> dict:
+    """Fetch + ingest papers for one category, updating its poll state.
+
+    Returns a per-category summary dict for inclusion in the JobLog.
+    Exceptions from arXiv are caught and recorded on the state row so other
+    categories still run. The high-water mark is only advanced on success,
+    which means a failed category self-heals on the next run.
+    """
+    state = _get_or_create_poll_state(db, category)
+    state.last_run_at = datetime.datetime.utcnow()
+    since = _since_date_for(state, today)
+
+    new_count = 0
+    max_submitted: datetime.date | None = None
+    try:
+        for paper_data in arxiv_service.fetch_papers_since(
+            category=category, since_date=since
+        ):
+            # process_paper_entry is a no-op for duplicates (arxiv_id unique),
+            # so overlap between runs is absorbed silently.
+            created = process_paper_entry(db, paper_data)
+            if created:
+                new_count += 1
+
+            submitted = paper_data.get("published_date")
+            if submitted is not None:
+                submitted_d = (
+                    submitted.date()
+                    if isinstance(submitted, datetime.datetime)
+                    else submitted
+                )
+                if max_submitted is None or submitted_d > max_submitted:
+                    max_submitted = submitted_d
+    except Exception as err:
+        logger.exception("Error polling category %s", category)
+        state.last_error = str(err)
+        return {
+            "category": category,
+            "since": since.isoformat(),
+            "new_papers": new_count,
+            "status": "FAILED",
+            "error": str(err),
+        }
+
+    if max_submitted is not None:
+        prior = state.last_successful_submitted_date or datetime.date.min
+        if max_submitted > prior:
+            state.last_successful_submitted_date = max_submitted
+    state.last_success_at = datetime.datetime.utcnow()
+    state.last_error = None
+    return {
+        "category": category,
+        "since": since.isoformat(),
+        "new_papers": new_count,
+        "max_submitted": (
+            max_submitted.isoformat() if max_submitted else None
+        ),
+        "status": "SUCCESS",
+    }
+
+
 def process_papers():
-    logger.info("Starting periodic paper poll...")
+    """Daily arXiv poll with per-category high-water-mark backfill.
+
+    arXiv announces once per day (~20:00 ET Sun–Thu). This job runs at
+    05:30 IST, uses a date-range query per category, and persists the max
+    observed ``submittedDate``. Missed runs self-heal because the next run
+    simply re-queries from the last success date onwards.
+    """
+    logger.info("Starting daily arXiv paper poll...")
     db: Session = SessionLocal()
-    
-    # 1. Create Job Log
+
     job_log = JobLog(
         job_name="scheduler_poll",
         status="RUNNING",
         start_time=datetime.datetime.utcnow(),
-        job_details={}
+        job_details={},
     )
     db.add(job_log)
     db.commit()
     db.refresh(job_log)
-    
-    new_papers_count = 0
-    errors = []
-    
+
     try:
-        # Get all unique categories
-        configs = db.query(UserConfig).all()
-        categories = set()
-        for config in configs:
-            if config.categories:
-                categories.update(config.categories)
-        
-        if not categories:
-            categories = {
-                "cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.RO", 
-                "cs.MA", "cs.NE", "cs.IR", "cs.SI", "cs.HC", "cs.CY"
-            }
+        categories = _collect_categories(db)
+        logger.info("Polling %d categories: %s", len(categories), categories)
 
-        logger.info(f"Polling categories: {categories}")
+        today = datetime.date.today()
+        per_category: list = []
+        for category in sorted(categories):
+            summary = _poll_category(db, category, today)
+            per_category.append(summary)
+            # Commit after each category so partial progress survives crashes
+            # and failed categories don't hold up state updates for others.
+            db.commit()
 
-        for category in categories:
-            try:
-                # Fetch recent papers (100 is enough for 15-min window)
-                # We fetch "submittedDate" effectively via API ordering
-                papers = arxiv_service.fetch_papers(query=f"cat:{category}", max_results=50) 
-                
-                for paper_data in papers:
-                    # Ingestion: stored in DB, status will be default (is_downloaded=False)
-                    # This effectively adds it to the "Processing Queue"
-                    paper = process_paper_entry(db, paper_data)
-                    
-                    if paper:
-                        new_papers_count += 1
-                        
-            except Exception as cat_err:
-                logger.error(f"Error fetching {category}: {cat_err}")
-                errors.append(f"{category}: {str(cat_err)}")
-
-        job_log.status = "SUCCESS"
-        if errors:
-            job_log.status = "WARNING"
-            
+        total_new = sum(s["new_papers"] for s in per_category)
+        failed = [s for s in per_category if s["status"] == "FAILED"]
+        job_log.status = "WARNING" if failed else "SUCCESS"
         job_log.job_details = {
-            "new_papers": new_papers_count,
-            "errors": errors
+            "new_papers": total_new,
+            "categories": per_category,
+            "errors": [f"{s['category']}: {s['error']}" for s in failed],
         }
-        logger.info(f"Polling complete. New Papers: {new_papers_count}")
-
+        logger.info(
+            "Polling complete. New papers: %d (failed categories: %d)",
+            total_new,
+            len(failed),
+        )
     except Exception as e:
-        logger.error(f"Error in polling: {e}")
+        logger.exception("Error in polling")
         job_log.status = "FAILED"
         job_log.error_message = str(e)
     finally:
@@ -229,12 +319,25 @@ def cleanup_query_embedding_cache():
 
 scheduler = BackgroundScheduler()
 
-# 1. Ingestion Job: Every 15 minutes
-scheduler.add_job(process_papers, IntervalTrigger(minutes=15))
-
-# 2. Email Job: Daily at 6:00 AM IST
 ist_timezone = pytz.timezone('Asia/Kolkata')
-scheduler.add_job(send_daily_email_digest, CronTrigger(hour=6, minute=0, timezone=ist_timezone))
+
+# 1. Ingestion Job: Daily at 05:30 IST.
+#    arXiv announces once per day at 20:00 ET — ~05:30 IST (EST) or
+#    ~04:30 IST (EDT). 05:30 IST catches both windows. Must run before the
+#    email-digest job below so yesterday's papers are ingested first.
+scheduler.add_job(
+    process_papers,
+    CronTrigger(hour=5, minute=30, timezone=ist_timezone),
+)
+
+# 2. Email Job: Daily at 07:00 IST.
+#    Runs after the 05:30 IST paper poll — ordering matters because the
+#    digest reads yesterday's cs.AI papers from the local DB, which the
+#    poll is responsible for populating.
+scheduler.add_job(
+    send_daily_email_digest,
+    CronTrigger(hour=7, minute=0, timezone=ist_timezone),
+)
 
 # 3. Batch Summarization Job: Daily at 11:00 PM IST
 scheduler.add_job(run_batch_summarization, CronTrigger(hour=23, minute=0, timezone=ist_timezone))

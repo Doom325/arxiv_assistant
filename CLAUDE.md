@@ -21,7 +21,7 @@ Modular monolith deployed via Docker Compose (4 containers). Supports two deploy
 ### Background Processes
 
 - `production_worker.py` — Continuously polls for unprocessed papers (batch of 5, last 20 days). Pipeline: download PDF → extract text/sections → generate 3072D embedding → extract entities (GLiNER) → parse citations (LLM) → resolve citations → classify patterns (V6 CoT taxonomy)
-- `scheduler.py` — APScheduler started in FastAPI lifespan: paper poll (every 15 min, 50 papers/category), email digest (6 AM IST), batch summarization (11 PM IST)
+- `scheduler.py` — APScheduler started in FastAPI lifespan: paper poll (daily 05:30 IST, date-range query with per-category high-water mark, self-heals missed runs), email digest (7 AM IST, runs after the poll), batch summarization (11 PM IST)
 - `batch_embed_manager.py` — Bulk historical embedding processing via Gemini Batch API
 
 ## External Services

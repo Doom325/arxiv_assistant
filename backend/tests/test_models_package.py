@@ -10,11 +10,13 @@ from models import (
     JobLog,
     SummarizationMetric,
     BatchQueue,
+    CategoryPollState,
     CitationLink,
     PromptTemplate,
     PatternExperimentResult,
     ReadingQueue,
     UserInterestProfile,
+    QueryEmbedding,
 )
 
 
@@ -30,11 +32,13 @@ class TestModelsPackage:
         assert JobLog is not None
         assert SummarizationMetric is not None
         assert BatchQueue is not None
+        assert CategoryPollState is not None
         assert CitationLink is not None
         assert PromptTemplate is not None
         assert PatternExperimentResult is not None
         assert ReadingQueue is not None
         assert UserInterestProfile is not None
+        assert QueryEmbedding is not None
 
     def test_all_models_importable(self):
         """Verify __all__ lists every expected export."""
@@ -42,8 +46,9 @@ class TestModelsPackage:
         expected = {
             "Base", "Paper", "PaperEmbedding", "User", "UserConfig",
             "UserLibrary", "JobLog", "SummarizationMetric", "BatchQueue",
-            "CitationLink", "PromptTemplate", "PatternExperimentResult",
-            "ReadingQueue", "UserInterestProfile",
+            "CategoryPollState", "CitationLink", "PromptTemplate",
+            "PatternExperimentResult", "ReadingQueue",
+            "UserInterestProfile", "QueryEmbedding",
         }
         assert set(models.__all__) == expected
 
@@ -60,12 +65,13 @@ class TestModelsPackage:
         assert hasattr(Paper, "embeddings")
 
     def test_all_tables_registered(self):
-        """All 13 tables should be in Base.metadata."""
+        """All model tables should be in Base.metadata."""
         table_names = sorted(Base.metadata.tables.keys())
         expected = [
-            "batch_queue", "citation_links", "job_logs", "paper_embeddings",
-            "papers", "pattern_experiment_results", "prompt_templates",
-            "reading_queue", "summarization_metrics", "user_configs",
-            "user_interest_profiles", "user_library", "users",
+            "batch_queue", "category_poll_state", "citation_links",
+            "job_logs", "paper_embeddings", "papers",
+            "pattern_experiment_results", "prompt_templates",
+            "query_embeddings", "reading_queue", "summarization_metrics",
+            "user_configs", "user_interest_profiles", "user_library", "users",
         ]
         assert table_names == expected

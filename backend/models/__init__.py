@@ -7,7 +7,7 @@ All 12 model classes plus Base are re-exported here so that every existing
 from .base import Base
 from .paper import Paper, PaperEmbedding
 from .user import User, UserConfig, UserLibrary
-from .jobs import JobLog, SummarizationMetric, BatchQueue
+from .jobs import JobLog, SummarizationMetric, BatchQueue, CategoryPollState
 from .citation import CitationLink
 from .pattern import PromptTemplate, PatternExperimentResult
 from .queue import ReadingQueue, UserInterestProfile
@@ -23,6 +23,7 @@ __all__ = [
     "JobLog",
     "SummarizationMetric",
     "BatchQueue",
+    "CategoryPollState",
     "CitationLink",
     "PromptTemplate",
     "PatternExperimentResult",

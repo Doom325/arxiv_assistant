@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date, JSON, Float, ForeignKey
 from datetime import datetime
 from .base import Base
 
@@ -41,3 +41,21 @@ class BatchQueue(Base):
     paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False)
     status = Column(String, default="PENDING") # PENDING, PROCESSING, COMPLETED, FAILED
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CategoryPollState(Base):
+    """Per-category high-water mark for the arXiv daily poller.
+
+    Tracks the most recent ``submittedDate`` we have successfully ingested for
+    each category. The next poll re-queries arXiv for everything from one day
+    before the high-water mark onwards, which guarantees self-healing backfill
+    if a run is missed (e.g. the host was offline for several days).
+    """
+
+    __tablename__ = "category_poll_state"
+
+    category = Column(String, primary_key=True)
+    last_successful_submitted_date = Column(Date, nullable=True)
+    last_run_at = Column(DateTime, nullable=True)
+    last_success_at = Column(DateTime, nullable=True)
+    last_error = Column(Text, nullable=True)
