@@ -1,4 +1,3 @@
-import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -47,8 +46,10 @@ class Settings(BaseSettings):
     QUERY_CACHE_LRU_SIZE: int = 1024
 
     # Background worker concurrency. Each in-flight paper holds one DB session
-    # plus active HTTP connections to the LiteLLM gateway, so keep these
-    # comfortably under the SQLAlchemy pool (size 20 + overflow 30).
+    # plus active HTTP connections to the LiteLLM gateway. The worker creates
+    # its own engine in production_worker.py sized to WORKER_CONCURRENCY+5
+    # (max_overflow=20), so these knobs control both pool pressure and gateway
+    # load.
     WORKER_CONCURRENCY: int = 4         # Number of papers processed in parallel
     WORKER_BATCH_SIZE: int = 20         # How many papers fetched per loop iteration
     WORKER_LLM_CONCURRENCY: int = 2     # Cap simultaneous LLM/embedding calls

@@ -1,8 +1,6 @@
 
 import sys
-import os
 import time
-import re
 import logging
 import datetime
 import threading
@@ -17,7 +15,8 @@ if sys.stdout.encoding != 'utf-8':
         import io
         sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
 from sqlalchemy import create_engine, or_, and_
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import sessionmaker
 from models import Paper, JobLog, PaperEmbedding, PatternExperimentResult
 from taxonomy import PROMPT_VERSION as TAXONOMY_PROMPT_VERSION, validate_classification_output
 from core.pdf_utils import (
@@ -35,7 +34,8 @@ from services.pdf_service import (
 from services.llm_service import llm_service, embedding_service
 from config import settings
 
-import json
+EXTRACTION_FAILED = "[FAILED]"
+DOWNLOAD_FAILED = "[DOWNLOAD FAILED]"
 
 # Setup Logger
 logging.basicConfig(
@@ -50,13 +50,15 @@ DB_URL = settings.DATABASE_URL
 PDF_DIR = settings.PDF_SAVE_DIR
 
 # Pool sized to comfortably accommodate WORKER_CONCURRENCY + scheduler/API
-# usage. SQLAlchemy default is 5 — too small for parallel workers.
-engine = create_engine(
-    DB_URL,
-    pool_size=max(10, settings.WORKER_CONCURRENCY + 5),
-    max_overflow=20,
-    pool_pre_ping=True,
-)
+# usage. SQLAlchemy default is 5 — too small for parallel workers. SQLite
+# (test harness) uses a SingletonThreadPool that doesn't accept these kwargs.
+_engine_kwargs = {"pool_pre_ping": True}
+if not DB_URL.startswith("sqlite"):
+    _engine_kwargs.update(
+        pool_size=max(10, settings.WORKER_CONCURRENCY + 5),
+        max_overflow=20,
+    )
+engine = create_engine(DB_URL, **_engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Limits simultaneous LLM/embedding HTTP calls to LiteLLM/Ollama. The worker
@@ -118,7 +120,7 @@ def _fetch_pending_paper_ids(db, batch_size: int) -> list[int]:
     """
     query = db.query(Paper.id).outerjoin(PaperEmbedding).filter(
         or_(
-            Paper.is_downloaded == False,
+            Paper.is_downloaded.is_(False),
             Paper.extracted_abstract.is_(None),
             Paper.citations.is_(None),
             PaperEmbedding.id.is_(None),
@@ -127,8 +129,8 @@ def _fetch_pending_paper_ids(db, batch_size: int) -> list[int]:
         or_(
             Paper.extracted_abstract.is_(None),
             and_(
-                Paper.extracted_abstract != "[FAILED]",
-                Paper.extracted_abstract != "[DOWNLOAD FAILED]",
+                Paper.extracted_abstract != EXTRACTION_FAILED,
+                Paper.extracted_abstract != DOWNLOAD_FAILED,
             ),
         )
     )
@@ -161,8 +163,8 @@ def _download_step(db, paper) -> str | None:
         return pdf_path
 
     paper.is_downloaded = True
-    paper.extracted_abstract = "[DOWNLOAD FAILED]"
-    paper.extracted_introduction = "[DOWNLOAD FAILED]"
+    paper.extracted_abstract = DOWNLOAD_FAILED
+    paper.extracted_introduction = DOWNLOAD_FAILED
     db.commit()
     log_job(
         db, "worker_download", "FAILED",
@@ -174,7 +176,7 @@ def _download_step(db, paper) -> str | None:
 def _extract_step(db, paper, processor, pdf_path: str) -> None:
     needs_extract = (
         not paper.extracted_abstract
-        or paper.extracted_abstract == "[FAILED]"
+        or paper.extracted_abstract == EXTRACTION_FAILED
         or paper.citations is None
     )
     if not needs_extract:
@@ -188,7 +190,7 @@ def _extract_step(db, paper, processor, pdf_path: str) -> None:
         logger.warning(f"Step 2: No result for {paper.arxiv_id}, rolling back...")
         db.rollback()
         paper = db.query(Paper).filter(Paper.id == paper.id).first()
-        paper.extracted_abstract = "[FAILED]"
+        paper.extracted_abstract = EXTRACTION_FAILED
         paper.extracted_introduction = (
             "Extraction failed: corrupted PDF or incompatible format"
         )
@@ -227,8 +229,8 @@ def _search_embedding_step(db, paper) -> None:
         search_text = paper.summary or paper.extracted_abstract or paper.title
         if (
             not search_text
-            or search_text == "[FAILED]"
-            or search_text == "[DOWNLOAD FAILED]"
+            or search_text == EXTRACTION_FAILED
+            or search_text == DOWNLOAD_FAILED
         ):
             logger.warning(f"No valid text to embed for {paper.arxiv_id}, skipping search sync.")
             return
@@ -256,9 +258,15 @@ def _search_embedding_step(db, paper) -> None:
             embedding_config={"purpose": "search", "dimension": 768},
             embedding_metadata={"source_model": "gemini-embedding-001"},
         )
-        db.add(new_emb)
-        db.commit()
-        logger.info(f"Created PaperEmbedding for {paper.arxiv_id}")
+        try:
+            db.add(new_emb)
+            db.commit()
+            logger.info(f"Created PaperEmbedding for {paper.arxiv_id}")
+        except IntegrityError:
+            db.rollback()
+            logger.info(
+                f"PaperEmbedding for {paper.arxiv_id} created concurrently; skipping"
+            )
     except Exception as sync_err:
         logger.error(f"Failed to sync search embedding for {paper.arxiv_id}: {sync_err}")
         db.rollback()
@@ -280,7 +288,7 @@ def _classify_step(db, paper) -> None:
         abstract_text = paper.extracted_abstract or paper.summary or ""
         if (
             not abstract_text
-            or abstract_text in ("[FAILED]", "[DOWNLOAD FAILED]")
+            or abstract_text in (EXTRACTION_FAILED, DOWNLOAD_FAILED)
             or len(abstract_text) <= 50
         ):
             logger.info(f"Step 3: Skipping classification for {paper.arxiv_id} (insufficient abstract text)")
@@ -333,8 +341,15 @@ def _classify_step(db, paper) -> None:
                 error=None,
             )
 
-        db.add(result)
-        db.commit()
+        try:
+            db.add(result)
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            logger.info(
+                f"PatternExperimentResult for {paper.arxiv_id} created concurrently; skipping"
+            )
+            return
         agentic_str = (
             str(result.is_agentic)[:5] if result.is_agentic is not None else "err"
         )
@@ -458,7 +473,9 @@ def run_worker():
             )
             time.sleep(settings.WORKER_BATCH_PAUSE_SECONDS)
     finally:
-        executor.shutdown(wait=True)
+        # cancel_futures=True prevents shutdown from blocking on stuck LLM
+        # calls when the worker process is terminated.
+        executor.shutdown(wait=True, cancel_futures=True)
 
 
 if __name__ == "__main__":
