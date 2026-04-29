@@ -10,10 +10,8 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import pytest
-
 import production_worker
-from production_worker import _process_paper, _llm_semaphore
+from production_worker import _process_paper
 
 
 class _FakeQueryResult:
