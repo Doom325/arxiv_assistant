@@ -1,4 +1,3 @@
-import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -45,6 +44,18 @@ class Settings(BaseSettings):
 
     # Query embedding cache
     QUERY_CACHE_LRU_SIZE: int = 1024
+
+    # Background worker concurrency. Each in-flight paper holds one DB session
+    # plus active HTTP connections to the LiteLLM gateway. The worker creates
+    # its own engine in production_worker.py sized to WORKER_CONCURRENCY+5
+    # (max_overflow=20), so these knobs control both pool pressure and gateway
+    # load.
+    WORKER_CONCURRENCY: int = 4         # Number of papers processed in parallel
+    WORKER_BATCH_SIZE: int = 20         # How many papers fetched per loop iteration
+    WORKER_LLM_CONCURRENCY: int = 2     # Cap simultaneous LLM/embedding calls
+    WORKER_BACKLOG_DAYS: int = 0        # 0 = no date filter (process full backlog); >0 = recent-N-days only
+    WORKER_IDLE_SLEEP_SECONDS: int = 30 # Sleep when nothing to process
+    WORKER_BATCH_PAUSE_SECONDS: int = 2 # Brief pause between batches
 
     class Config:
         env_file = ".env"
