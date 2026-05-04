@@ -48,80 +48,155 @@ def _parse_date(s: str) -> datetime.date:
     return datetime.datetime.strptime(s, "%Y-%m-%d").date()
 
 
+def _process_one_query(
+    db: Session,
+    category: str,
+    since: datetime.date,
+    until: datetime.date,
+    safety_cap: int,
+    skip_ai: bool,
+) -> tuple[int, int]:
+    """Run a single ``fetch_papers_since`` and ingest. Returns (new, seen).
+
+    Caller owns commits/rollbacks at the granularity that makes sense for
+    its loop (per-day or per-category).
+    """
+    new_count = 0
+    seen_count = 0
+    for paper_data in arxiv_service.fetch_papers_since(
+        category=category,
+        since_date=since,
+        until_date=until,
+        safety_cap=safety_cap,
+        descending=True,
+    ):
+        seen_count += 1
+        try:
+            created = process_paper_entry(
+                db, paper_data, skip_ai=skip_ai
+            )
+            if created:
+                new_count += 1
+        except Exception:
+            # process_paper_entry rolls back inside its own try block, but
+            # its initial existence-check SELECT runs *outside* it — so a
+            # poisoned session reaches us here without being cleaned up.
+            # Roll back so the next paper's SELECT starts fresh.
+            logger.exception(
+                "Skipping paper %s due to ingestion error",
+                paper_data.get("arxiv_id"),
+            )
+            db.rollback()
+    return new_count, seen_count
+
+
+def _iter_dates(
+    start: datetime.date,
+    end: datetime.date,
+    descending: bool = True,
+) -> list[datetime.date]:
+    """Inclusive list of dates between ``start`` and ``end``.
+    ``descending=True`` returns newest → oldest (default for backfill).
+    """
+    span = (end - start).days
+    dates = [start + datetime.timedelta(days=i) for i in range(span + 1)]
+    if descending:
+        dates.reverse()
+    return dates
+
+
 def backfill(
     start: datetime.date,
     end: datetime.date,
     categories: list[str],
     skip_ai: bool = True,
     safety_cap: int = POLL_SAFETY_CAP,
+    per_day: bool = True,
 ) -> dict:
+    """Per-day mode (default) iterates day-by-day, each query is single-day.
+    No realistic single category produces >100 papers/day, so cap truncation
+    becomes effectively impossible. Multi-day failures are also isolated:
+    if April 30 fails, May 1 still runs.
+
+    Bulk mode (``per_day=False``) issues one multi-day query per category.
+    Faster (fewer HTTP round-trips), but needs ``safety_cap`` set high
+    enough to cover the busiest category × full range.
+    """
     db: Session = SessionLocal()
     summary: dict = {"categories": {}, "total_new": 0, "total_seen": 0}
+    # Pre-seed per-category counters so categories with zero results still
+    # appear in the summary.
+    for cat in sorted(categories):
+        summary["categories"][cat] = {"new": 0, "seen": 0, "truncated": False}
     try:
-        for category in sorted(categories):
-            new_count = 0
-            seen_count = 0
-            logger.info(
-                "Polling category=%s since=%s until=%s", category, start, end
-            )
-            try:
-                for paper_data in arxiv_service.fetch_papers_since(
-                    category=category,
-                    since_date=start,
-                    until_date=end,
-                    safety_cap=safety_cap,
-                    descending=True,
-                ):
-                    seen_count += 1
+        if per_day:
+            for day in _iter_dates(start, end, descending=True):
+                logger.info("=== Day: %s ===", day)
+                for category in sorted(categories):
                     try:
-                        created = process_paper_entry(
-                            db, paper_data, skip_ai=skip_ai
+                        new_c, seen_c = _process_one_query(
+                            db, category, day, day, safety_cap, skip_ai
                         )
-                        if created:
-                            new_count += 1
+                        db.commit()
                     except Exception:
-                        # process_paper_entry rolls back inside its own try
-                        # block, but its initial existence-check SELECT runs
-                        # *outside* it — so a poisoned session reaches us
-                        # here without being cleaned up. Roll back so the
-                        # next paper's SELECT can start a fresh transaction.
                         logger.exception(
-                            "Skipping paper %s due to ingestion error",
-                            paper_data.get("arxiv_id"),
+                            "Day %s category %s failed mid-stream",
+                            day, category,
                         )
                         db.rollback()
-                # Commit per-category so a later category failure doesn't
-                # discard everything we just did.
-                db.commit()
-                if seen_count >= safety_cap:
-                    # fetch_papers_since stops at safety_cap; on a
-                    # multi-week backfill of a busy category that means
-                    # silent truncation. Surface it clearly so the
-                    # operator knows to re-run with a smaller range or
-                    # higher --max-per-category.
-                    logger.warning(
-                        "Category %s hit safety_cap=%d — results truncated. "
-                        "Re-run with a tighter date range or pass "
-                        "--max-per-category > %d.",
-                        category, safety_cap, safety_cap,
+                        new_c, seen_c = 0, 0
+                    summary["categories"][category]["new"] += new_c
+                    summary["categories"][category]["seen"] += seen_c
+                    summary["total_new"] += new_c
+                    summary["total_seen"] += seen_c
+                    if seen_c >= safety_cap:
+                        # Per-day shouldn't ever hit this realistically, but
+                        # if it does, flag the category so the summary is
+                        # honest.
+                        summary["categories"][category]["truncated"] = True
+                        logger.warning(
+                            "Day %s category %s hit safety_cap=%d",
+                            day, category, safety_cap,
+                        )
+                    if seen_c:
+                        logger.info(
+                            "  %s: new=%d seen=%d", category, new_c, seen_c
+                        )
+        else:
+            for category in sorted(categories):
+                logger.info(
+                    "Polling category=%s since=%s until=%s",
+                    category, start, end,
+                )
+                try:
+                    new_c, seen_c = _process_one_query(
+                        db, category, start, end, safety_cap, skip_ai
                     )
-            except Exception:
-                logger.exception("Category %s failed mid-stream", category)
-                db.rollback()
-            summary["categories"][category] = {
-                "new": new_count,
-                "seen": seen_count,
-                "truncated": seen_count >= safety_cap,
-            }
-            summary["total_new"] += new_count
-            summary["total_seen"] += seen_count
-            logger.info(
-                "Category %s done: new=%d seen=%d%s",
-                category,
-                new_count,
-                seen_count,
-                " (TRUNCATED)" if seen_count >= safety_cap else "",
-            )
+                    db.commit()
+                    truncated = seen_c >= safety_cap
+                    if truncated:
+                        logger.warning(
+                            "Category %s hit safety_cap=%d — truncated. "
+                            "Re-run with a tighter range or higher "
+                            "--max-per-category.",
+                            category, safety_cap,
+                        )
+                except Exception:
+                    logger.exception(
+                        "Category %s failed mid-stream", category,
+                    )
+                    db.rollback()
+                    new_c, seen_c, truncated = 0, 0, False
+                summary["categories"][category] = {
+                    "new": new_c, "seen": seen_c, "truncated": truncated,
+                }
+                summary["total_new"] += new_c
+                summary["total_seen"] += seen_c
+                logger.info(
+                    "Category %s done: new=%d seen=%d%s",
+                    category, new_c, seen_c,
+                    " (TRUNCATED)" if truncated else "",
+                )
     finally:
         db.close()
     return summary
@@ -170,17 +245,29 @@ def main(argv: list[str] | None = None) -> int:
             "re-run with a tighter date range or a higher value."
         ),
     )
+    parser.add_argument(
+        "--bulk",
+        action="store_true",
+        help=(
+            "Issue one multi-day query per category instead of iterating "
+            "day-by-day (default). Bulk mode is faster on long ranges but "
+            "needs --max-per-category set high enough to cover the busiest "
+            "category × full range. Per-day mode (the default) avoids "
+            "cap truncation by keeping every query single-day."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.start > args.end:
         parser.error(f"--start ({args.start}) must be <= --end ({args.end})")
 
     logger.info(
-        "Backfill: %s → %s, categories=%s, skip_ai=%s",
+        "Backfill: %s → %s, categories=%s, skip_ai=%s, mode=%s",
         args.start,
         args.end,
         args.categories,
         not args.with_ai,
+        "bulk" if args.bulk else "per-day",
     )
     result = backfill(
         start=args.start,
@@ -188,6 +275,7 @@ def main(argv: list[str] | None = None) -> int:
         categories=args.categories,
         skip_ai=not args.with_ai,
         safety_cap=args.max_per_category,
+        per_day=not args.bulk,
     )
     logger.info("Done: total_new=%d total_seen=%d", result["total_new"], result["total_seen"])
     for cat, stats in result["categories"].items():

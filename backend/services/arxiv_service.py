@@ -80,8 +80,15 @@ class ArxivService:
             f"cat:{category} AND "
             f"submittedDate:[{since_str} TO {until_str}]"
         )
+        # ``arxiv.Search`` defaults max_results=100 — without overriding, the
+        # library stops after the first page even with page_size=2000. The
+        # daily poll never tripped on this (one day of one category is
+        # usually <100 papers), but a multi-day backfill silently truncated.
+        # Cap at safety_cap so the lib stops on the same boundary as our
+        # generator's counter, saving one unnecessary HTTP round trip.
         search = arxiv.Search(
             query=query,
+            max_results=safety_cap,
             sort_by=arxiv.SortCriterion.SubmittedDate,
             sort_order=(
                 arxiv.SortOrder.Descending
