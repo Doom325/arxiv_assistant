@@ -179,3 +179,27 @@ def test_ollama_list_summarization_models_fallback(mock_get):
         assert models[0] == "sum-model"  # ordering preserves precedence
         assert "chat-model" in models
         assert "class-model" in models
+
+
+@patch('requests.post')
+def test_ollama_summarize_text_default_temperature(mock_post, ollama_provider):
+    """When temperature is not specified, payload uses the 0.3 default."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {'choices': [{'message': {'content': 'ok'}}]}
+    mock_response.raise_for_status.return_value = None
+    mock_post.return_value = mock_response
+
+    ollama_provider.summarize_text("text")
+    assert mock_post.call_args.kwargs["json"]["temperature"] == 0.3
+
+
+@patch('requests.post')
+def test_ollama_summarize_text_with_temperature_override(mock_post, ollama_provider):
+    """Caller-supplied temperature wins."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {'choices': [{'message': {'content': 'ok'}}]}
+    mock_response.raise_for_status.return_value = None
+    mock_post.return_value = mock_response
+
+    ollama_provider.summarize_text("text", temperature=0.7)
+    assert mock_post.call_args.kwargs["json"]["temperature"] == 0.7

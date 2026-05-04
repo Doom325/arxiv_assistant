@@ -12,9 +12,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SUMMARIZATION_TEMPERATURE = 0.3
+
+
 class LLMProvider(ABC):
     @abstractmethod
-    def summarize_text(self, text: str, model: str | None = None) -> str:
+    def summarize_text(self, text: str, model: str | None = None, temperature: float | None = None) -> str:
         pass
 
     def list_summarization_models(self) -> list[str]:
@@ -60,12 +63,14 @@ class GeminiProvider(LLMProvider):
         self.model_name = _GEMINI_SUMMARIZATION_MODEL
         self.embedding_model = 'models/gemini-embedding-001'
 
-    def summarize_text(self, text: str, model: str | None = None) -> str:
+    def summarize_text(self, text: str, model: str | None = None, temperature: float | None = None) -> str:
         prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text[:30000]))
+        temp = DEFAULT_SUMMARIZATION_TEMPERATURE if temperature is None else temperature
         try:
             response = self.client.models.generate_content(
                 model=model or self.model_name,
-                contents=prompt
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=temp),
             )
             return response.text
         except Exception as e:
@@ -182,12 +187,13 @@ class OllamaProvider(LLMProvider):
             return []
         return []
 
-    def summarize_text(self, text: str, model: str | None = None) -> str:
+    def summarize_text(self, text: str, model: str | None = None, temperature: float | None = None) -> str:
         prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text))
         payload = {
             "model": model or self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 3000,
+            "temperature": DEFAULT_SUMMARIZATION_TEMPERATURE if temperature is None else temperature,
             "stream": False,
         }
         try:
@@ -230,6 +236,7 @@ class OllamaProvider(LLMProvider):
             "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 3000,
+            "temperature": DEFAULT_SUMMARIZATION_TEMPERATURE,
             "stream": False,
         }
         try:

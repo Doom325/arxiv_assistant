@@ -212,10 +212,11 @@ export const api = {
         return response.json();
     },
 
-    generateSummary: async (paperId: number, force: boolean = false, model?: string) => {
+    generateSummary: async (paperId: number, force: boolean = false, model?: string, temperature?: number) => {
         const params = new URLSearchParams();
         if (force) params.set("force", "true");
         if (model) params.set("model", model);
+        if (temperature !== undefined) params.set("temperature", String(temperature));
         const qs = params.toString();
         const url = qs
             ? `${API_URL}/papers/${paperId}/summarize?${qs}`
