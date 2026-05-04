@@ -41,18 +41,16 @@ class SummarizationService:
         # 2. Use AI_PROVIDER setting to decide which model to use. A user-supplied
         # ``model`` overrides the configured default; we still route through the
         # active provider (Gemini vs LiteLLM gateway).
+        # Real deployments are Khadas (Gemini API) and Framework Desktop
+        # (LiteLLM gateway). MLX is a Mac dev-only fallback used by mac_worker
+        # and ignores the user-supplied model.
         if settings.AI_PROVIDER == "gemini":
             logger.info(f"Using Gemini API for summarization of {pdf_path} (model={model or 'default'})")
             return llm_service.summarize_text(text, model=model)
         elif HAS_MLX and not model:
-            # MLX path has no model-routing support — only use it when the user
-            # didn't pick a specific model (i.e. accepted the provider default).
             return self._generate_with_mlx(text, pdf_path)
         else:
-            if not HAS_MLX:
-                logger.info(f"MLX not available, falling back to LLM gateway for {pdf_path} (model={model or 'default'})")
-            else:
-                logger.info(f"Using LLM gateway for {pdf_path} (model={model or 'default'})")
+            logger.info(f"Using LLM gateway for {pdf_path} (model={model or 'default'})")
             return llm_service.summarize_text(text, model=model)
 
     def _generate_with_mlx(self, text: str, pdf_path: str) -> str:

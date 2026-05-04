@@ -267,32 +267,3 @@ class TestModelSelection:
             mock_gen.assert_called_once()
             assert mock_gen.call_args.kwargs["model"] == "model-b"
 
-    def test_default_model_collapsed_to_none(self, client, db_session, sample_paper, tmp_path):
-        """Picking the provider default must drop the override so the MLX path
-        (and any other ``model is None`` branches) still trigger."""
-        pdf_path = tmp_path / f"{sample_paper.arxiv_id}.pdf"
-        pdf_path.write_bytes(b"%PDF-1.4 test")
-
-        with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
-             patch.object(
-                 integrations.llm_service,
-                 "list_summarization_models",
-                 return_value=["default-model"],
-             ), \
-             patch.object(
-                 integrations.llm_service,
-                 "default_summarization_model",
-                 return_value="default-model",
-             ), \
-             patch.object(
-                 integrations.summarization_service,
-                 "generate_summary",
-                 return_value="ok",
-             ) as mock_gen, \
-             _patch_session_local(db_session):
-            response = client.post(
-                f"/papers/{sample_paper.id}/summarize?force=true&model=default-model"
-            )
-            assert response.status_code == 200
-            mock_gen.assert_called_once()
-            assert mock_gen.call_args.kwargs["model"] is None

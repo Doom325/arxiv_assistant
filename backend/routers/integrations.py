@@ -170,9 +170,8 @@ def summarize_paper(
         raise HTTPException(status_code=404, detail="Paper not found")
 
     # The frontend dropdown isn't a security boundary — anything reaching this
-    # endpoint must be on the provider's curated list. If the user picked the
-    # provider's default, drop it so downstream code paths (e.g. MLX on Apple
-    # Silicon) that treat ``model is None`` as "no override" still trigger.
+    # endpoint must be on the provider's curated list (Gemini static list or
+    # LiteLLM gateway /models response).
     if model:
         try:
             allowed = set(llm_service.list_summarization_models())
@@ -184,11 +183,6 @@ def summarize_paper(
                 status_code=400,
                 detail=f"Unknown model '{model}'. See GET /models/summarization.",
             )
-        try:
-            if model == llm_service.default_summarization_model():
-                model = None
-        except NotImplementedError:
-            pass
 
     # A prior failed attempt is retry-eligible without ``force=True``. Only a
     # truly successful summary (generated_summary populated) short-circuits.
