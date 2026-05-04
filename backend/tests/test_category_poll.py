@@ -79,7 +79,9 @@ class TestFetchPapersSince:
         return result
 
     def test_query_string_uses_submitted_date_range(self):
-        """Verify the query includes the submittedDate:[YYYYMMDD0000 TO *] form."""
+        """Verify the query has an explicit upper bound — arXiv's API
+        returns HTTP 500 for the ``TO *`` wildcard form, so the upper
+        bound must be a concrete date string."""
         service = ArxivService()
         captured = {}
 
@@ -98,7 +100,15 @@ class TestFetchPapersSince:
             )
 
         assert "cat:cs.AI" in captured["query"]
-        assert "submittedDate:[202604200000 TO *]" in captured["query"]
+        assert "submittedDate:[202604200000 TO " in captured["query"]
+        assert " TO *]" not in captured["query"]
+        # Upper bound is tomorrow UTC — assert it's a YYYYMMDD0000 form,
+        # not a wildcard.
+        import re
+        m = re.search(
+            r"submittedDate:\[202604200000 TO (\d{12})\]", captured["query"]
+        )
+        assert m is not None, captured["query"]
         import arxiv
         assert captured["sort_by"] == arxiv.SortCriterion.SubmittedDate
         assert captured["sort_order"] == arxiv.SortOrder.Ascending

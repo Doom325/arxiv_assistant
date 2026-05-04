@@ -2,7 +2,7 @@ import arxiv
 import logging
 import requests
 import os
-from datetime import date
+from datetime import date, timedelta
 from typing import Iterator
 
 import time
@@ -65,10 +65,16 @@ class ArxivService:
         (daily poll, a handful of categories) we expect at most a few hundred
         results per category per call.
         """
+        # arXiv's API returns HTTP 500 for ``submittedDate:[D TO *]`` (the
+        # wildcard upper bound is broken). Use an explicit far-future upper
+        # bound — tomorrow UTC — so the range still captures everything
+        # submitted up to "now" without ever silently dropping today's
+        # papers.
         since_str = since_date.strftime("%Y%m%d0000")
+        until_str = (date.today() + timedelta(days=1)).strftime("%Y%m%d0000")
         query = (
             f"cat:{category} AND "
-            f"submittedDate:[{since_str} TO *]"
+            f"submittedDate:[{since_str} TO {until_str}]"
         )
         search = arxiv.Search(
             query=query,

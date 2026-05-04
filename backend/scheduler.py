@@ -104,10 +104,21 @@ def _poll_category(db: Session, category: str, today: datetime.date) -> dict:
     except Exception as err:
         logger.exception("Error polling category %s", category)
         state.last_error = str(err)
+        # Advance HWM to whatever we did manage to ingest before the
+        # exception. Without this, a mid-stream arXiv hiccup discards
+        # all progress and the next run repeats the same large window
+        # (which may itself fail), so the HWM never moves forward.
+        if max_submitted is not None:
+            prior = state.last_successful_submitted_date or datetime.date.min
+            if max_submitted > prior:
+                state.last_successful_submitted_date = max_submitted
         return {
             "category": category,
             "since": since.isoformat(),
             "new_papers": new_count,
+            "max_submitted": (
+                max_submitted.isoformat() if max_submitted else None
+            ),
             "status": "FAILED",
             "error": str(err),
         }
