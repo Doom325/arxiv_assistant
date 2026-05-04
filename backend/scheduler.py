@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import os
 
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -363,4 +364,13 @@ scheduler.add_job(
 )
 
 def start_scheduler():
+    # Suppress scheduled jobs during a deploy's migration window. deploy.sh
+    # sets MIGRATING=1 while it brings up backend alongside the DB to run
+    # DDL — we don't want the scheduler to fire process_papers / batch
+    # summarization / queue rescore in that window because those jobs
+    # INSERT/UPDATE papers and would re-introduce the same ACCESS EXCLUSIVE
+    # lock contention that hangs ALTER TABLE migrations.
+    if os.getenv("MIGRATING") == "1":
+        logger.info("MIGRATING=1 — skipping scheduler startup")
+        return
     scheduler.start()

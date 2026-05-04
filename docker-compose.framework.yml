@@ -34,6 +34,8 @@ services:
       - LITELLM_API_KEY=${LITELLM_API_KEY}
       - LLM_CHAT_MODEL=gemma3:27b
       - LLM_CLASSIFICATION_MODEL=gemma3:27b
+      # Suppresses scheduler during deploy migration window. See deploy.sh.
+      - MIGRATING=${MIGRATING:-0}
 
   worker:
     extra_hosts:

@@ -26,6 +26,7 @@ services:
       - EMAIL_SENDER=onboarding@resend.dev
       - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
       - GROBID_URL=http://grobid:8070
+      - MIGRATING=${MIGRATING:-0}
 
   worker:
     build:
