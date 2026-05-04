@@ -2,8 +2,8 @@
 set -e
 
 # Configuration (override with environment variables)
-KHADAS_IP="${KHADAS_IP:-192.168.86.26}"
-FRAMEWORK_IP="${FRAMEWORK_IP:-192.168.86.24}"
+KHADAS_IP="${KHADAS_IP:-192.168.1.49}"
+FRAMEWORK_IP="${FRAMEWORK_IP:-192.168.1.32}"
 PROJECT_DIR="${PROJECT_DIR:-/Users/sumanthgottipati/git/arxiv_assistant}"
 REMOTE_USER="${KHADAS_USER:-khadas}"
 export SSHPASS="${KHADAS_PASSWORD:-khadas}"
