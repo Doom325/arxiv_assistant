@@ -112,8 +112,20 @@ sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" << 'EOF'
     echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env down --remove-orphans
     # Build containers (Docker will use cache to speed up the process)
     echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env build
-    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env up -d --force-recreate
-    
+
+    # 🛠️ Migration ordering: bring up DB + backend first (NO worker, NO frontend),
+    # run DDL while nothing else is writing. The worker holds row locks via
+    # active INSERT/UPDATEs and ALTER TABLE ... ADD COLUMN IF NOT EXISTS still
+    # needs ACCESS EXCLUSIVE on the table catalog → it waits forever otherwise.
+    #
+    # Backend is fine to be up during DDL (idles unless requests arrive) and
+    # we need it to exec the python migration scripts. We additionally set
+    # MIGRATING=1 so backend's APScheduler doesn't fire ingestion / batch /
+    # rescore jobs in this window — those would re-introduce lock contention.
+    echo "🗄️  Bringing up db + backend only (pre-migration, MIGRATING=1)..."
+    echo "MIGRATING=1" >> .env
+    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" MIGRATING=1 docker compose $COMPOSE_FILES --env-file .env up -d --force-recreate db backend
+
     # 🔍 Diagnostic: Verify the schema file INSIDE the running container
     echo "🔍 Verifying internal schema version..."
     echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_backend cat /app/schemas.py | grep "Any" || echo "❌ WARNING: 'Any' type not found in container's schemas.py!"
@@ -172,6 +184,13 @@ sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" << 'EOF'
     echo "🛠️ Running full-text extraction migration..."
     echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_db psql -U user -d arxiv_db -c "ALTER TABLE papers ADD COLUMN IF NOT EXISTS full_text_sections JSONB;"
     echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_db psql -U user -d arxiv_db -c "ALTER TABLE papers ADD COLUMN IF NOT EXISTS extracted_images JSONB;"
+
+    # 🚀 Migrations done — clear MIGRATING flag and bring up the rest (worker
+    # + frontend). The MIGRATING change forces backend to recreate so its
+    # scheduler can start; db is unchanged and is a no-op.
+    echo "🚀 Migrations complete — clearing MIGRATING and bringing up worker + frontend..."
+    sed -i '/^MIGRATING=/d' .env
+    echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env up -d
 
     # ✅ Final API Health Check with Retries
     echo "🌐 Testing API endpoint (http://localhost:8000/papers/)..."
