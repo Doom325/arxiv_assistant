@@ -188,6 +188,7 @@ class OllamaProvider(LLMProvider):
             "model": model or self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 3000,
+            "temperature": 0.3,
             "stream": False,
         }
         try:
@@ -230,6 +231,7 @@ class OllamaProvider(LLMProvider):
             "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 3000,
+            "temperature": 0.3,
             "stream": False,
         }
         try:
