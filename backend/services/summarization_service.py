@@ -29,7 +29,7 @@ class SummarizationService:
             self.model, self.tokenizer = load(self.model_repo)
             logger.info("Model loaded.")
 
-    def generate_summary(self, pdf_path: str) -> str:
+    def generate_summary(self, pdf_path: str, model: str | None = None) -> str:
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
@@ -38,15 +38,19 @@ class SummarizationService:
         if not text:
             raise ValueError("Failed to extract text from PDF")
 
-        # 2. Use AI_PROVIDER setting to decide which model to use
+        # 2. Use AI_PROVIDER setting to decide which model to use. A user-supplied
+        # ``model`` overrides the configured default; we still route through the
+        # active provider (Gemini vs LiteLLM gateway).
         if settings.AI_PROVIDER == "gemini":
-            logger.info(f"Using Gemini API for summarization of {pdf_path}")
-            return llm_service.summarize_text(text)
-        elif HAS_MLX:
+            logger.info(f"Using Gemini API for summarization of {pdf_path} (model={model or 'default'})")
+            return llm_service.summarize_text(text, model=model)
+        elif HAS_MLX and not model:
+            # MLX path has no model-routing support — only use it when the user
+            # didn't pick a specific model.
             return self._generate_with_mlx(text, pdf_path)
         else:
-            logger.info(f"MLX not available, falling back to LLM service for {pdf_path}")
-            return llm_service.summarize_text(text)
+            logger.info(f"Using LLM gateway for {pdf_path} (model={model or 'default'})")
+            return llm_service.summarize_text(text, model=model)
 
     def _generate_with_mlx(self, text: str, pdf_path: str) -> str:
         # Load Model (Lazy load)

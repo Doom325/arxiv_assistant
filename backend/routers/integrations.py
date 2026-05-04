@@ -25,6 +25,7 @@ from models.paper import (
 from services.arxiv_service import arxiv_service
 from services.email_service import email_service
 from services.gdrive import GoogleDriveService, NeedAuthException
+from services.llm_service import llm_service
 from services.summarization_service import summarization_service
 
 logger = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ def _record_summary_failure(
     db.commit()
 
 
-def run_summarization(paper_id: int, pdf_url: str):
+def run_summarization(paper_id: int, pdf_url: str, model: Optional[str] = None):
     """Background task: uses its own DB session (request session may be closed)."""
     db = SessionLocal()
     try:
@@ -122,7 +123,7 @@ def run_summarization(paper_id: int, pdf_url: str):
 
         pdf_path = os.path.join(pdf_dir, filename)
 
-        summary = summarization_service.generate_summary(pdf_path)
+        summary = summarization_service.generate_summary(pdf_path, model=model)
 
         # Naive UTC (see _record_summary_failure).
         now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -161,6 +162,7 @@ def summarize_paper(
     paper_id: int,
     background_tasks: BackgroundTasks,
     force: bool = False,
+    model: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     paper = db.query(Paper).filter(Paper.id == paper_id).first()
@@ -184,8 +186,25 @@ def summarize_paper(
     paper.summary_error = None
     db.commit()
 
-    background_tasks.add_task(run_summarization, paper_id, paper.pdf_url)
-    return {"message": "Summarization started"}
+    background_tasks.add_task(run_summarization, paper_id, paper.pdf_url, model)
+    return {"message": "Summarization started", "model": model}
+
+
+@router.get("/models/summarization")
+def list_summarization_models():
+    """Models the user can pick for summary generation. Routed through the
+    active provider so the dropdown always reflects what the backend can serve."""
+    try:
+        models = llm_service.list_summarization_models()
+    except Exception as e:
+        logger.error(f"Failed to list summarization models: {e}")
+        raise HTTPException(status_code=502, detail="Failed to list models")
+
+    if settings.AI_PROVIDER == "gemini":
+        default = models[0] if models else None
+    else:
+        default = settings.LLM_SUMMARIZATION_MODEL or settings.LLM_CHAT_MODEL
+    return {"provider": settings.AI_PROVIDER, "default": default, "models": models}
 
 
 # --- Email ---

@@ -212,14 +212,24 @@ export const api = {
         return response.json();
     },
 
-    generateSummary: async (paperId: number, force: boolean = false) => {
-        const url = force
-            ? `${API_URL}/papers/${paperId}/summarize?force=true`
+    generateSummary: async (paperId: number, force: boolean = false, model?: string) => {
+        const params = new URLSearchParams();
+        if (force) params.set("force", "true");
+        if (model) params.set("model", model);
+        const qs = params.toString();
+        const url = qs
+            ? `${API_URL}/papers/${paperId}/summarize?${qs}`
             : `${API_URL}/papers/${paperId}/summarize`;
         const response = await fetch(url, {
             method: "POST",
         });
         if (!response.ok) throw new Error("Failed to start summarization");
+        return response.json();
+    },
+
+    getSummarizationModels: async (): Promise<{ provider: string; default: string | null; models: string[] }> => {
+        const response = await fetch(`${API_URL}/models/summarization`);
+        if (!response.ok) throw new Error("Failed to fetch models");
         return response.json();
     },
 
@@ -574,6 +584,7 @@ export const getLibraryLists = api.getLibraryLists;
 export const getLibrary = api.getLibrary;
 export const getPaper = api.getPaper;
 export const generateSummary = api.generateSummary;
+export const getSummarizationModels = api.getSummarizationModels;
 export const addPaper = api.addPaper;
 export const getSimilarPapers = api.getSimilarPapers;
 export const exportToGDrive = api.exportToGDrive;

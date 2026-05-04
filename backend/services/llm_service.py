@@ -14,8 +14,12 @@ logger = logging.getLogger(__name__)
 
 class LLMProvider(ABC):
     @abstractmethod
-    def summarize_text(self, text: str) -> str:
+    def summarize_text(self, text: str, model: str | None = None) -> str:
         pass
+
+    def list_summarization_models(self) -> list[str]:
+        """Return available model identifiers for summarization."""
+        raise NotImplementedError("Subclass must implement list_summarization_models")
 
     def sanitize_text(self, text: str) -> str:
         """Removes null bytes and UTF-16 surrogates. Delegates to core.text_utils."""
@@ -39,17 +43,27 @@ class GeminiProvider(LLMProvider):
         self.model_name = 'gemini-3-flash-preview' # User requested Gemini 3 Flash
         self.embedding_model = 'models/gemini-embedding-001'
 
-    def summarize_text(self, text: str) -> str:
+    def summarize_text(self, text: str, model: str | None = None) -> str:
         prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text[:30000]))
         try:
             response = self.client.models.generate_content(
-                model=self.model_name,
+                model=model or self.model_name,
                 contents=prompt
             )
             return response.text
         except Exception as e:
             logger.error(f"Gemini summarization error: {e}")
             raise e
+
+    def list_summarization_models(self) -> list[str]:
+        # Static list — Gemini's /models endpoint includes embedding/legacy models we
+        # don't want surfaced as summarization choices.
+        return [
+            "gemini-3-flash-preview",
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+        ]
 
     def generate_embedding(self, text: str, task_type: str = "retrieval_document", output_dimensionality: int = 3072) -> list[float]:
         try:
@@ -155,10 +169,10 @@ class OllamaProvider(LLMProvider):
             return []
         return []
 
-    def summarize_text(self, text: str) -> str:
+    def summarize_text(self, text: str, model: str | None = None) -> str:
         prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text))
         payload = {
-            "model": self.summarization_model,
+            "model": model or self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 3000,
             "stream": False,
@@ -170,6 +184,28 @@ class OllamaProvider(LLMProvider):
         except Exception as e:
             logger.error(f"Gateway summarization error: {e}")
             raise e
+
+    def list_summarization_models(self) -> list[str]:
+        url = f"{self.base_url.rstrip('/')}/models"
+        try:
+            response = requests.get(url, headers=self._headers(), timeout=10)
+            response.raise_for_status()
+            data = response.json().get("data", [])
+            return sorted({item["id"] for item in data if isinstance(item, dict) and item.get("id")})
+        except Exception as e:
+            logger.warning(f"Gateway model listing failed, falling back to configured models: {e}")
+            fallbacks = [
+                self.summarization_model,
+                self.chat_model,
+                self.entity_model,
+                self.classification_model,
+            ]
+            seen, out = set(), []
+            for m in fallbacks:
+                if m and m not in seen:
+                    seen.add(m)
+                    out.append(m)
+            return out
 
     def summarize_text_with_metrics(self, text: str) -> dict:
         """Returns {text, num_input_tokens, num_output_tokens}"""

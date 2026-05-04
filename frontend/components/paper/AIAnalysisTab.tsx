@@ -10,7 +10,7 @@ interface AIAnalysisTabProps {
     paper: Paper
     paperPatterns: PaperPattern | null
     summarizing: boolean
-    onGenerate: () => void
+    onGenerate: (model?: string) => void
 }
 
 export default function AIAnalysisTab({
