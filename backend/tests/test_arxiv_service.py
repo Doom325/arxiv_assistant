@@ -54,3 +54,86 @@ def test_extract_text(arxiv_service):
         text = arxiv_service.extract_text("paper.pdf")
         
         assert "Page Text" in text
+
+
+def test_fetch_papers_since_with_until_date(arxiv_service):
+    """``until_date`` must produce a closed ``submittedDate:[X TO Y]`` range query."""
+    import datetime
+    captured = {}
+
+    def fake_search(query, **kwargs):
+        captured["query"] = query
+        return MagicMock()
+
+    with patch("services.arxiv_service.arxiv.Search", side_effect=fake_search), \
+         patch.object(arxiv_service.client, "results", return_value=iter([])):
+        list(arxiv_service.fetch_papers_since(
+            category="cs.AI",
+            since_date=datetime.date(2026, 1, 1),
+            until_date=datetime.date(2026, 1, 31),
+        ))
+
+    assert "submittedDate:[202601010000 TO 202601312359]" in captured["query"]
+    assert "cat:cs.AI" in captured["query"]
+
+
+def test_fetch_papers_since_without_until_date_open_ended(arxiv_service):
+    """Omitting ``until_date`` keeps the upper bound open (existing behavior)."""
+    import datetime
+    captured = {}
+
+    def fake_search(query, **kwargs):
+        captured["query"] = query
+        return MagicMock()
+
+    with patch("services.arxiv_service.arxiv.Search", side_effect=fake_search), \
+         patch.object(arxiv_service.client, "results", return_value=iter([])):
+        list(arxiv_service.fetch_papers_since(
+            category="cs.AI",
+            since_date=datetime.date(2026, 1, 1),
+        ))
+
+    assert "submittedDate:[202601010000 TO *]" in captured["query"]
+
+
+def test_fetch_papers_since_descending_uses_descending_sort_order(arxiv_service):
+    """``descending=True`` must pass arxiv.SortOrder.Descending to the Search."""
+    import datetime
+    import arxiv as arxiv_lib
+    captured = {}
+
+    def fake_search(query, **kwargs):
+        captured["query"] = query
+        captured["sort_order"] = kwargs.get("sort_order")
+        return MagicMock()
+
+    with patch("services.arxiv_service.arxiv.Search", side_effect=fake_search), \
+         patch.object(arxiv_service.client, "results", return_value=iter([])):
+        list(arxiv_service.fetch_papers_since(
+            category="cs.AI",
+            since_date=datetime.date(2026, 1, 1),
+            until_date=datetime.date(2026, 1, 31),
+            descending=True,
+        ))
+
+    assert captured["sort_order"] == arxiv_lib.SortOrder.Descending
+
+
+def test_fetch_papers_since_default_is_ascending(arxiv_service):
+    """Daily-poll callers omit ``descending`` and must keep ascending sort."""
+    import datetime
+    import arxiv as arxiv_lib
+    captured = {}
+
+    def fake_search(query, **kwargs):
+        captured["sort_order"] = kwargs.get("sort_order")
+        return MagicMock()
+
+    with patch("services.arxiv_service.arxiv.Search", side_effect=fake_search), \
+         patch.object(arxiv_service.client, "results", return_value=iter([])):
+        list(arxiv_service.fetch_papers_since(
+            category="cs.AI",
+            since_date=datetime.date(2026, 1, 1),
+        ))
+
+    assert captured["sort_order"] == arxiv_lib.SortOrder.Ascending

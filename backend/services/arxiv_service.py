@@ -14,9 +14,12 @@ logger = logging.getLogger(__name__)
 
 class ArxivService:
     def __init__(self):
-        # arXiv API requires 3 seconds between requests
+        # arXiv TOS: ≥3s between requests, single connection. page_size is
+        # the per-HTTP-call result count; the API caps it at 2000. Larger
+        # pages amortize the 3s delay over more papers (~16x speed-up vs
+        # the prior 100 for multi-thousand-paper queries).
         self.client = arxiv.Client(
-            page_size=100,
+            page_size=2000,
             delay_seconds=3,
             num_retries=3
         )
@@ -50,15 +53,21 @@ class ArxivService:
         self,
         category: str,
         since_date: date,
+        until_date: date | None = None,
         safety_cap: int = POLL_SAFETY_CAP,
+        descending: bool = False,
     ) -> Iterator[dict]:
-        """Yield papers in ``category`` with ``submittedDate >= since_date``.
+        """Yield papers in ``category`` with ``submittedDate`` in
+        ``[since_date, until_date]`` inclusive. If ``until_date`` is omitted,
+        the upper bound is open (``*``) — matches the daily-poll usage.
 
-        Uses arXiv's ``submittedDate`` range query and iterates oldest → newest
-        so a caller can track a running high-water mark as it consumes the
-        stream. Papers are yielded as dicts in the same shape as
-        :meth:`fetch_papers`. This is a generator — it does not materialise
-        the full result list.
+        Uses arXiv's ``submittedDate`` range query. By default iterates oldest
+        → newest so daily-poll callers can track a running high-water mark
+        as they consume the stream. Set ``descending=True`` for backfill use
+        cases where the most recent papers should land first (so an
+        interrupted run keeps the most relevant results). Papers are yielded
+        as dicts in the same shape as :meth:`fetch_papers`. This is a
+        generator — it does not materialise the full result list.
 
         ``safety_cap`` is a hard ceiling to guard against runaway loops from
         malformed queries or a pathological date range. Under normal operation
@@ -66,14 +75,19 @@ class ArxivService:
         results per category per call.
         """
         since_str = since_date.strftime("%Y%m%d0000")
+        until_str = until_date.strftime("%Y%m%d2359") if until_date else "*"
         query = (
             f"cat:{category} AND "
-            f"submittedDate:[{since_str} TO *]"
+            f"submittedDate:[{since_str} TO {until_str}]"
         )
         search = arxiv.Search(
             query=query,
             sort_by=arxiv.SortCriterion.SubmittedDate,
-            sort_order=arxiv.SortOrder.Ascending,
+            sort_order=(
+                arxiv.SortOrder.Descending
+                if descending
+                else arxiv.SortOrder.Ascending
+            ),
         )
         count = 0
         for result in self.client.results(search):
