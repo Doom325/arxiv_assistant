@@ -1,15 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import { getSummarizationModels } from "@/lib/api";
 
 interface AISynthesisSectionProps {
   summary: string | null | undefined;
   isSummarizing: boolean;
-  onGenerate: () => void;
+  onGenerate: (model?: string) => void;
   hasExistingSummary: boolean;
 }
 
@@ -19,6 +21,28 @@ export default function AISynthesisSection({
   onGenerate,
   hasExistingSummary,
 }: AISynthesisSectionProps) {
+  const [models, setModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [modelsError, setModelsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSummarizationModels()
+      .then((res) => {
+        if (cancelled) return;
+        setModels(res.models);
+        setSelectedModel(res.default ?? res.models[0] ?? "");
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        console.error("Failed to load models:", e);
+        setModelsError("Could not load model list");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const buttonText = isSummarizing
     ? "Generating..."
     : hasExistingSummary
@@ -31,20 +55,44 @@ export default function AISynthesisSection({
       className="bg-surface-card rounded-2xl shadow-warm-sm p-6 md:p-8"
     >
       {/* Header row */}
-      <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-accent" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">
             AI Synthesis
           </span>
         </div>
-        <button
-          onClick={onGenerate}
-          disabled={isSummarizing}
-          className="bg-accent text-on-accent rounded-full px-5 py-2 text-sm font-medium transition-colors hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {buttonText}
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-foreground-secondary">
+            <span className="uppercase tracking-widest text-[10px] font-bold text-foreground-muted">
+              Model
+            </span>
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={isSummarizing || models.length === 0}
+              className="bg-surface border border-foreground/10 rounded-md px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
+              title={modelsError ?? "Choose a model for summary generation"}
+            >
+              {models.length === 0 ? (
+                <option value="">{modelsError ?? "Loading..."}</option>
+              ) : (
+                models.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <button
+            onClick={() => onGenerate(selectedModel || undefined)}
+            disabled={isSummarizing}
+            className="bg-accent text-on-accent rounded-full px-5 py-2 text-sm font-medium transition-colors hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {buttonText}
+          </button>
+        </div>
       </div>
 
       {/* Content area */}
