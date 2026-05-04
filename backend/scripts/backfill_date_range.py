@@ -70,6 +70,7 @@ def backfill(
                     since_date=start,
                     until_date=end,
                     safety_cap=safety_cap,
+                    descending=True,
                 ):
                     seen_count += 1
                     try:
