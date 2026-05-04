@@ -23,7 +23,8 @@ export default function AISynthesisSection({
   onGenerate,
   hasExistingSummary,
 }: AISynthesisSectionProps) {
-  const [models, setModels] = useState<string[]>([]);
+  type ModelEntry = { id: string; provider: "gemini" | "local" };
+  const [models, setModels] = useState<ModelEntry[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [temperature, setTemperature] = useState<number>(DEFAULT_TEMPERATURE);
@@ -34,7 +35,7 @@ export default function AISynthesisSection({
       .then((res) => {
         if (cancelled) return;
         setModels(res.models);
-        setSelectedModel(res.default ?? res.models[0] ?? "");
+        setSelectedModel(res.default ?? res.models[0]?.id ?? "");
       })
       .catch((e) => {
         if (cancelled) return;
@@ -80,11 +81,30 @@ export default function AISynthesisSection({
               {models.length === 0 ? (
                 <option value="">{modelsError ?? "Loading..."}</option>
               ) : (
-                models.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))
+                <>
+                  {models.some((m) => m.provider === "gemini") && (
+                    <optgroup label="Gemini (cloud)">
+                      {models
+                        .filter((m) => m.provider === "gemini")
+                        .map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.id}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  {models.some((m) => m.provider === "local") && (
+                    <optgroup label="Local (LiteLLM gateway)">
+                      {models
+                        .filter((m) => m.provider === "local")
+                        .map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.id}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                </>
               )}
             </select>
           </label>

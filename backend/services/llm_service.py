@@ -394,6 +394,61 @@ def get_llm_service():
     else:
         return OllamaProvider()
 
+
+_gemini_summarization_provider: GeminiProvider | None = None
+_local_summarization_provider: OllamaProvider | None = None
+
+
+def get_summarization_provider(model: str | None) -> tuple[LLMProvider, str]:
+    """Pick the right provider for a summarization request based on the chosen
+    model. Returns (provider, provider_name).
+
+    Routing rules:
+    - If ``model`` is in the curated Gemini list, route to Gemini (requires GEMINI_API_KEY).
+    - Else, route to the LiteLLM gateway (Ollama-compatible path).
+    - If ``model`` is None, fall back to the configured ``AI_PROVIDER``.
+
+    Both providers are lazy-constructed and cached so the dropdown can mix
+    Gemini + local models regardless of which AI_PROVIDER is configured.
+    """
+    global _gemini_summarization_provider, _local_summarization_provider
+
+    is_gemini = bool(model) and model in set(_GEMINI_SUMMARIZATION_MODELS)
+    if model is None:
+        is_gemini = settings.AI_PROVIDER == "gemini"
+
+    if is_gemini:
+        if _gemini_summarization_provider is None:
+            _gemini_summarization_provider = GeminiProvider()
+        return _gemini_summarization_provider, "gemini"
+
+    if _local_summarization_provider is None:
+        _local_summarization_provider = OllamaProvider()
+    return _local_summarization_provider, "local"
+
+
+def list_all_summarization_models() -> list[dict]:
+    """Union of Gemini + local gateway models, each tagged with its provider.
+    Gemini models are only included when GEMINI_API_KEY is configured;
+    gateway models are only included when the gateway responds (or via the
+    fallback to configured model names if it doesn't).
+    """
+    out: list[dict] = []
+
+    if settings.FINAL_GOOGLE_API_KEY:
+        for m in _GEMINI_SUMMARIZATION_MODELS:
+            out.append({"id": m, "provider": "gemini"})
+
+    try:
+        local = OllamaProvider().list_summarization_models()
+    except Exception as e:
+        logger.warning(f"Local provider model listing failed: {e}")
+        local = []
+    for m in local:
+        out.append({"id": m, "provider": "local"})
+
+    return out
+
 def get_embedding_service():
     """Returns the provider used for embeddings. Can differ from the main LLM provider.
 

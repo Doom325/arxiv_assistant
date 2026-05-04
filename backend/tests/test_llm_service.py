@@ -203,3 +203,31 @@ def test_ollama_summarize_text_with_temperature_override(mock_post, ollama_provi
 
     ollama_provider.summarize_text("text", temperature=0.7)
     assert mock_post.call_args.kwargs["json"]["temperature"] == 0.7
+
+
+def test_get_summarization_provider_routes_gemini_model_to_gemini():
+    """A model from the curated Gemini list must route to GeminiProvider."""
+    from services import llm_service as svc
+    with patch('services.llm_service.GeminiProvider') as MockG, \
+         patch('services.llm_service.OllamaProvider') as MockO:
+        svc._gemini_summarization_provider = None
+        svc._local_summarization_provider = None
+
+        _, name = svc.get_summarization_provider(svc._GEMINI_SUMMARIZATION_MODELS[0])
+        assert name == "gemini"
+        MockG.assert_called_once()
+        MockO.assert_not_called()
+
+
+def test_get_summarization_provider_routes_unknown_model_to_local():
+    """A model that's not in the Gemini list must route to OllamaProvider (gateway)."""
+    from services import llm_service as svc
+    with patch('services.llm_service.GeminiProvider') as MockG, \
+         patch('services.llm_service.OllamaProvider') as MockO:
+        svc._gemini_summarization_provider = None
+        svc._local_summarization_provider = None
+
+        _, name = svc.get_summarization_provider("gemma3:27b")
+        assert name == "local"
+        MockO.assert_called_once()
+        MockG.assert_not_called()

@@ -2,7 +2,7 @@ import logging
 import sys
 import os
 from services.arxiv_service import arxiv_service
-from services.llm_service import llm_service
+from services.llm_service import llm_service, get_summarization_provider
 from config import settings
 from services.prompts import SUMMARIZATION_PROMPT_MLX
 
@@ -38,17 +38,20 @@ class SummarizationService:
         if not text:
             raise ValueError("Failed to extract text from PDF")
 
-        # Real deployments are Khadas (Gemini API) and Framework Desktop
-        # (LiteLLM gateway). MLX is a Mac dev-only fallback used by mac_worker
-        # and ignores user-supplied model/temperature.
-        if settings.AI_PROVIDER == "gemini":
-            logger.info(f"Using Gemini API for summarization of {pdf_path} (model={model or 'default'}, temp={temperature})")
-            return llm_service.summarize_text(text, model=model, temperature=temperature)
-        elif HAS_MLX and not model:
+        # MLX is a Mac dev-only fallback used by mac_worker and ignores
+        # user-supplied model/temperature. On real deployments (Khadas, Framework)
+        # HAS_MLX is False and routing is decided per-model:
+        #   - Gemini-listed models → GeminiProvider (uses GEMINI_API_KEY)
+        #   - Everything else → OllamaProvider (LiteLLM gateway)
+        if HAS_MLX and not model:
             return self._generate_with_mlx(text, pdf_path)
-        else:
-            logger.info(f"Using LLM gateway for {pdf_path} (model={model or 'default'}, temp={temperature})")
-            return llm_service.summarize_text(text, model=model, temperature=temperature)
+
+        provider, provider_name = get_summarization_provider(model)
+        logger.info(
+            f"Routing summarization of {pdf_path} via provider={provider_name} "
+            f"(model={model or 'default'}, temp={temperature})"
+        )
+        return provider.summarize_text(text, model=model, temperature=temperature)
 
     def _generate_with_mlx(self, text: str, pdf_path: str) -> str:
         # Load Model (Lazy load)

@@ -208,29 +208,31 @@ class TestSummarizePaperEndpoint:
 
 class TestModelSelection:
     def test_list_models_endpoint(self, client):
-        """GET /models/summarization returns provider, default, and a list."""
+        """GET /models/summarization returns the cross-provider list, default, and default_provider."""
         with patch.object(
-            integrations.llm_service,
-            "list_summarization_models",
-            return_value=["model-a", "model-b"],
-        ), patch.object(
-            integrations.llm_service,
-            "default_summarization_model",
-            return_value="model-a",
+            integrations,
+            "list_all_summarization_models",
+            return_value=[
+                {"id": "gemini-3-flash-preview", "provider": "gemini"},
+                {"id": "gemma3:27b", "provider": "local"},
+            ],
         ):
             response = client.get("/models/summarization")
         assert response.status_code == 200
         body = response.json()
-        assert body["models"] == ["model-a", "model-b"]
-        assert body["default"] == "model-a"
-        assert "provider" in body
+        assert body["models"] == [
+            {"id": "gemini-3-flash-preview", "provider": "gemini"},
+            {"id": "gemma3:27b", "provider": "local"},
+        ]
+        assert "default_provider" in body
+        assert "default" in body
 
     def test_unknown_model_rejected(self, client, db_session, sample_paper):
         """Unknown model values must be rejected with 400, not silently forwarded."""
         with patch.object(
-            integrations.llm_service,
-            "list_summarization_models",
-            return_value=["model-a"],
+            integrations,
+            "list_all_summarization_models",
+            return_value=[{"id": "model-a", "provider": "local"}],
         ):
             response = client.post(
                 f"/papers/{sample_paper.id}/summarize?model=evil-model"
@@ -245,14 +247,12 @@ class TestModelSelection:
 
         with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
              patch.object(
-                 integrations.llm_service,
-                 "list_summarization_models",
-                 return_value=["model-a", "model-b"],
-             ), \
-             patch.object(
-                 integrations.llm_service,
-                 "default_summarization_model",
-                 return_value="model-a",
+                 integrations,
+                 "list_all_summarization_models",
+                 return_value=[
+                     {"id": "model-a", "provider": "local"},
+                     {"id": "model-b", "provider": "local"},
+                 ],
              ), \
              patch.object(
                  integrations.summarization_service,
@@ -276,9 +276,9 @@ class TestModelSelection:
 
         with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
              patch.object(
-                 integrations.llm_service,
-                 "list_summarization_models",
-                 return_value=["model-a"],
+                 integrations,
+                 "list_all_summarization_models",
+                 return_value=[{"id": "model-a", "provider": "local"}],
              ), \
              patch.object(
                  integrations.summarization_service,

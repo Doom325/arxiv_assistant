@@ -25,7 +25,11 @@ from models.paper import (
 from services.arxiv_service import arxiv_service
 from services.email_service import email_service
 from services.gdrive import GoogleDriveService, NeedAuthException
-from services.llm_service import llm_service
+from services.llm_service import (
+    llm_service,
+    get_summarization_provider,
+    list_all_summarization_models,
+)
 from services.summarization_service import summarization_service
 
 logger = logging.getLogger(__name__)
@@ -176,11 +180,11 @@ def summarize_paper(
         raise HTTPException(status_code=404, detail="Paper not found")
 
     # The frontend dropdown isn't a security boundary — anything reaching this
-    # endpoint must be on the provider's curated list (Gemini static list or
-    # LiteLLM gateway /models response).
+    # endpoint must be on the curated allowlist (Gemini static list ∪ LiteLLM
+    # gateway /models response).
     if model:
         try:
-            allowed = set(llm_service.list_summarization_models())
+            allowed = {m["id"] for m in list_all_summarization_models()}
         except Exception as e:
             logger.error(f"Failed to load model allowlist: {e}")
             raise HTTPException(status_code=502, detail="Cannot validate model")
@@ -213,19 +217,28 @@ def summarize_paper(
 
 @router.get("/models/summarization")
 def list_summarization_models():
-    """Models the user can pick for summary generation. Routed through the
-    active provider so the dropdown always reflects what the backend can serve."""
+    """All models the user can pick for summary generation, across providers.
+    Each model is tagged with its provider ("gemini" or "local") so the
+    frontend can group them. The configured ``AI_PROVIDER`` only chooses the
+    *default* selection — the user can pick a model from the other provider
+    too, and routing is per-model."""
     try:
-        models = llm_service.list_summarization_models()
+        models = list_all_summarization_models()
     except Exception as e:
         logger.error(f"Failed to list summarization models: {e}")
         raise HTTPException(status_code=502, detail="Failed to list models")
 
     try:
-        default = llm_service.default_summarization_model()
-    except NotImplementedError:
-        default = None
-    return {"provider": settings.AI_PROVIDER, "default": default, "models": models}
+        default_provider, _ = get_summarization_provider(None)
+        default = default_provider.default_summarization_model()
+    except Exception:
+        default = models[0]["id"] if models else None
+
+    return {
+        "default_provider": settings.AI_PROVIDER,
+        "default": default,
+        "models": models,
+    }
 
 
 # --- Email ---

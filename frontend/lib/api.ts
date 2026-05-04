@@ -228,7 +228,11 @@ export const api = {
         return response.json();
     },
 
-    getSummarizationModels: async (): Promise<{ provider: string; default: string | null; models: string[] }> => {
+    getSummarizationModels: async (): Promise<{
+        default_provider: string;
+        default: string | null;
+        models: { id: string; provider: "gemini" | "local" }[];
+    }> => {
         const response = await fetch(`${API_URL}/models/summarization`);
         if (!response.ok) throw new Error("Failed to fetch models");
         return response.json();
