@@ -21,6 +21,10 @@ class LLMProvider(ABC):
         """Return available model identifiers for summarization."""
         raise NotImplementedError("Subclass must implement list_summarization_models")
 
+    def default_summarization_model(self) -> str | None:
+        """The model used when no explicit override is supplied."""
+        raise NotImplementedError("Subclass must implement default_summarization_model")
+
     def sanitize_text(self, text: str) -> str:
         """Removes null bytes and UTF-16 surrogates. Delegates to core.text_utils."""
         return _sanitize_text(text)
@@ -37,10 +41,23 @@ class LLMProvider(ABC):
         """Classify a paper using the V6 CoT prompt. Returns parsed JSON or None on failure."""
         raise NotImplementedError("Subclass must implement classify_paper")
 
+_GEMINI_SUMMARIZATION_MODEL = 'gemini-3-flash-preview'
+
+# Co-located with _GEMINI_SUMMARIZATION_MODEL so additions/removals stay together.
+# Gemini's /models endpoint returns embedding + legacy models we don't want to
+# surface as summarization choices, so we curate this list manually.
+_GEMINI_SUMMARIZATION_MODELS = [
+    _GEMINI_SUMMARIZATION_MODEL,
+    'gemini-2.5-pro',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+]
+
+
 class GeminiProvider(LLMProvider):
     def __init__(self):
         self.client = genai.Client(api_key=settings.FINAL_GOOGLE_API_KEY)
-        self.model_name = 'gemini-3-flash-preview' # User requested Gemini 3 Flash
+        self.model_name = _GEMINI_SUMMARIZATION_MODEL
         self.embedding_model = 'models/gemini-embedding-001'
 
     def summarize_text(self, text: str, model: str | None = None) -> str:
@@ -56,14 +73,10 @@ class GeminiProvider(LLMProvider):
             raise e
 
     def list_summarization_models(self) -> list[str]:
-        # Static list — Gemini's /models endpoint includes embedding/legacy models we
-        # don't want surfaced as summarization choices.
-        return [
-            "gemini-3-flash-preview",
-            "gemini-2.5-pro",
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-        ]
+        return list(_GEMINI_SUMMARIZATION_MODELS)
+
+    def default_summarization_model(self) -> str:
+        return self.model_name
 
     def generate_embedding(self, text: str, task_type: str = "retrieval_document", output_dimensionality: int = 3072) -> list[float]:
         try:
@@ -206,6 +219,9 @@ class OllamaProvider(LLMProvider):
                     seen.add(m)
                     out.append(m)
             return out
+
+    def default_summarization_model(self) -> str:
+        return self.summarization_model
 
     def summarize_text_with_metrics(self, text: str) -> dict:
         """Returns {text, num_input_tokens, num_output_tokens}"""

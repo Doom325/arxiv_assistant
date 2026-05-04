@@ -46,10 +46,13 @@ class SummarizationService:
             return llm_service.summarize_text(text, model=model)
         elif HAS_MLX and not model:
             # MLX path has no model-routing support — only use it when the user
-            # didn't pick a specific model.
+            # didn't pick a specific model (i.e. accepted the provider default).
             return self._generate_with_mlx(text, pdf_path)
         else:
-            logger.info(f"Using LLM gateway for {pdf_path} (model={model or 'default'})")
+            if not HAS_MLX:
+                logger.info(f"MLX not available, falling back to LLM gateway for {pdf_path} (model={model or 'default'})")
+            else:
+                logger.info(f"Using LLM gateway for {pdf_path} (model={model or 'default'})")
             return llm_service.summarize_text(text, model=model)
 
     def _generate_with_mlx(self, text: str, pdf_path: str) -> str:

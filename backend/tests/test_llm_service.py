@@ -110,3 +110,72 @@ def test_ollama_custom_models():
         assert provider.summarization_model == "sum-model"
         assert provider.entity_model == "ent-model"
         assert provider.classification_model == "class-model"
+
+
+@patch('requests.post')
+def test_ollama_summarize_text_with_model_override(mock_post, ollama_provider):
+    """A non-None ``model`` override must be sent in the request payload."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        'choices': [{'message': {'content': 'override Summary'}}]
+    }
+    mock_response.raise_for_status.return_value = None
+    mock_post.return_value = mock_response
+
+    ollama_provider.summarize_text("text", model="custom/model:7b")
+
+    assert mock_post.call_args.kwargs["json"]["model"] == "custom/model:7b"
+
+
+def test_gemini_summarize_text_with_model_override(gemini_provider):
+    mock_response = MagicMock()
+    mock_response.text = "ok"
+    gemini_provider.client.models.generate_content.return_value = mock_response
+
+    gemini_provider.summarize_text("text", model="gemini-2.5-pro")
+
+    kwargs = gemini_provider.client.models.generate_content.call_args.kwargs
+    assert kwargs["model"] == "gemini-2.5-pro"
+
+
+def test_gemini_list_summarization_models(gemini_provider):
+    models = gemini_provider.list_summarization_models()
+    assert isinstance(models, list)
+    assert gemini_provider.default_summarization_model() in models
+
+
+@patch('requests.get')
+def test_ollama_list_summarization_models_from_gateway(mock_get):
+    """Gateway /models response is unwrapped to a sorted list of ids."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "data": [
+            {"id": "z-model"},
+            {"id": "a-model"},
+            {"id": "m-model"},
+        ]
+    }
+    mock_response.raise_for_status.return_value = None
+    mock_get.return_value = mock_response
+
+    provider = OllamaProvider()
+    assert provider.list_summarization_models() == ["a-model", "m-model", "z-model"]
+
+
+@patch('requests.get', side_effect=Exception("connection refused"))
+def test_ollama_list_summarization_models_fallback(mock_get):
+    """Gateway failure must fall back to configured model names, not raise."""
+    with patch('services.llm_service.settings') as mock_settings:
+        mock_settings.LITELLM_BASE_URL = "http://localhost:4000/v1"
+        mock_settings.LITELLM_API_KEY = ""
+        mock_settings.LLM_CHAT_MODEL = "chat-model"
+        mock_settings.LLM_SUMMARIZATION_MODEL = "sum-model"
+        mock_settings.LLM_ENTITY_MODEL = None
+        mock_settings.LLM_CLASSIFICATION_MODEL = "class-model"
+        mock_settings.LLM_EMBEDDING_MODEL = "embed-model"
+
+        provider = OllamaProvider()
+        models = provider.list_summarization_models()
+        assert models[0] == "sum-model"  # ordering preserves precedence
+        assert "chat-model" in models
+        assert "class-model" in models

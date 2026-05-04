@@ -169,6 +169,27 @@ def summarize_paper(
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
 
+    # The frontend dropdown isn't a security boundary — anything reaching this
+    # endpoint must be on the provider's curated list. If the user picked the
+    # provider's default, drop it so downstream code paths (e.g. MLX on Apple
+    # Silicon) that treat ``model is None`` as "no override" still trigger.
+    if model:
+        try:
+            allowed = set(llm_service.list_summarization_models())
+        except Exception as e:
+            logger.error(f"Failed to load model allowlist: {e}")
+            raise HTTPException(status_code=502, detail="Cannot validate model")
+        if model not in allowed:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown model '{model}'. See GET /models/summarization.",
+            )
+        try:
+            if model == llm_service.default_summarization_model():
+                model = None
+        except NotImplementedError:
+            pass
+
     # A prior failed attempt is retry-eligible without ``force=True``. Only a
     # truly successful summary (generated_summary populated) short-circuits.
     has_success = (
@@ -200,10 +221,10 @@ def list_summarization_models():
         logger.error(f"Failed to list summarization models: {e}")
         raise HTTPException(status_code=502, detail="Failed to list models")
 
-    if settings.AI_PROVIDER == "gemini":
-        default = models[0] if models else None
-    else:
-        default = settings.LLM_SUMMARIZATION_MODEL or settings.LLM_CHAT_MODEL
+    try:
+        default = llm_service.default_summarization_model()
+    except NotImplementedError:
+        default = None
     return {"provider": settings.AI_PROVIDER, "default": default, "models": models}
 
 

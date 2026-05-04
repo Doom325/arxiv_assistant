@@ -204,3 +204,95 @@ class TestSummarizePaperEndpoint:
         db_session.expire_all()
         refreshed = db_session.query(Paper).filter(Paper.id == sample_paper.id).one()
         assert refreshed.summary_status == "pending"
+
+
+class TestModelSelection:
+    def test_list_models_endpoint(self, client):
+        """GET /models/summarization returns provider, default, and a list."""
+        with patch.object(
+            integrations.llm_service,
+            "list_summarization_models",
+            return_value=["model-a", "model-b"],
+        ), patch.object(
+            integrations.llm_service,
+            "default_summarization_model",
+            return_value="model-a",
+        ):
+            response = client.get("/models/summarization")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["models"] == ["model-a", "model-b"]
+        assert body["default"] == "model-a"
+        assert "provider" in body
+
+    def test_unknown_model_rejected(self, client, db_session, sample_paper):
+        """Unknown model values must be rejected with 400, not silently forwarded."""
+        with patch.object(
+            integrations.llm_service,
+            "list_summarization_models",
+            return_value=["model-a"],
+        ):
+            response = client.post(
+                f"/papers/{sample_paper.id}/summarize?model=evil-model"
+            )
+        assert response.status_code == 400
+        assert "Unknown model" in response.json()["detail"]
+
+    def test_known_model_accepted_and_threaded(self, client, db_session, sample_paper, tmp_path):
+        """A model on the allowlist reaches summarize_text via generate_summary."""
+        pdf_path = tmp_path / f"{sample_paper.arxiv_id}.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
+             patch.object(
+                 integrations.llm_service,
+                 "list_summarization_models",
+                 return_value=["model-a", "model-b"],
+             ), \
+             patch.object(
+                 integrations.llm_service,
+                 "default_summarization_model",
+                 return_value="model-a",
+             ), \
+             patch.object(
+                 integrations.summarization_service,
+                 "generate_summary",
+                 return_value="ok",
+             ) as mock_gen, \
+             _patch_session_local(db_session):
+            response = client.post(
+                f"/papers/{sample_paper.id}/summarize?force=true&model=model-b"
+            )
+            assert response.status_code == 200
+            mock_gen.assert_called_once()
+            assert mock_gen.call_args.kwargs["model"] == "model-b"
+
+    def test_default_model_collapsed_to_none(self, client, db_session, sample_paper, tmp_path):
+        """Picking the provider default must drop the override so the MLX path
+        (and any other ``model is None`` branches) still trigger."""
+        pdf_path = tmp_path / f"{sample_paper.arxiv_id}.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
+             patch.object(
+                 integrations.llm_service,
+                 "list_summarization_models",
+                 return_value=["default-model"],
+             ), \
+             patch.object(
+                 integrations.llm_service,
+                 "default_summarization_model",
+                 return_value="default-model",
+             ), \
+             patch.object(
+                 integrations.summarization_service,
+                 "generate_summary",
+                 return_value="ok",
+             ) as mock_gen, \
+             _patch_session_local(db_session):
+            response = client.post(
+                f"/papers/{sample_paper.id}/summarize?force=true&model=default-model"
+            )
+            assert response.status_code == 200
+            mock_gen.assert_called_once()
+            assert mock_gen.call_args.kwargs["model"] is None
