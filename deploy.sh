@@ -119,11 +119,14 @@ sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" << 'EOF'
     # needs ACCESS EXCLUSIVE on the table catalog → it waits forever otherwise.
     #
     # Backend is fine to be up during DDL (idles unless requests arrive) and
-    # we need it to exec the python migration scripts. We additionally set
+    # we need it to exec the python migration scripts. We additionally pass
     # MIGRATING=1 so backend's APScheduler doesn't fire ingestion / batch /
     # rescore jobs in this window — those would re-introduce lock contention.
+    #
+    # MIGRATING flows via process env (compose interpolation reads from caller
+    # env), not via .env mutation — so a mid-script failure can't leave a
+    # stale MIGRATING=1 behind in the file.
     echo "🗄️  Bringing up db + backend only (pre-migration, MIGRATING=1)..."
-    echo "MIGRATING=1" >> .env
     echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" MIGRATING=1 docker compose $COMPOSE_FILES --env-file .env up -d --force-recreate db backend
 
     # 🔍 Diagnostic: Verify the schema file INSIDE the running container
@@ -185,11 +188,11 @@ sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" << 'EOF'
     echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_db psql -U user -d arxiv_db -c "ALTER TABLE papers ADD COLUMN IF NOT EXISTS full_text_sections JSONB;"
     echo "$SSHPASS" | sudo -S docker exec arxiv_assistant_db psql -U user -d arxiv_db -c "ALTER TABLE papers ADD COLUMN IF NOT EXISTS extracted_images JSONB;"
 
-    # 🚀 Migrations done — clear MIGRATING flag and bring up the rest (worker
-    # + frontend). The MIGRATING change forces backend to recreate so its
-    # scheduler can start; db is unchanged and is a no-op.
-    echo "🚀 Migrations complete — clearing MIGRATING and bringing up worker + frontend..."
-    sed -i '/^MIGRATING=/d' .env
+    # 🚀 Migrations done — bring up the rest (worker + frontend). Not passing
+    # MIGRATING here means compose's ${MIGRATING:-0} default kicks in, which
+    # is a config change for backend → it recreates and starts the scheduler.
+    # db is unchanged → no-op for it.
+    echo "🚀 Migrations complete — bringing up worker + frontend (MIGRATING unset)..."
     echo "$SSHPASS" | sudo -S env DATA_DIR="$DATA_DIR_PATH" DB_STORAGE="$MOUNT_POINT" docker compose $COMPOSE_FILES --env-file .env up -d
 
     # ✅ Final API Health Check with Retries
