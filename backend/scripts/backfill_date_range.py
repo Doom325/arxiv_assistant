@@ -34,7 +34,7 @@ from sqlalchemy.orm import Session
 
 from database import SessionLocal
 from ingestion import process_paper_entry
-from scheduler import DEFAULT_CATEGORIES
+from poll_constants import DEFAULT_CATEGORIES, POLL_SAFETY_CAP
 from services.arxiv_service import arxiv_service
 
 logging.basicConfig(
@@ -53,6 +53,7 @@ def backfill(
     end: datetime.date,
     categories: list[str],
     skip_ai: bool = True,
+    safety_cap: int = POLL_SAFETY_CAP,
 ) -> dict:
     db: Session = SessionLocal()
     summary: dict = {"categories": {}, "total_new": 0, "total_seen": 0}
@@ -68,6 +69,7 @@ def backfill(
                     category=category,
                     since_date=start,
                     until_date=end,
+                    safety_cap=safety_cap,
                 ):
                     seen_count += 1
                     try:
@@ -90,20 +92,34 @@ def backfill(
                 # Commit per-category so a later category failure doesn't
                 # discard everything we just did.
                 db.commit()
+                if seen_count >= safety_cap:
+                    # fetch_papers_since stops at safety_cap; on a
+                    # multi-week backfill of a busy category that means
+                    # silent truncation. Surface it clearly so the
+                    # operator knows to re-run with a smaller range or
+                    # higher --max-per-category.
+                    logger.warning(
+                        "Category %s hit safety_cap=%d — results truncated. "
+                        "Re-run with a tighter date range or pass "
+                        "--max-per-category > %d.",
+                        category, safety_cap, safety_cap,
+                    )
             except Exception:
                 logger.exception("Category %s failed mid-stream", category)
                 db.rollback()
             summary["categories"][category] = {
                 "new": new_count,
                 "seen": seen_count,
+                "truncated": seen_count >= safety_cap,
             }
             summary["total_new"] += new_count
             summary["total_seen"] += seen_count
             logger.info(
-                "Category %s done: new=%d seen=%d",
+                "Category %s done: new=%d seen=%d%s",
                 category,
                 new_count,
                 seen_count,
+                " (TRUNCATED)" if seen_count >= safety_cap else "",
             )
     finally:
         db.close()
@@ -143,6 +159,16 @@ def main(argv: list[str] | None = None) -> int:
             "the production_worker picks up unprocessed rows."
         ),
     )
+    parser.add_argument(
+        "--max-per-category",
+        type=int,
+        default=POLL_SAFETY_CAP,
+        help=(
+            f"Hard ceiling on papers fetched per category (default: {POLL_SAFETY_CAP}). "
+            "Hitting the cap logs a warning and truncates the category — "
+            "re-run with a tighter date range or a higher value."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.start > args.end:
@@ -160,6 +186,7 @@ def main(argv: list[str] | None = None) -> int:
         end=args.end,
         categories=args.categories,
         skip_ai=not args.with_ai,
+        safety_cap=args.max_per_category,
     )
     logger.info("Done: total_new=%d total_seen=%d", result["total_new"], result["total_seen"])
     for cat, stats in result["categories"].items():

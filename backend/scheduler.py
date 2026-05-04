@@ -14,18 +14,17 @@ from database import SessionLocal
 from ingestion import process_paper_entry
 import models
 from models import CategoryPollState, JobLog, Paper, UserConfig
-from poll_constants import INITIAL_BACKFILL_DAYS, REPOLL_OVERLAP_DAYS
+from poll_constants import (
+    DEFAULT_CATEGORIES,
+    INITIAL_BACKFILL_DAYS,
+    REPOLL_OVERLAP_DAYS,
+)
 from services.arxiv_service import arxiv_service
 from services.batch_service import batch_service
 from services.email_service import email_service
 from services.summarization_service import summarization_service
 from services import reading_queue_service as rqs
 from services.query_embedding_cache import query_cache
-
-DEFAULT_CATEGORIES = {
-    "cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.RO",
-    "cs.MA", "cs.NE", "cs.IR", "cs.SI", "cs.HC", "cs.CY",
-}
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -18,3 +18,11 @@ REPOLL_OVERLAP_DAYS = 1
 # pathological date range. Under normal operation (daily poll, a handful
 # of categories) we expect at most a few hundred results per call.
 POLL_SAFETY_CAP = 10000
+
+# Default categories scanned by the daily poll and the date-range backfill
+# script. Lifted out of scheduler.py so scripts can import without dragging
+# in BackgroundScheduler construction at module import.
+DEFAULT_CATEGORIES = {
+    "cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.RO",
+    "cs.MA", "cs.NE", "cs.IR", "cs.SI", "cs.HC", "cs.CY",
+}
