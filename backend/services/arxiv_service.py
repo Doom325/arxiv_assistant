@@ -50,9 +50,12 @@ class ArxivService:
         self,
         category: str,
         since_date: date,
+        until_date: date | None = None,
         safety_cap: int = POLL_SAFETY_CAP,
     ) -> Iterator[dict]:
-        """Yield papers in ``category`` with ``submittedDate >= since_date``.
+        """Yield papers in ``category`` with ``submittedDate`` in
+        ``[since_date, until_date]`` inclusive. If ``until_date`` is omitted,
+        the upper bound is open (``*``) — matches the daily-poll usage.
 
         Uses arXiv's ``submittedDate`` range query and iterates oldest → newest
         so a caller can track a running high-water mark as it consumes the
@@ -66,9 +69,10 @@ class ArxivService:
         results per category per call.
         """
         since_str = since_date.strftime("%Y%m%d0000")
+        until_str = until_date.strftime("%Y%m%d2359") if until_date else "*"
         query = (
             f"cat:{category} AND "
-            f"submittedDate:[{since_str} TO *]"
+            f"submittedDate:[{since_str} TO {until_str}]"
         )
         search = arxiv.Search(
             query=query,
