@@ -137,3 +137,24 @@ def test_fetch_papers_since_default_is_ascending(arxiv_service):
         ))
 
     assert captured["sort_order"] == arxiv_lib.SortOrder.Ascending
+
+
+def test_fetch_papers_since_passes_max_results_to_search(arxiv_service):
+    """``arxiv.Search(max_results=...)`` must be set to safety_cap, otherwise
+    the lib's default 100 silently truncates multi-page queries."""
+    import datetime
+    captured = {}
+
+    def fake_search(*args, **kwargs):
+        captured.update(kwargs)
+        return MagicMock()
+
+    with patch("services.arxiv_service.arxiv.Search", side_effect=fake_search), \
+         patch.object(arxiv_service.client, "results", return_value=iter([])):
+        list(arxiv_service.fetch_papers_since(
+            category="cs.AI",
+            since_date=datetime.date(2026, 1, 1),
+            safety_cap=5000,
+        ))
+
+    assert captured["max_results"] == 5000
