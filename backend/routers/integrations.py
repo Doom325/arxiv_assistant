@@ -68,7 +68,7 @@ def _record_summary_failure(
     db.commit()
 
 
-def run_summarization(paper_id: int, pdf_url: str, model: Optional[str] = None):
+def run_summarization(paper_id: int, pdf_url: str, model: Optional[str] = None, temperature: Optional[float] = None):
     """Background task: uses its own DB session (request session may be closed)."""
     db = SessionLocal()
     try:
@@ -123,7 +123,7 @@ def run_summarization(paper_id: int, pdf_url: str, model: Optional[str] = None):
 
         pdf_path = os.path.join(pdf_dir, filename)
 
-        summary = summarization_service.generate_summary(pdf_path, model=model)
+        summary = summarization_service.generate_summary(pdf_path, model=model, temperature=temperature)
 
         # Naive UTC (see _record_summary_failure).
         now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -163,8 +163,14 @@ def summarize_paper(
     background_tasks: BackgroundTasks,
     force: bool = False,
     model: Optional[str] = None,
+    temperature: Optional[float] = None,
     db: Session = Depends(get_db),
 ):
+    if temperature is not None and not (0.0 <= temperature <= 2.0):
+        raise HTTPException(
+            status_code=400,
+            detail=f"temperature must be in [0.0, 2.0], got {temperature}",
+        )
     paper = db.query(Paper).filter(Paper.id == paper_id).first()
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
@@ -201,8 +207,8 @@ def summarize_paper(
     paper.summary_error = None
     db.commit()
 
-    background_tasks.add_task(run_summarization, paper_id, paper.pdf_url, model)
-    return {"message": "Summarization started", "model": model}
+    background_tasks.add_task(run_summarization, paper_id, paper.pdf_url, model, temperature)
+    return {"message": "Summarization started", "model": model, "temperature": temperature}
 
 
 @router.get("/models/summarization")

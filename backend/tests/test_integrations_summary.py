@@ -267,3 +267,37 @@ class TestModelSelection:
             mock_gen.assert_called_once()
             assert mock_gen.call_args.kwargs["model"] == "model-b"
 
+
+
+    def test_temperature_threaded_to_generate_summary(self, client, db_session, sample_paper, tmp_path):
+        """A user-supplied temperature must reach summarization_service.generate_summary."""
+        pdf_path = tmp_path / f"{sample_paper.arxiv_id}.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
+             patch.object(
+                 integrations.llm_service,
+                 "list_summarization_models",
+                 return_value=["model-a"],
+             ), \
+             patch.object(
+                 integrations.summarization_service,
+                 "generate_summary",
+                 return_value="ok",
+             ) as mock_gen, \
+             _patch_session_local(db_session):
+            response = client.post(
+                f"/papers/{sample_paper.id}/summarize?force=true&model=model-a&temperature=0.7"
+            )
+            assert response.status_code == 200
+            assert response.json()["temperature"] == 0.7
+            mock_gen.assert_called_once()
+            assert mock_gen.call_args.kwargs["temperature"] == 0.7
+
+    def test_temperature_out_of_range_rejected(self, client, db_session, sample_paper):
+        """temperature outside [0, 2] must be 400."""
+        response = client.post(
+            f"/papers/{sample_paper.id}/summarize?force=true&temperature=3.5"
+        )
+        assert response.status_code == 400
+        assert "temperature must be in" in response.json()["detail"]

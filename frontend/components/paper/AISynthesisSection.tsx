@@ -11,9 +11,11 @@ import { getSummarizationModels } from "@/lib/api";
 interface AISynthesisSectionProps {
   summary: string | null | undefined;
   isSummarizing: boolean;
-  onGenerate: (model?: string) => void;
+  onGenerate: (model?: string, temperature?: number) => void;
   hasExistingSummary: boolean;
 }
+
+const DEFAULT_TEMPERATURE = 0.3;
 
 export default function AISynthesisSection({
   summary,
@@ -24,6 +26,7 @@ export default function AISynthesisSection({
   const [models, setModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [modelsError, setModelsError] = useState<string | null>(null);
+  const [temperature, setTemperature] = useState<number>(DEFAULT_TEMPERATURE);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,8 +88,27 @@ export default function AISynthesisSection({
               )}
             </select>
           </label>
+          <label className="flex items-center gap-2 text-xs text-foreground-secondary">
+            <span className="uppercase tracking-widest text-[10px] font-bold text-foreground-muted">
+              Temp
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={2}
+              step={0.1}
+              value={temperature}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!Number.isNaN(v)) setTemperature(Math.min(2, Math.max(0, v)));
+              }}
+              disabled={isSummarizing}
+              className="w-20 bg-surface border border-foreground/10 rounded-md px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
+              title="Sampling temperature (0 = deterministic, 2 = very random). Default 0.3."
+            />
+          </label>
           <button
-            onClick={() => onGenerate(selectedModel || undefined)}
+            onClick={() => onGenerate(selectedModel || undefined, temperature)}
             disabled={isSummarizing}
             className="bg-accent text-on-accent rounded-full px-5 py-2 text-sm font-medium transition-colors hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >

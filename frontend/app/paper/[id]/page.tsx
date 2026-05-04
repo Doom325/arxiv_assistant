@@ -81,7 +81,7 @@ export default function PaperDetail() {
         }
     };
 
-    const handleGenerateSummary = async (model?: string) => {
+    const handleGenerateSummary = async (model?: string, temperature?: number) => {
         if (!paper?.db_id) return;
         const isRegenerate = !!paper.generated_summary;
         // Capture the moment this session started polling. Any failure whose
@@ -94,7 +94,7 @@ export default function PaperDetail() {
         const sessionStartedAt = new Date();
         setSummarizing(true);
         try {
-            await generateSummary(paper.db_id, isRegenerate, model);
+            await generateSummary(paper.db_id, isRegenerate, model, temperature);
 
             requestNotificationPermission();
 
