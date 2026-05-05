@@ -70,24 +70,33 @@ function localDateKey(d: Date): string {
 /** Format a YYYY-MM-DD key into a human-readable label */
 function formatDateLabel(key: string): string {
     if (key === "unknown") return "Unknown Date";
-    const d = new Date(key + "T12:00:00"); // noon to avoid timezone shift
+    // Parse YYYY-MM-DD via the explicit (year, month, day, hour) Date
+    // constructor instead of string concat. The constructor treats the
+    // arguments as local time unambiguously across engines, whereas
+    // ``new Date(key + "T12:00:00")`` depends on string-parser behavior
+    // (some engines treat naive ISO as UTC, which would render the
+    // prior calendar day for users west of UTC).
+    const m = key.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return key;
+    const [, y, mo, d] = m;
+    const dt = new Date(+y, +mo - 1, +d, 12, 0, 0);
+
     const today = new Date();
     today.setHours(12, 0, 0, 0);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const dStr = key;
     const todayStr = localDateKey(today);
     const yesterdayStr = localDateKey(yesterday);
 
-    const formatted = d.toLocaleDateString("en-US", {
+    const formatted = dt.toLocaleDateString("en-US", {
         month: "long",
         day: "numeric",
     });
 
-    if (dStr === todayStr) return `Today ${formatted}`;
-    if (dStr === yesterdayStr) return `Yesterday ${formatted}`;
-    return d.toLocaleDateString("en-US", {
+    if (key === todayStr) return `Today ${formatted}`;
+    if (key === yesterdayStr) return `Yesterday ${formatted}`;
+    return dt.toLocaleDateString("en-US", {
         weekday: "long",
         month: "long",
         day: "numeric",
