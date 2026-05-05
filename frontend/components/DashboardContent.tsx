@@ -33,9 +33,21 @@ const ANALYTICS_CATEGORY = "cs.AI";
 
 /* ── Helpers ────────────────────────────────────────── */
 
-/** Parse an ISO date string into YYYY-MM-DD for grouping */
+/** Parse an ISO date string into YYYY-MM-DD for grouping.
+ *
+ * The backend's ``published_date`` is a SQL date column (no time-of-day);
+ * SQLAlchemy serialises it as ``YYYY-MM-DDT00:00:00`` with no timezone
+ * suffix. ``new Date(naiveISO)`` parses that as LOCAL time, then
+ * ``.toISOString()`` converts to UTC — for any user east of UTC (IST
+ * +05:30, KST +09:00, etc.), this rolls every paper back one calendar
+ * day, so May 1 papers appear bucketed under April 30. We side-step by
+ * slicing the YYYY-MM-DD prefix directly — that's the date the paper
+ * was actually published per the backend's date column.
+ */
 function toDateKey(dateStr: string | undefined): string {
     if (!dateStr) return "unknown";
+    const m = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
     try {
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return "unknown";
@@ -43,6 +55,16 @@ function toDateKey(dateStr: string | undefined): string {
     } catch {
         return "unknown";
     }
+}
+
+/** YYYY-MM-DD in the user's local timezone (NOT UTC). Used for "today"
+ * / "yesterday" comparisons against keys produced by toDateKey, which
+ * are already calendar-day strings. */
+function localDateKey(d: Date): string {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
 }
 
 /** Format a YYYY-MM-DD key into a human-readable label */
@@ -54,9 +76,9 @@ function formatDateLabel(key: string): string {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const dStr = d.toISOString().slice(0, 10);
-    const todayStr = today.toISOString().slice(0, 10);
-    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+    const dStr = key;
+    const todayStr = localDateKey(today);
+    const yesterdayStr = localDateKey(yesterday);
 
     const formatted = d.toLocaleDateString("en-US", {
         month: "long",
@@ -73,11 +95,11 @@ function formatDateLabel(key: string): string {
     });
 }
 
-/** Check if a date key is today */
+/** Check if a date key is today (in local time, matching toDateKey's
+ * calendar-day semantics). */
 function isToday(key: string): boolean {
     if (key === "unknown") return false;
-    const today = new Date();
-    return key === today.toISOString().slice(0, 10);
+    return key === localDateKey(new Date());
 }
 
 /* ── Component ──────────────────────────────────────── */
