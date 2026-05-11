@@ -74,8 +74,11 @@ class ArxivService:
         (daily poll, a handful of categories) we expect at most a few hundred
         results per category per call.
         """
+        import datetime
         since_str = since_date.strftime("%Y%m%d0000")
-        until_str = until_date.strftime("%Y%m%d2359") if until_date else "*"
+        if not until_date:
+            until_date = datetime.date.today() + datetime.timedelta(days=1)
+        until_str = until_date.strftime("%Y%m%d2359")
         query = (
             f"cat:{category} AND "
             f"submittedDate:[{since_str} TO {until_str}]"
