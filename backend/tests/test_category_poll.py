@@ -79,7 +79,7 @@ class TestFetchPapersSince:
         return result
 
     def test_query_string_uses_submitted_date_range(self):
-        """Verify the query includes the submittedDate:[YYYYMMDD0000 TO *] form."""
+        """Verify the query includes the submittedDate closed date range."""
         service = ArxivService()
         captured = {}
 
@@ -97,8 +97,11 @@ class TestFetchPapersSince:
                 )
             )
 
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        tomorrow_str = tomorrow.strftime("%Y%m%d2359")
+
         assert "cat:cs.AI" in captured["query"]
-        assert "submittedDate:[202604200000 TO *]" in captured["query"]
+        assert f"submittedDate:[202604200000 TO {tomorrow_str}]" in captured["query"]
         import arxiv
         assert captured["sort_by"] == arxiv.SortCriterion.SubmittedDate
         assert captured["sort_order"] == arxiv.SortOrder.Ascending

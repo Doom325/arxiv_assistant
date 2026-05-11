@@ -77,8 +77,8 @@ def test_fetch_papers_since_with_until_date(arxiv_service):
     assert "cat:cs.AI" in captured["query"]
 
 
-def test_fetch_papers_since_without_until_date_open_ended(arxiv_service):
-    """Omitting ``until_date`` keeps the upper bound open (existing behavior)."""
+def test_fetch_papers_since_without_until_date_defaults_to_tomorrow(arxiv_service):
+    """Omitting ``until_date`` defaults the upper bound to tomorrow."""
     import datetime
     captured = {}
 
@@ -93,7 +93,9 @@ def test_fetch_papers_since_without_until_date_open_ended(arxiv_service):
             since_date=datetime.date(2026, 1, 1),
         ))
 
-    assert "submittedDate:[202601010000 TO *]" in captured["query"]
+    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+    tomorrow_str = tomorrow.strftime("%Y%m%d2359")
+    assert f"submittedDate:[202601010000 TO {tomorrow_str}]" in captured["query"]
 
 
 def test_fetch_papers_since_descending_uses_descending_sort_order(arxiv_service):

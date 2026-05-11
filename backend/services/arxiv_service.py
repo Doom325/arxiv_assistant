@@ -2,7 +2,7 @@ import arxiv
 import logging
 import requests
 import os
-from datetime import date
+from datetime import date, timedelta
 from typing import Iterator
 
 import time
@@ -59,7 +59,7 @@ class ArxivService:
     ) -> Iterator[dict]:
         """Yield papers in ``category`` with ``submittedDate`` in
         ``[since_date, until_date]`` inclusive. If ``until_date`` is omitted,
-        the upper bound is open (``*``) — matches the daily-poll usage.
+        the upper bound is closed at tomorrow to comply with arXiv API limits.
 
         Uses arXiv's ``submittedDate`` range query. By default iterates oldest
         → newest so daily-poll callers can track a running high-water mark
@@ -75,7 +75,9 @@ class ArxivService:
         results per category per call.
         """
         since_str = since_date.strftime("%Y%m%d0000")
-        until_str = until_date.strftime("%Y%m%d2359") if until_date else "*"
+        if not until_date:
+            until_date = date.today() + timedelta(days=1)
+        until_str = until_date.strftime("%Y%m%d2359")
         query = (
             f"cat:{category} AND "
             f"submittedDate:[{since_str} TO {until_str}]"
