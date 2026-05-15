@@ -296,6 +296,7 @@ export default function DashboardContent() {
                         sessionStorage.setItem("dashboard_papers", JSON.stringify(next));
                         sessionStorage.setItem("dashboard_page", pageNum.toString());
                         sessionStorage.setItem("dashboard_has_more", (data.length >= LIMIT).toString());
+                        sessionStorage.setItem("dashboard_cached_at", Date.now().toString());
                     } catch (e) {
                         console.error("Storage error", e);
                     }
@@ -346,8 +347,16 @@ export default function DashboardContent() {
         const savedPage = sessionStorage.getItem("dashboard_page");
         const savedHasMore = sessionStorage.getItem("dashboard_has_more");
         const savedScroll = sessionStorage.getItem("dashboard_scroll");
+        const cachedAt = parseInt(sessionStorage.getItem("dashboard_cached_at") || "0");
 
-        if (savedPapers && isInitialLoad && !searchParams.toString()) {
+        // Discard cached papers older than 30 minutes. Tabs left open across
+        // a daily-poll boundary (09:00 IST) would otherwise keep rendering
+        // the pre-poll list forever, since the restore short-circuits the
+        // fresh fetch below.
+        const CACHE_TTL_MS = 30 * 60 * 1000;
+        const cacheIsFresh = cachedAt > 0 && Date.now() - cachedAt < CACHE_TTL_MS;
+
+        if (savedPapers && cacheIsFresh && isInitialLoad && !searchParams.toString()) {
             try {
                 const parsed = JSON.parse(savedPapers);
                 if (Array.isArray(parsed) && parsed.length > 0) {
