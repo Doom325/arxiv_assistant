@@ -5,12 +5,16 @@ Covers the move from the legacy ``__ERROR__`` sentinel in
 ``summary_status`` / ``summary_error`` / ``summary_attempted_at`` columns.
 """
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
 
 from models import Paper
+from models.paper import (
+    SUMMARY_STATUS_PENDING,
+    SUMMARY_STATUS_RUNNING,
+)
 from routers import integrations
 
 
@@ -301,3 +305,116 @@ class TestModelSelection:
         )
         assert response.status_code == 400
         assert "temperature must be in" in response.json()["detail"]
+
+
+class TestSummarizeConcurrencyGuard:
+    """Verify that the endpoint rejects duplicate runs while one is in flight
+    (issue #21). Two simultaneous POSTs must result in exactly one scheduled
+    background task; the second returns 409.
+    """
+
+    def test_second_post_while_running_returns_409(
+        self, client, db_session, sample_paper
+    ):
+        """A fresh ``running`` attempt blocks a second POST with 409."""
+        sample_paper.summary_status = SUMMARY_STATUS_RUNNING
+        sample_paper.summary_attempted_at = (
+            datetime.now(timezone.utc).replace(tzinfo=None)
+        )
+        db_session.commit()
+
+        response = client.post(f"/papers/{sample_paper.id}/summarize")
+        assert response.status_code == 409
+        assert "in progress" in response.json()["detail"].lower()
+
+        # Ensure the row was not mutated by the rejected request.
+        db_session.expire_all()
+        refreshed = db_session.query(Paper).filter(Paper.id == sample_paper.id).one()
+        assert refreshed.summary_status == SUMMARY_STATUS_RUNNING
+
+    def test_second_post_while_pending_returns_409(
+        self, client, db_session, sample_paper
+    ):
+        """A fresh ``pending`` attempt (background task not yet picked up)
+        also blocks duplicate scheduling."""
+        sample_paper.summary_status = SUMMARY_STATUS_PENDING
+        sample_paper.summary_attempted_at = (
+            datetime.now(timezone.utc).replace(tzinfo=None)
+        )
+        db_session.commit()
+
+        response = client.post(f"/papers/{sample_paper.id}/summarize")
+        assert response.status_code == 409
+
+    def test_force_does_not_bypass_concurrency_guard(
+        self, client, db_session, sample_paper
+    ):
+        """``force=True`` overrides the has-success short-circuit but must
+        NOT bypass the in-progress guard — that would still double-bill."""
+        sample_paper.summary_status = SUMMARY_STATUS_RUNNING
+        sample_paper.summary_attempted_at = (
+            datetime.now(timezone.utc).replace(tzinfo=None)
+        )
+        db_session.commit()
+
+        response = client.post(
+            f"/papers/{sample_paper.id}/summarize?force=true"
+        )
+        assert response.status_code == 409
+
+    def test_stale_running_attempt_is_overridden(
+        self, client, db_session, sample_paper
+    ):
+        """A ``running`` row whose ``summary_attempted_at`` is older than
+        the stale threshold is treated as a dead worker and the new POST
+        is allowed to claim the slot."""
+        stale_age = settings_stale_seconds() + 60
+        sample_paper.summary_status = SUMMARY_STATUS_RUNNING
+        sample_paper.summary_attempted_at = (
+            datetime.now(timezone.utc).replace(tzinfo=None)
+            - timedelta(seconds=stale_age)
+        )
+        db_session.commit()
+
+        response = client.post(f"/papers/{sample_paper.id}/summarize")
+        assert response.status_code == 200
+        assert response.json()["message"] == "Summarization started"
+
+        db_session.expire_all()
+        refreshed = db_session.query(Paper).filter(Paper.id == sample_paper.id).one()
+        assert refreshed.summary_status == SUMMARY_STATUS_PENDING
+
+    def test_running_with_null_attempted_at_is_overridden(
+        self, client, db_session, sample_paper
+    ):
+        """A ``running`` row with NULL ``summary_attempted_at`` (defensive —
+        the new code always populates it, but legacy rows may not) is
+        treated as stale rather than permanently blocked."""
+        sample_paper.summary_status = SUMMARY_STATUS_RUNNING
+        sample_paper.summary_attempted_at = None
+        db_session.commit()
+
+        response = client.post(f"/papers/{sample_paper.id}/summarize")
+        assert response.status_code == 200
+
+    def test_concurrent_posts_schedule_exactly_one_task(
+        self, client, db_session, sample_paper
+    ):
+        """Simulate two POSTs racing against the same fresh paper: exactly
+        one should schedule ``run_summarization``; the other must 409."""
+        with patch.object(integrations, "run_summarization") as mock_run:
+            r1 = client.post(f"/papers/{sample_paper.id}/summarize")
+            r2 = client.post(f"/papers/{sample_paper.id}/summarize")
+
+        statuses = sorted([r1.status_code, r2.status_code])
+        assert statuses == [200, 409]
+        # FastAPI BackgroundTasks fires after the response — TestClient flushes
+        # them on context exit, so by the time we assert here, exactly one
+        # scheduling has occurred.
+        assert mock_run.call_count == 1
+
+
+def settings_stale_seconds() -> int:
+    """Helper to read the configured stale threshold for tests."""
+    from config import settings
+    return settings.SUMMARY_RUN_STALE_THRESHOLD_SECONDS

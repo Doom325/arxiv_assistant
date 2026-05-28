@@ -5,11 +5,12 @@ Extracted from papers.py (summarize/email) and library.py (GDrive).
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import and_, or_, update
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -206,10 +207,50 @@ def summarize_paper(
             "summary": paper.generated_summary,
         }
 
-    # Clear prior failure state before scheduling a retry.
-    paper.summary_status = SUMMARY_STATUS_PENDING
-    paper.summary_error = None
+    # Atomic concurrency claim. Two simultaneous POSTs would otherwise both
+    # observe the paper as not-running, both schedule a background task, and
+    # both spend tokens on duplicate work. The conditional UPDATE serializes
+    # at the DB row lock: exactly one caller observes rowcount==1; the other
+    # gets rowcount==0 and is rejected with 409.
+    #
+    # A prior pending/running attempt is only treated as "in progress" while
+    # its ``summary_attempted_at`` is fresh. After the configured stale
+    # threshold the attempt is assumed dead (worker crash, lost background
+    # task) and the new caller is allowed to override it.
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    stale_cutoff = now - timedelta(
+        seconds=settings.SUMMARY_RUN_STALE_THRESHOLD_SECONDS
+    )
+    in_progress_states = (SUMMARY_STATUS_PENDING, SUMMARY_STATUS_RUNNING)
+    claim = (
+        update(Paper)
+        .where(Paper.id == paper_id)
+        .where(
+            or_(
+                Paper.summary_status.is_(None),
+                Paper.summary_status.notin_(in_progress_states),
+                and_(
+                    Paper.summary_status.in_(in_progress_states),
+                    or_(
+                        Paper.summary_attempted_at.is_(None),
+                        Paper.summary_attempted_at < stale_cutoff,
+                    ),
+                ),
+            )
+        )
+        .values(
+            summary_status=SUMMARY_STATUS_PENDING,
+            summary_error=None,
+            summary_attempted_at=now,
+        )
+    )
+    result = db.execute(claim)
     db.commit()
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Summarization already in progress",
+        )
 
     background_tasks.add_task(run_summarization, paper_id, paper.pdf_url, model, temperature)
     return {"message": "Summarization started", "model": model, "temperature": temperature}
