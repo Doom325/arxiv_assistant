@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     WORKER_IDLE_SLEEP_SECONDS: int = 30 # Sleep when nothing to process
     WORKER_BATCH_PAUSE_SECONDS: int = 2 # Brief pause between batches
 
+    # Summarization concurrency guard. A POST to /papers/{id}/summarize is
+    # rejected with 409 if another attempt is already pending/running and was
+    # touched within this many seconds. After the threshold, the prior attempt
+    # is assumed dead (worker crash, lost background task) and the retry is
+    # allowed to claim the slot.
+    SUMMARY_RUN_STALE_THRESHOLD_SECONDS: int = 600
+
     class Config:
         env_file = ".env"
         extra = "ignore"
