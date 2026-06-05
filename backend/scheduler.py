@@ -372,4 +372,12 @@ def start_scheduler():
     if os.getenv("MIGRATING") == "1":
         logger.info("MIGRATING=1 — skipping scheduler startup")
         return
+    # Non-production stacks (e.g. staging) share the host's egress IP with
+    # prod. Two stacks polling arXiv on the same cron schedule double the
+    # request rate from one IP and trip arXiv's HTTP 429 rate limiter, which
+    # stalls ingestion on *both* stacks. Set DISABLE_SCHEDULER=1 on every
+    # non-prod stack so only one scheduler hits arXiv.
+    if os.getenv("DISABLE_SCHEDULER") == "1":
+        logger.info("DISABLE_SCHEDULER=1 — skipping scheduler startup")
+        return
     scheduler.start()

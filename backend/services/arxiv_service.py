@@ -1,5 +1,6 @@
 import arxiv
 import logging
+import random
 import requests
 import os
 from datetime import date, timedelta
@@ -12,6 +13,16 @@ from poll_constants import POLL_SAFETY_CAP
 
 logger = logging.getLogger(__name__)
 
+# arXiv rate-limits by source IP and replies HTTP 429 when a client exceeds
+# it. The ``arxiv`` library's built-in ``num_retries`` only re-requests after
+# the fixed ``delay_seconds`` gap, which is far too short to clear a 429 — so
+# bursts (multi-page backfills, several categories back-to-back, or two stacks
+# sharing one egress IP) fail the whole category and freeze its high-water
+# mark, which then widens the next day's query into an even bigger burst. We
+# break that spiral with our own exponential backoff on 429.
+ARXIV_429_MAX_RETRIES = 5
+ARXIV_429_BASE_BACKOFF_S = 30.0
+
 class ArxivService:
     def __init__(self):
         # arXiv TOS: ≥3s between requests, single connection. page_size is
@@ -20,7 +31,7 @@ class ArxivService:
         # the prior 100 for multi-thousand-paper queries).
         self.client = arxiv.Client(
             page_size=2000,
-            delay_seconds=3,
+            delay_seconds=5,
             num_retries=3
         )
 
@@ -98,26 +109,49 @@ class ArxivService:
                 else arxiv.SortOrder.Ascending
             ),
         )
-        count = 0
-        for result in self.client.results(search):
-            if count >= safety_cap:
+        # Retry the whole search on HTTP 429 with exponential backoff + jitter.
+        # A 429 can surface mid-stream (e.g. on page 3), so a retry re-runs the
+        # query from the first page and re-yields papers already emitted this
+        # call. That is safe: the daily-poll caller's process_paper_entry is a
+        # no-op for duplicate arxiv_ids, so re-yielded papers are absorbed
+        # silently rather than double-counted.
+        attempt = 0
+        while True:
+            count = 0
+            try:
+                for result in self.client.results(search):
+                    if count >= safety_cap:
+                        logger.warning(
+                            "fetch_papers_since hit safety_cap=%d for "
+                            "category=%s since=%s — stopping early",
+                            safety_cap, category, since_date,
+                        )
+                        return
+                    count += 1
+                    yield {
+                        "arxiv_id": result.entry_id.split('/')[-1],
+                        "title": result.title,
+                        "authors": [author.name for author in result.authors],
+                        "summary": result.summary,
+                        "published_date": result.published,
+                        "updated_date": result.updated,
+                        "pdf_url": result.pdf_url,
+                        "category": result.primary_category,
+                    }
+                return
+            except arxiv.HTTPError as err:
+                if err.status != 429 or attempt >= ARXIV_429_MAX_RETRIES:
+                    raise
+                attempt += 1
+                backoff = ARXIV_429_BASE_BACKOFF_S * (2 ** (attempt - 1))
+                backoff += random.uniform(0, ARXIV_429_BASE_BACKOFF_S)
                 logger.warning(
-                    "fetch_papers_since hit safety_cap=%d for "
-                    "category=%s since=%s — stopping early",
-                    safety_cap, category, since_date,
+                    "arXiv returned HTTP 429 for category=%s since=%s; backing "
+                    "off %.1fs before retry %d/%d",
+                    category, since_date, backoff, attempt,
+                    ARXIV_429_MAX_RETRIES,
                 )
-                break
-            count += 1
-            yield {
-                "arxiv_id": result.entry_id.split('/')[-1],
-                "title": result.title,
-                "authors": [author.name for author in result.authors],
-                "summary": result.summary,
-                "published_date": result.published,
-                "updated_date": result.updated,
-                "pdf_url": result.pdf_url,
-                "category": result.primary_category,
-            }
+                time.sleep(backoff)
 
     def get_paper_by_id(self, arxiv_id: str):
         """
