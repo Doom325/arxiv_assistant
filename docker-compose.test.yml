@@ -30,6 +30,9 @@ services:
       - DATABASE_URL=postgresql://user:password@test-db:5432/arxiv_test_db
       - PDF_SAVE_DIR=/app/data
       - PYTHONUNBUFFERED=1
+      # Staging shares the host egress IP with prod; let only prod poll arXiv
+      # so the two stacks don't double the request rate and trip HTTP 429.
+      - DISABLE_SCHEDULER=1
       - AI_PROVIDER=gemini
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}

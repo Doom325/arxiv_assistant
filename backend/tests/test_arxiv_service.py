@@ -1,10 +1,29 @@
+import datetime
+
+import arxiv
 import pytest
 from unittest.mock import MagicMock, patch
-from services.arxiv_service import ArxivService
+from services.arxiv_service import ArxivService, ARXIV_429_MAX_RETRIES
 
 @pytest.fixture
 def arxiv_service():
     return ArxivService()
+
+
+def _mock_result(arxiv_id="2101.00001"):
+    """Build a fake arxiv result row with all fields fetch_papers_since reads."""
+    result = MagicMock()
+    result.entry_id = f"http://arxiv.org/abs/{arxiv_id}"
+    result.title = "Test Paper"
+    author = MagicMock()
+    author.name = "Author One"
+    result.authors = [author]
+    result.summary = "Test Summary"
+    result.published = datetime.datetime(2026, 1, 5)
+    result.updated = datetime.datetime(2026, 1, 5)
+    result.pdf_url = f"http://arxiv.org/pdf/{arxiv_id}"
+    result.primary_category = "cs.AI"
+    return result
 
 def test_fetch_papers(arxiv_service):
     # Mock the arxiv.Client and its results
@@ -160,3 +179,62 @@ def test_fetch_papers_since_passes_max_results_to_search(arxiv_service):
         ))
 
     assert captured["max_results"] == 5000
+
+
+def test_fetch_papers_since_retries_on_429_then_succeeds(arxiv_service):
+    """A transient HTTP 429 must be retried with backoff, not surfaced."""
+    err = arxiv.HTTPError(url="http://export.arxiv.org/api", retry=3, status=429)
+    results_mock = MagicMock(side_effect=[err, iter([_mock_result()])])
+
+    with patch("services.arxiv_service.arxiv.Search", return_value=MagicMock()), \
+         patch("services.arxiv_service.time.sleep") as mock_sleep, \
+         patch.object(arxiv_service.client, "results", results_mock):
+        papers = list(arxiv_service.fetch_papers_since(
+            category="cs.AI",
+            since_date=datetime.date(2026, 1, 1),
+            until_date=datetime.date(2026, 1, 31),
+        ))
+
+    assert len(papers) == 1
+    assert papers[0]["arxiv_id"] == "2101.00001"
+    assert results_mock.call_count == 2  # initial attempt + one retry
+    assert mock_sleep.call_count == 1    # backed off once before retrying
+
+
+def test_fetch_papers_since_reraises_non_429(arxiv_service):
+    """Non-429 HTTP errors must propagate immediately without retrying."""
+    err = arxiv.HTTPError(url="http://export.arxiv.org/api", retry=3, status=503)
+    results_mock = MagicMock(side_effect=err)
+
+    with patch("services.arxiv_service.arxiv.Search", return_value=MagicMock()), \
+         patch("services.arxiv_service.time.sleep") as mock_sleep, \
+         patch.object(arxiv_service.client, "results", results_mock):
+        with pytest.raises(arxiv.HTTPError):
+            list(arxiv_service.fetch_papers_since(
+                category="cs.AI",
+                since_date=datetime.date(2026, 1, 1),
+                until_date=datetime.date(2026, 1, 31),
+            ))
+
+    assert results_mock.call_count == 1  # no retry for non-429
+    assert mock_sleep.call_count == 0
+
+
+def test_fetch_papers_since_gives_up_after_max_429_retries(arxiv_service):
+    """Persistent 429s must eventually surface after exhausting retries."""
+    err = arxiv.HTTPError(url="http://export.arxiv.org/api", retry=3, status=429)
+    results_mock = MagicMock(side_effect=err)
+
+    with patch("services.arxiv_service.arxiv.Search", return_value=MagicMock()), \
+         patch("services.arxiv_service.time.sleep") as mock_sleep, \
+         patch.object(arxiv_service.client, "results", results_mock):
+        with pytest.raises(arxiv.HTTPError):
+            list(arxiv_service.fetch_papers_since(
+                category="cs.AI",
+                since_date=datetime.date(2026, 1, 1),
+                until_date=datetime.date(2026, 1, 31),
+            ))
+
+    # initial attempt + ARXIV_429_MAX_RETRIES retries, sleeping before each retry
+    assert results_mock.call_count == ARXIV_429_MAX_RETRIES + 1
+    assert mock_sleep.call_count == ARXIV_429_MAX_RETRIES
