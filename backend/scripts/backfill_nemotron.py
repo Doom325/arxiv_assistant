@@ -35,6 +35,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import create_engine, text as sa_text
+from sqlalchemy.exc import OperationalError, DBAPIError
 from sqlalchemy.orm import sessionmaker
 
 from config import settings
@@ -91,7 +92,44 @@ def main():
     args = ap.parse_args()
 
     cutoff = datetime.utcnow() - timedelta(days=30 * args.months)
-    engine = create_engine(settings.DATABASE_URL)
+    # pool_pre_ping + short connect timeout: a dropped link fails fast so the
+    # supervisor can retry instead of hanging on a half-open socket.
+    engine = create_engine(
+        settings.DATABASE_URL, pool_pre_ping=True,
+        connect_args={"connect_timeout": 10},
+    )
+
+    # SUPERVISOR loop: tolerate flaky DB connectivity. Each pass is resumable
+    # via DB-state, so we keep retrying; a connection dropped mid-pass raises
+    # OperationalError (see per-item handlers) and we reconnect after a pause.
+    # Exit once two consecutive passes find no new work (or after one pass when
+    # --limit is set).
+    consecutive_idle = 0
+    pass_no = 0
+    while True:
+        pass_no += 1
+        try:
+            new_work = run_pass(args, cutoff, engine, pass_no)
+        except (OperationalError, DBAPIError) as e:
+            print(f"  [pass {pass_no}] DB unreachable ({str(e)[:100]}) — retry in 30s")
+            time.sleep(30)
+            continue
+        if args.limit:
+            break
+        if new_work == 0:
+            consecutive_idle += 1
+            if consecutive_idle >= 2:
+                print("  no new work across two passes — backfill complete.")
+                break
+            time.sleep(15)
+        else:
+            consecutive_idle = 0
+
+
+def run_pass(args, cutoff, engine, pass_no=1):
+    """One resumable pass over the candidate set. Returns count of new work
+    done (classifications + citation extractions) this pass. Re-raises
+    OperationalError/DBAPIError so the supervisor can reconnect."""
     Base.metadata.create_all(engine, checkfirst=True)
     db = sessionmaker(bind=engine)()
 
@@ -156,6 +194,8 @@ def main():
                     else:
                         db.commit()  # cleared the old row; leave unmarked so it retries
                         n_err += 1
+                except (OperationalError, DBAPIError):
+                    raise  # let the supervisor reconnect; resumable
                 except Exception as e:
                     db.rollback(); n_err += 1
                     print(f"  ! classify {arxiv_id}: {e}")
@@ -183,6 +223,8 @@ def main():
                         done_citations.add(arxiv_id)
                         n_cit += 1
                         did_work = True
+                    except (OperationalError, DBAPIError):
+                        raise  # let the supervisor reconnect; resumable
                     except Exception as e:
                         db.rollback()
                         try:
@@ -204,9 +246,10 @@ def main():
                 print("  reached --limit, stopping")
                 break
 
-    print(f"{'='*72}\n  DONE  classified={n_clf}  citations={n_cit}  "
+    print(f"{'='*72}\n  PASS {pass_no} DONE  classified={n_clf}  citations={n_cit}  "
           f"skipped_no_pdf={n_skip}  errors={n_err}\n  finished {datetime.now():%Y-%m-%d %H:%M:%S}\n{'='*72}")
     db.close()
+    return n_clf + n_cit
 
 
 if __name__ == "__main__":
