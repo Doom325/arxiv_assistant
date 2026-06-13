@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     LITELLM_BASE_URL: str = "http://192.168.1.32:4000/v1"
     LITELLM_API_KEY: str = ""
     LLM_EMBEDDING_MODEL: str = "embeddinggemma:latest"
-    LLM_CHAT_MODEL: str = "gemma3:27b"  # RAG chat + universal fallback for dedicated *_MODEL vars
+    LLM_CHAT_MODEL: str = "gemma4:31b"  # RAG chat + universal fallback for dedicated *_MODEL vars (gemma3:27b retired from gateway)
     LLM_SUMMARIZATION_MODEL: str | None = None  # Falls back to LLM_CHAT_MODEL if unset
     LLM_ENTITY_MODEL: str | None = None  # Falls back to LLM_CHAT_MODEL if unset
     LLM_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification + citation parsing
