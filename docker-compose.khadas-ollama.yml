@@ -28,7 +28,7 @@ services:
                   - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
                   - LITELLM_API_KEY=${LITELLM_API_KEY}
                   - LLM_CHAT_MODEL=nemotron3:nano
-                  - LLM_CLASSIFICATION_MODEL=gemma3:27b
+                  - LLM_CLASSIFICATION_MODEL=nemotron3:nano
                   # Suppresses scheduler during deploy migration window. See deploy.sh.
                   - MIGRATING=${MIGRATING:-0}
 
@@ -49,6 +49,6 @@ services:
                   - LITELLM_BASE_URL=http://${FRAMEWORK_IP:-192.168.1.32}:4000/v1
                   - LITELLM_API_KEY=${LITELLM_API_KEY}
                   - LLM_CHAT_MODEL=nemotron3:nano
-                  - LLM_CLASSIFICATION_MODEL=gemma3:27b
+                  - LLM_CLASSIFICATION_MODEL=nemotron3:nano
                   - ENTITY_EXTRACTION_PROVIDER=llm
                   - GEMINI_API_KEY=${GEMINI_API_KEY}

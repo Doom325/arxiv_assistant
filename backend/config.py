@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     LLM_CHAT_MODEL: str = "nemotron3:nano"  # RAG chat + summarization + universal fallback. nemotron-3-nano (hybrid SSM-MoE) — ~4-7x faster than gemma4:31b at equal/better quality
     LLM_SUMMARIZATION_MODEL: str | None = None  # Falls back to LLM_CHAT_MODEL if unset
     LLM_ENTITY_MODEL: str | None = None  # Falls back to LLM_CHAT_MODEL if unset
-    LLM_CLASSIFICATION_MODEL: str = "gemma3:12b"  # Classification + citation parsing
+    LLM_CLASSIFICATION_MODEL: str = "nemotron3:nano"  # Classification + citation parsing (consolidated onto nemotron3:nano)
     LLM_EMBEDDING_TRUNCATION: int = 8000  # Chars to send for embedding (client-side truncation)
     PDF_SAVE_DIR: str = "data"
 
