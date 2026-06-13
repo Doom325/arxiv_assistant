@@ -168,6 +168,19 @@ class OllamaProvider(LLMProvider):
     def _embed_url(self) -> str:
         return f"{self.base_url.rstrip('/')}/embeddings"
 
+    @staticmethod
+    def _strip_md_fences(s: str) -> str:
+        """Strip surrounding ```json ... ``` (or plain ```) code fences if a model
+        wraps its JSON in them despite response_format=json_object."""
+        s = (s or "").strip()
+        if s.startswith("```"):
+            nl = s.find("\n")
+            if nl != -1:
+                s = s[nl + 1:]
+            if s.rstrip().endswith("```"):
+                s = s.rstrip()[:-3]
+        return s.strip()
+
     def _unwrap_json_list(self, content: str) -> list:
         """Parse JSON that may be a bare list, wrapped in an object, or
         wrapped in markdown code fences (some local models do this even
@@ -283,19 +296,27 @@ class OllamaProvider(LLMProvider):
             return []
 
     def parse_citations(self, text: str) -> list[dict]:
-        prompt = f"""
-        Extract paper citations from the text below as a JSON list.
-        Provide: title, authors (list), url (string or null), raw (full text).
+        prompt = f"""Extract the bibliographic references/citations from the text below.
 
-        Text: {self.sanitize_text(text)}
+For each distinct cited work, output an object with:
+- "raw": the full reference string as it appears
+- "title": the paper/work title (string, or null if not identifiable)
+- "authors": list of author names (may be empty)
+- "url": a URL or arXiv id if present (string or null)
 
-        Respond ONLY with a JSON object containing a single key "citations" whose value is the list.
-        """
+Text:
+{self.sanitize_text(text)}
+
+Respond with ONLY a JSON object of the form {{"citations": [ ... ]}} — no commentary. If there are no references, return {{"citations": []}}."""
         payload = {
             "model": self.classification_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
             "response_format": {"type": "json_object"},
+            # Disable the reasoning model's <think> trace (see classify_paper) and bound
+            # the output — reference lists are long, so allow generous headroom.
+            "chat_template_kwargs": {"enable_thinking": False},
+            "max_tokens": 4096,
         }
         try:
             response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
@@ -342,6 +363,14 @@ class OllamaProvider(LLMProvider):
             "stream": False,
             "response_format": {"type": "json_object"},
             "temperature": 0.1,
+            # Reasoning models (e.g. nemotron3:nano, a hybrid SSM-MoE) otherwise emit a
+            # large unbounded <think> trace before the JSON — ~5x the output tokens and
+            # ~5x slower per call. Disable native thinking: the V6 CoT "reasoning" field
+            # inside the JSON is preserved (bounded) and drives classification accuracy.
+            # Also bounds the JSON so a malformed run can't decode indefinitely.
+            # (chat_template_kwargs survives LiteLLM drop_params; verified on the gateway.)
+            "chat_template_kwargs": {"enable_thinking": False},
+            "max_tokens": 1024,
         }
         try:
             response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
