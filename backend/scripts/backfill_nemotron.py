@@ -26,10 +26,14 @@ Run (on the host with DB + PDFs, i.e. inside the Khadas backend container):
   PYTHONPATH=. python3 scripts/backfill_nemotron.py --months 6 --task citations --download
 """
 import argparse
+import fcntl
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
+
+LOCK_PATH = "/tmp/backfill_nemotron.lock"
 
 # Make the backend package importable regardless of CWD.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -89,7 +93,29 @@ def main():
     ap.add_argument("--download", action="store_true",
                     help="Download missing PDFs for citation extraction (slow; arXiv rate-limited)")
     ap.add_argument("--limit", type=int, default=0, help="Stop after N papers (0 = all)")
+    ap.add_argument("--concurrency", type=int, default=1,
+                    help="Classify this many papers concurrently (classify task only). "
+                         "Decode on the gateway is bandwidth-bound, so batching ~8 streams "
+                         "gives ~3x aggregate throughput. DB writes stay single-threaded.")
+    ap.add_argument("--exclude-recent-days", type=int, default=0,
+                    help="Skip papers published within the last N days. The live worker "
+                         "owns its recent window (it classifies new papers); excluding it "
+                         "here prevents the two writers from racing on the same paper "
+                         "(no unique constraint exists, and the worker is insert-only).")
     args = ap.parse_args()
+
+    # Single-instance lock: two backfills both order newest-first off the same
+    # resume set and would re-do (and, with the insert-only worker, duplicate)
+    # the same papers — exactly how an earlier parallel backfill left 168 dup
+    # rows. Refuse to start if another instance holds the lock.
+    global _lock_fd
+    _lock_fd = open(LOCK_PATH, "w")
+    try:
+        fcntl.flock(_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        print(f"another backfill is already running (lock: {LOCK_PATH}) — exiting.")
+        sys.exit(1)
+    _lock_fd.write(str(os.getpid())); _lock_fd.flush()
 
     cutoff = datetime.utcnow() - timedelta(days=30 * args.months)
     # pool_pre_ping + short connect timeout: a dropped link fails fast so the
@@ -126,6 +152,78 @@ def main():
             consecutive_idle = 0
 
 
+def _classify_parallel(args, db, papers, done_classify, pass_no):
+    """Classify the not-yet-done papers using a thread pool for the LLM calls
+    while committing results on the main thread. Returns count classified.
+    Re-raises OperationalError/DBAPIError so the supervisor can reconnect."""
+    work = [(pid, arxiv_id, title, abstract)
+            for (pid, arxiv_id, title, abstract, _citations, _pdf_url) in papers
+            if arxiv_id not in done_classify
+            and abstract and len(abstract) > MIN_ABSTRACT_CHARS]
+    print(f"  parallel classify: {len(work)} papers to do, concurrency={args.concurrency}")
+
+    def classify_one(item):
+        _pid, _aid, title, abstract = item
+        t0 = time.time()
+        try:
+            parsed = llm_service.classify_paper(title or "", abstract)
+        except Exception:
+            parsed = None
+        return item, parsed, time.time() - t0
+
+    n_clf = n_err = processed = 0
+    stop = False
+    # Bound outstanding futures so we don't queue tens of thousands at once.
+    batch = max(args.concurrency * 8, args.concurrency)
+    with ThreadPoolExecutor(max_workers=args.concurrency) as ex:
+        for i in range(0, len(work), batch):
+            if stop:
+                break
+            futs = [ex.submit(classify_one, it) for it in work[i:i + batch]]
+            for fut in as_completed(futs):
+                item, parsed, elapsed = fut.result()
+                _pid, arxiv_id, title, _abstract = item
+                try:
+                    db.execute(sa_text(
+                        "DELETE FROM pattern_experiment_results WHERE arxiv_id=:a AND prompt_version=:pv"
+                    ), {"a": arxiv_id, "pv": PROMPT_VERSION})
+                    if parsed:
+                        issues = validate_classification_output(parsed)
+                        db.add(PatternExperimentResult(
+                            arxiv_id=arxiv_id, paper_title=(title or "")[:200],
+                            prompt_version=PROMPT_VERSION, model_name=model_name(),
+                            is_agentic=parsed.get("is_agentic"),
+                            primary_category=parsed.get("primary_category"),
+                            reasoning=parsed.get("reasoning", ""), patterns=parsed.get("patterns", []),
+                            raw_json=parsed, num_patterns=len(parsed.get("patterns", [])),
+                            taxonomy_violations=issues or None, num_violations=len(issues),
+                            elapsed_seconds=elapsed, error=None,
+                        ))
+                        db.commit()
+                        done_classify.add(arxiv_id)
+                        n_clf += 1
+                        processed += 1
+                    else:
+                        db.commit()  # cleared old row; leave unmarked so it retries
+                        n_err += 1
+                except (OperationalError, DBAPIError):
+                    raise  # supervisor reconnects; resumable
+                except Exception as e:
+                    db.rollback(); n_err += 1
+                    print(f"  ! classify {arxiv_id}: {e}")
+                if processed and processed % 25 == 0:
+                    print(f"  [{processed}] clf={n_clf} err={n_err}")
+                if args.limit and processed >= args.limit:
+                    print("  reached --limit, stopping")
+                    stop = True
+                    break
+
+    print(f"{'='*72}\n  PASS {pass_no} DONE (parallel x{args.concurrency})  "
+          f"classified={n_clf}  errors={n_err}\n  finished {datetime.now():%Y-%m-%d %H:%M:%S}\n{'='*72}")
+    db.close()
+    return n_clf
+
+
 def run_pass(args, cutoff, engine, pass_no=1):
     """One resumable pass over the candidate set. Returns count of new work
     done (classifications + citation extractions) this pass. Re-raises
@@ -133,15 +231,19 @@ def run_pass(args, cutoff, engine, pass_no=1):
     Base.metadata.create_all(engine, checkfirst=True)
     db = sessionmaker(bind=engine)()
 
-    # Candidate papers (reverse chronological).
+    # Candidate papers (reverse chronological). Optionally skip the worker's
+    # live recent window to avoid racing it on the same papers.
+    recent = (datetime.utcnow() - timedelta(days=args.exclude_recent_days)
+              if args.exclude_recent_days
+              else datetime.utcnow() + timedelta(days=3650))
     papers = db.execute(sa_text("""
         SELECT id, arxiv_id, title,
                COALESCE(extracted_abstract, summary) AS abstract,
                citations, pdf_url
         FROM papers
-        WHERE published_date >= :cutoff
+        WHERE published_date >= :cutoff AND published_date < :recent
         ORDER BY published_date DESC
-    """), {"cutoff": cutoff}).fetchall()
+    """), {"cutoff": cutoff, "recent": recent}).fetchall()
 
     # Resume sets (DB-state).
     done_classify = {r[0] for r in db.execute(sa_text("""
@@ -158,6 +260,13 @@ def run_pass(args, cutoff, engine, pass_no=1):
     print(f"{'='*72}\n  NEMOTRON BACKFILL  task={args.task}  since={cutoff:%Y-%m-%d}  "
           f"candidates={len(papers)}\n  already done: classify={len(done_classify)} "
           f"citations={len(done_citations)}\n  started {datetime.now():%Y-%m-%d %H:%M:%S}\n{'='*72}")
+
+    # Parallel fast-path for classification-only runs: the LLM call is the
+    # bottleneck and gateway decode is bandwidth-bound, so issuing N concurrent
+    # classifications amortizes weight reads for ~3x aggregate throughput. DB
+    # writes stay on this (main) thread — SQLAlchemy sessions aren't thread-safe.
+    if args.task == "classify" and getattr(args, "concurrency", 1) > 1:
+        return _classify_parallel(args, db, papers, done_classify, pass_no)
 
     n_clf = n_cit = n_skip = n_err = processed = 0
     for row in papers:
