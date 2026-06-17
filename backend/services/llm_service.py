@@ -181,6 +181,25 @@ class OllamaProvider(LLMProvider):
                 s = s.rstrip()[:-3]
         return s.strip()
 
+    @staticmethod
+    def _loads_lenient(content: str) -> dict:
+        """Parse classification JSON, tolerating nemotron's one deterministic
+        failure mode: lone backslashes from LaTeX/math in the verbose "reasoning"
+        string (e.g. \\alpha, \\mathbb, \\nabla) which strict JSON rejects as an
+        "Invalid \\escape". Escape any backslash that isn't the start of a valid
+        JSON escape (\\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX) and retry.
+
+        (Output truncation is handled upstream by a larger max_tokens budget, not
+        here — the classification fields follow "reasoning", so a truncated object
+        has lost them and cannot be salvaged.)
+        """
+        s = OllamaProvider._strip_md_fences(content)
+        try:
+            return json.loads(s)
+        except json.JSONDecodeError:
+            repaired = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', s)
+            return json.loads(repaired)
+
     def _unwrap_json_list(self, content: str) -> list:
         """Parse JSON that may be a bare list, wrapped in an object, or
         wrapped in markdown code fences (some local models do this even
@@ -370,13 +389,16 @@ Respond with ONLY a JSON object of the form {{"citations": [ ... ]}} — no comm
             # Also bounds the JSON so a malformed run can't decode indefinitely.
             # (chat_template_kwargs survives LiteLLM drop_params; verified on the gateway.)
             "chat_template_kwargs": {"enable_thinking": False},
-            "max_tokens": 1024,
+            # The CoT "reasoning" field comes first and runs long; 1024 truncated a
+            # tail of papers mid-reasoning (before is_agentic was emitted). 2048 gives
+            # the bounded reasoning + classification fields room to close cleanly.
+            "max_tokens": 2048,
         }
         try:
             response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
             response.raise_for_status()
             content = response.json()['choices'][0]['message']['content']
-            return json.loads(content)
+            return self._loads_lenient(content)
         except Exception as e:
             logger.error(f"Gateway classify_paper error: {e}")
             return None
