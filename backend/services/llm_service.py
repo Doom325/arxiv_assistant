@@ -201,7 +201,7 @@ class OllamaProvider(LLMProvider):
         return []
 
     def summarize_text(self, text: str, model: str | None = None, temperature: float | None = None) -> str:
-        prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text))
+        prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text[:30000]))
         payload = {
             "model": model or self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
@@ -244,7 +244,7 @@ class OllamaProvider(LLMProvider):
 
     def summarize_text_with_metrics(self, text: str) -> dict:
         """Returns {text, num_input_tokens, num_output_tokens}"""
-        prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text))
+        prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text[:30000]))
         payload = {
             "model": self.summarization_model,
             "messages": [{"role": "user", "content": prompt}],
