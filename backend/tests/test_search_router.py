@@ -64,6 +64,21 @@ class TestParseQuery:
         assert filters["author"] == "Doe"
         assert filters["entity"] == "ResNet"
 
+    def test_arxiv_id_extraction(self):
+        text, filters = parse_query("arxiv:2310.01405 reinforcement learning")
+        assert text == "reinforcement learning"
+        assert filters["arxiv_id"] == "2310.01405"
+
+    def test_arxiv_id_extraction_old_format(self):
+        text, filters = parse_query("quant-ph/0101010")
+        assert text == ""
+        assert filters["arxiv_id"] == "quant-ph/0101010"
+
+    def test_arxiv_id_extraction_no_prefix(self):
+        text, filters = parse_query("2401.12345")
+        assert text == ""
+        assert filters["arxiv_id"] == "2401.12345"
+
     def test_empty_query(self):
         text, filters = parse_query("")
         assert text == ""
