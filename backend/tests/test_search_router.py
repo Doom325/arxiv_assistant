@@ -89,3 +89,37 @@ class TestParseQuery:
         assert text == ""
         assert filters["category"] == "cs.AI"
         assert filters["author"] == "Smith"
+
+from models import Paper, PaperEmbedding
+from datetime import date
+
+def test_search_papers_with_arxiv_id(client, db_session):
+    # Create a paper and its embedding
+    paper = Paper(
+        arxiv_id="2310.01405",
+        title="Test Paper ID Match",
+        authors="Test Author",
+        summary="Test Summary",
+        published_date=date(2023, 10, 1),
+        category="cs.AI",
+        pdf_url="http://example.com/pdf",
+    )
+    db_session.add(paper)
+    db_session.commit()
+
+    paper_embedding = PaperEmbedding(
+        paper_id=paper.id,
+        embedding=[0.1] * 3072,
+        embedding_config={"model": "test"},
+        embedding_metadata={"type": "full"}
+    )
+    db_session.add(paper_embedding)
+    db_session.commit()
+
+    # Search with arxiv: ID using POST and 'query' param
+    response = client.post("/papers/search?query=arxiv:2310.01405")
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert len(data) == 1
+    assert data[0]["arxiv_id"] == "2310.01405"

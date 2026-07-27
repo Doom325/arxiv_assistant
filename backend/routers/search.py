@@ -64,7 +64,7 @@ def parse_query(query: str):
         query = query.replace(entity_match.group(0), '')
 
     # Extract arxiv_id
-    arxiv_match = re.search(r'(?i)(?:arxiv:)?\s*(\d{4}\.\d{4,5}|[a-z\-]+/\d{7})', query)
+    arxiv_match = re.search(r'(?i)(?:arxiv:)?\s*\b(\d{4}\.\d{4,5}|[a-z\-]+/\d{7})\b', query)
     if arxiv_match:
         filters['arxiv_id'] = arxiv_match.group(1)
         query = query.replace(arxiv_match.group(0), '')
@@ -110,6 +110,8 @@ def search_papers(
         semantic_query = semantic_query.filter(Paper.authors.cast(Text).ilike(f"%{metadata_filters['author']}%"))
     if metadata_filters['entity']:
         semantic_query = semantic_query.filter(Paper.entities.cast(Text).ilike(f"%{metadata_filters['entity']}%"))
+    if metadata_filters['arxiv_id']:
+        semantic_query = semantic_query.filter(Paper.arxiv_id == metadata_filters['arxiv_id'])
 
     # 2. Filters from explicit query params (UI dropdowns/date pickers)
     if category:
@@ -143,6 +145,8 @@ def search_papers(
         keyword_query = keyword_query.filter(Paper.authors.cast(Text).ilike(f"%{metadata_filters['author']}%"))
     if metadata_filters['entity']:
         keyword_query = keyword_query.filter(Paper.entities.cast(Text).ilike(f"%{metadata_filters['entity']}%"))
+    if metadata_filters['arxiv_id']:
+        keyword_query = keyword_query.filter(Paper.arxiv_id == metadata_filters['arxiv_id'])
 
     # Explicit Params
     if category:
@@ -152,11 +156,21 @@ def search_papers(
     if end_date:
         keyword_query = keyword_query.filter(Paper.published_date <= end_date)
 
-    keyword_results = keyword_query.filter(
-        Paper.search_vector.op('@@')(func.plainto_tsquery('english', clean_query))
-    ).order_by(
-        func.ts_rank_cd(Paper.search_vector, func.plainto_tsquery('english', clean_query)).desc()
-    ).limit(POOL_SIZE).all()
+    from config import settings
+    if "sqlite" in settings.DATABASE_URL:
+        if clean_query:
+            keyword_results = keyword_query.filter(Paper.title.ilike(f"%{clean_query}%")).limit(POOL_SIZE).all()
+        else:
+            keyword_results = keyword_query.limit(POOL_SIZE).all()
+    else:
+        if clean_query:
+            keyword_results = keyword_query.filter(
+                Paper.search_vector.op('@@')(func.plainto_tsquery('english', clean_query))
+            ).order_by(
+                func.ts_rank_cd(Paper.search_vector, func.plainto_tsquery('english', clean_query)).desc()
+            ).limit(POOL_SIZE).all()
+        else:
+            keyword_results = keyword_query.limit(POOL_SIZE).all()
 
     # 5. Reciprocal Rank Fusion (RRF)
     k = 60
