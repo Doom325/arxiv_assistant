@@ -27,7 +27,8 @@ def parse_query(query: str):
         'after': None,
         'before': None,
         'author': None,
-        'entity': None
+        'entity': None,
+        'arxiv_id': None
     }
 
     # Extract category:val
@@ -61,6 +62,12 @@ def parse_query(query: str):
     if entity_match:
         filters['entity'] = entity_match.group(1)
         query = query.replace(entity_match.group(0), '')
+
+    # Extract arxiv_id
+    arxiv_match = re.search(r'(?i)(?:arxiv:)?\s*(\d{4}\.\d{4,5}|[a-z\-]+/\d{7})', query)
+    if arxiv_match:
+        filters['arxiv_id'] = arxiv_match.group(1)
+        query = query.replace(arxiv_match.group(0), '')
 
     return query.strip(), filters
 
