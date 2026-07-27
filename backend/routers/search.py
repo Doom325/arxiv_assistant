@@ -103,9 +103,10 @@ def search_papers(
             
             if exact_match_row:
                 exact_match_paper = exact_match_row[0]
+                logger.info(f"event=search_exact_match arxiv_id={metadata_filters['arxiv_id']}")
                 
         except OperationalError as e:
-            logger.error(f"search_db_timeout: {str(e)}")
+            logger.error(f"event=search_db_timeout error={str(e)}")
             raise HTTPException(status_code=503, detail="Search database timeout")
         finally:
             if is_postgres:
@@ -118,6 +119,7 @@ def search_papers(
         if not clean_query:
             if exact_match_paper:
                 return [exact_match_paper]
+            logger.info(f"event=search_missing_id_aborted arxiv_id={metadata_filters['arxiv_id']}")
             return []
 
     # 2. Generate embedding with correct task type (cached)
