@@ -78,29 +78,9 @@ For Antigravity-specific overrides, see `GEMINI.md`. For Claude Code context, se
 - Provider changes: extend `LLMProvider` base class in `llm_service.py`. Never hard-code provider-specific logic in routers.
 - All paper processing goes through the worker pipeline — never process PDFs synchronously in API handlers.
 
----
+## Local Review Agent Integration
 
-## Reviewer Agent Integration (MANDATORY)
-
-This repo is tracked by the [Reviewer Agent](https://github.com/Doom325/reviewer-agent), an autonomous AI code review system. **Every code change must go through a PR and be reviewed by the Reviewer Agent before merging.**
-
-### Identity: CoderAgent GitHub App
-
-All agents (Claude Code, Antigravity) act as `coder-agent[bot]` when creating PRs. Before performing git/GitHub operations, generate a token:
-
-```bash
-export GITHUB_TOKEN=$(python ~/git/reviewer_agent/scripts/generate_app_token.py \
-  --app-id 3275701 \
-  --private-key ~/.config/reviewer-agent/keys/coder-agent.pem \
-  --installation-id 121415198)
-```
-
-Configure git identity for commits:
-
-```bash
-git config user.name "coder-agent[bot]"
-git config user.email "3275701+Doom325-CoderAgent[bot]@users.noreply.github.com"
-```
+**Every code change must go through a PR and be reviewed by a local Subagent before merging.**
 
 ### PR Submission Workflow (follow this for EVERY task)
 
@@ -117,33 +97,21 @@ After completing implementation:
    git commit -m "feat: short description of change"
    ```
 
-3. **Push and create a PR:**
-   ```bash
-   git push -u origin feat/short-description
-   gh pr create --title "feat: short description" --body "## Summary\n- ...\n\n## Test plan\n- [ ] ..."
-   ```
+3. **Request Local Review:**
+   Use the local subagent (with the `PR Code Reviewer` role) to review the branch.
 
-4. **Apply the `reviewer:pending` label** to trigger AI review:
-   ```bash
-   gh pr edit --add-label "reviewer:pending"
-   ```
+4. **Iterate on Feedback:**
+   If rejected, address the subagent's findings, commit, and re-request review.
 
-5. **Do NOT merge.** Wait for the Reviewer Agent to post its review.
-
-### After Reviewer Agent Posts Its Review
-
-| Verdict | What to do |
-|---|---|
-| **APPROVED** | Merge the PR |
-| **CONDITIONAL** | Address minor items, then merge |
-| **REJECTED** | Fix each finding in new commits, push, re-apply `reviewer:pending` |
-| **HARD_REJECTED** | Redesign the approach before resubmitting |
-| **ESCALATED** | Cycle limit reached — notify the human for manual review |
+5. **Merge & Clean Up (Upon Approval):**
+   Once approved by the subagent with 0 findings:
+   - Merge the PR to `main`.
+   - Delete the empty branch (locally and remotely).
+   - Remove any worktrees (if applicable).
+   - Sync local `main` with remote `main` (`git checkout main && git pull`).
 
 ### Rules
 
-- **NEVER** push directly to `main` — always use feature branches + PRs
-- **NEVER** merge a PR without a Reviewer Agent verdict
-- **NEVER** remove `reviewer:in-progress` manually — the agent manages labels
-- **ALWAYS** apply `reviewer:pending` after creating a PR or pushing fixes
-- Maximum review cycles before escalation: 3 (CRITICAL), 4 (MAJOR), 5 (MINOR)
+- **NEVER** push directly to `main` — always use feature branches + PRs.
+- **NEVER** merge a PR without a local Subagent verdict.
+- **ALWAYS** clean up branches immediately after merging.
