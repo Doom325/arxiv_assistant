@@ -5,8 +5,9 @@ import re
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import func, Text
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, Text, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -86,6 +87,39 @@ def search_papers(
     # 1. Parse query for filters
     clean_query, metadata_filters = parse_query(query)
 
+    # 1.5 Exact Match Lookup (Atomic with scoped timeout)
+    exact_match_paper = None
+    if metadata_filters.get('arxiv_id'):
+        from config import settings
+        is_postgres = "sqlite" not in settings.DATABASE_URL
+        try:
+            if is_postgres:
+                db.execute(text("SET LOCAL statement_timeout = 50;"))
+            
+            # Atomic lookup: outerjoin ensures paper is found even if embedding is still generating
+            exact_match_row = db.query(Paper, PaperEmbedding).outerjoin(
+                PaperEmbedding, Paper.id == PaperEmbedding.paper_id
+            ).filter(Paper.arxiv_id == metadata_filters['arxiv_id']).first()
+            
+            if exact_match_row:
+                exact_match_paper = exact_match_row[0]
+                
+        except OperationalError as e:
+            logger.error(f"search_db_timeout: {str(e)}")
+            raise HTTPException(status_code=503, detail="Search database timeout")
+        finally:
+            if is_postgres:
+                try:
+                    db.execute(text("RESET statement_timeout;"))
+                except Exception:
+                    pass
+        
+        # Bypass LLM if no residual text
+        if not clean_query:
+            if exact_match_paper:
+                return [exact_match_paper]
+            return []
+
     # 2. Generate embedding with correct task type (cached)
     try:
         query_embedding = query_cache.get_or_generate(
@@ -152,11 +186,19 @@ def search_papers(
     if end_date:
         keyword_query = keyword_query.filter(Paper.published_date <= end_date)
 
-    keyword_results = keyword_query.filter(
-        Paper.search_vector.op('@@')(func.plainto_tsquery('english', clean_query))
-    ).order_by(
-        func.ts_rank_cd(Paper.search_vector, func.plainto_tsquery('english', clean_query)).desc()
-    ).limit(POOL_SIZE).all()
+    keyword_results = []
+    if clean_query:
+        if is_postgres:
+            keyword_results = keyword_query.filter(
+                Paper.search_vector.op('@@')(func.plainto_tsquery('english', clean_query))
+            ).order_by(
+                func.ts_rank_cd(Paper.search_vector, func.plainto_tsquery('english', clean_query)).desc()
+            ).limit(POOL_SIZE).all()
+        else:
+            # Fallback for SQLite testing
+            keyword_results = keyword_query.filter(
+                Paper.title.ilike(f"%{clean_query}%") | Paper.summary.ilike(f"%{clean_query}%")
+            ).limit(POOL_SIZE).all()
 
     # 5. Reciprocal Rank Fusion (RRF)
     k = 60
@@ -167,6 +209,9 @@ def search_papers(
 
     for i, p in enumerate(keyword_results):
         rrf_scores[p.id] = rrf_scores.get(p.id, 0) + 1.0 / (k + i + 1)
+        
+    if exact_match_paper:
+        rrf_scores[exact_match_paper.id] = float('inf')
 
     # 6. Final Ranking and Pagination
     if sort_by == "relevance":
@@ -178,19 +223,26 @@ def search_papers(
 
         papers = db.query(Paper).filter(Paper.id.in_(top_ids)).all()
         paper_map = {p.id: p for p in papers}
+        # Maintain sorted order
         return [paper_map[pid] for pid in top_ids if pid in paper_map]
 
     else:
         top_ids = list(rrf_scores.keys())
-        if not top_ids:
+        if exact_match_paper and exact_match_paper.id in top_ids:
+            top_ids.remove(exact_match_paper.id)
+            
+        if not top_ids and not exact_match_paper:
             return []
 
-        all_papers = db.query(Paper).filter(Paper.id.in_(top_ids)).all()
+        all_papers = db.query(Paper).filter(Paper.id.in_(top_ids)).all() if top_ids else []
 
         if sort_by == "date":
             all_papers.sort(key=lambda p: p.published_date, reverse=True)
         elif sort_by == "title":
             all_papers.sort(key=lambda p: (p.title or "").lower())
+            
+        if exact_match_paper:
+            all_papers.insert(0, exact_match_paper)
 
         return all_papers[skip : skip + limit]
 

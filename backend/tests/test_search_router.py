@@ -89,3 +89,56 @@ class TestParseQuery:
         assert text == ""
         assert filters["category"] == "cs.AI"
         assert filters["author"] == "Smith"
+
+def test_search_db_timeout(client, mocker):
+    """Test that a database timeout during atomic lookup returns a 503 Service Unavailable."""
+    from sqlalchemy.exc import OperationalError
+    
+    # Mock the database query to raise an OperationalError (simulating a timeout)
+    mocker.patch(
+        "sqlalchemy.orm.Session.query",
+        side_effect=OperationalError("timeout", params=None, orig=None)
+    )
+    
+    response = client.post("/papers/search?query=arxiv:2310.01405")
+    
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Search database timeout"
+
+def test_search_exact_match_found_no_text(client, db_session):
+    # Add a mock paper
+    from models import Paper
+    from datetime import datetime
+    p = Paper(arxiv_id="2310.01405", title="Exact Match Paper", published_date=datetime.now(), category="cs.AI", pdf_url="http://example.com/pdf")
+    db_session.add(p)
+    db_session.commit()
+    
+    response = client.post("/papers/search?query=arxiv:2310.01405")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["title"] == "Exact Match Paper"
+
+def test_search_exact_match_found_with_text(client, db_session, mocker):
+    # Add an exact match paper and some other paper
+    from models import Paper
+    from datetime import datetime
+    p1 = Paper(arxiv_id="2310.01405", title="Exact Match Paper", published_date=datetime.now(), category="cs.AI", pdf_url="http://example.com/pdf")
+    p2 = Paper(arxiv_id="1234.56789", title="Some other paper", published_date=datetime.now(), category="cs.CV", pdf_url="http://example.com/pdf")
+    db_session.add(p1)
+    db_session.add(p2)
+    db_session.commit()
+    
+    # Mock reciprocal_rank_fusion or just let it run. It will run Keyword search (fallback since SQLite)
+    # We pass some text so it does not bypass LLM
+    response = client.post("/papers/search?query=arxiv:2310.01405 some text")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 1
+    # The exact match should be at rank 1 (index 0)
+    assert data[0]["title"] == "Exact Match Paper"
+
+def test_search_exact_match_not_found_no_text(client):
+    response = client.post("/papers/search?query=arxiv:9999.99999")
+    assert response.status_code == 200
+    assert response.json() == []
