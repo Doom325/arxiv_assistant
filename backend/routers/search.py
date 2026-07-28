@@ -65,9 +65,11 @@ def parse_query(query: str):
         query = query.replace(entity_match.group(0), '')
 
     # Extract arxiv_id
-    arxiv_match = re.search(r'(?i)(?:arxiv:)?\s*(\d{4}\.\d{4,5}|[a-z\-]+/\d{7})', query)
+    arxiv_match = re.search(r'(?i)(?:arxiv:)?\s*(\d{4}\.\d{4,5}(?:v\d+)?|[a-z\-]+/\d{7}(?:v\d+)?)', query)
     if arxiv_match:
-        filters['arxiv_id'] = arxiv_match.group(1)
+        extracted_id = arxiv_match.group(1)
+        base_id = re.sub(r'(?i)v\d+$', '', extracted_id)
+        filters['arxiv_id'] = base_id
         query = query.replace(arxiv_match.group(0), '')
 
     return query.strip(), filters
@@ -97,9 +99,12 @@ def search_papers(
                 db.execute(text("SET LOCAL statement_timeout = 50;"))
             
             # Atomic lookup: outerjoin ensures paper is found even if embedding is still generating
+            base_id = metadata_filters['arxiv_id']
+            possible_ids = [base_id] + [f"{base_id}v{i}" for i in range(1, 10)]
+            
             exact_match_row = db.query(Paper, PaperEmbedding).outerjoin(
                 PaperEmbedding, Paper.id == PaperEmbedding.paper_id
-            ).filter(Paper.arxiv_id == metadata_filters['arxiv_id']).first()
+            ).filter(Paper.arxiv_id.in_(possible_ids)).order_by(Paper.arxiv_id.desc()).first()
             
             if exact_match_row:
                 exact_match_paper = exact_match_row[0]
