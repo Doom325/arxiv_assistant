@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, BookmarkCheck, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Paper } from "../../lib/api";
 import HeroDecoration from "../HeroDecoration";
+
+import BookmarkButton from "../BookmarkButton";
 
 interface HeroLeadStoryProps {
   paper: Paper | null;
   onReadFull: (paper: Paper) => void;
-  onBookmark: (paper: Paper) => void;
-  isBookmarked: boolean;
 }
 
 function estimateReadTime(text: string | undefined | null): string {
@@ -35,8 +35,6 @@ function formatDate(dateStr: string | undefined): string {
 export default function HeroLeadStory({
   paper,
   onReadFull,
-  onBookmark,
-  isBookmarked,
 }: HeroLeadStoryProps) {
   if (!paper) {
     return (
@@ -125,17 +123,11 @@ export default function HeroLeadStory({
             Read Full Analysis
           </Link>
 
-          <button
-            onClick={() => onBookmark(paper)}
+          <BookmarkButton
+            paper={paper}
             className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-white/10 transition-colors"
-            aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-          >
-            {isBookmarked ? (
-              <BookmarkCheck className="h-5 w-5 fill-white" />
-            ) : (
-              <Bookmark className="h-5 w-5" />
-            )}
-          </button>
+            iconClassName="h-5 w-5"
+          />
         </div>
       </div>
     </section>

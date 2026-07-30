@@ -196,30 +196,6 @@ export default function DashboardContent() {
     // Flat list for peek prev/next
     const flatPapers = useMemo(() => Object.values(groupedPapers).flat(), [groupedPapers]);
 
-    /* ── Library helpers ── */
-    const isInLibrary = (arxivId: string): boolean => {
-        // bookmarkedMap is keyed by db_id (number), check all entries
-        const paper = papers.find((p) => p.arxiv_id === arxivId);
-        if (!paper?.db_id) return false;
-        return (bookmarkedMap[paper.db_id] ?? []).length > 0;
-    };
-
-    const handleBookmark = async (paper: Paper) => {
-        if (!paper.db_id) return;
-        const { addBookmark, removeBookmark } = await import("../lib/api");
-        const currentLists = bookmarkedMap[paper.db_id] ?? [];
-        try {
-            if (currentLists.length > 0) {
-                await removeBookmark(paper.db_id, currentLists[0] || "default");
-            } else {
-                await addBookmark(paper.db_id, "default");
-            }
-            await refreshLibrary();
-        } catch (e) {
-            console.error("Bookmark error", e);
-        }
-    };
-
     /* ── Peek navigation ── */
     const handlePeekPrev = () => setPeekIndex((prev) => Math.max(prev - 1, 0));
     const handlePeekNext = () => setPeekIndex((prev) => Math.min(prev + 1, papers.length - 1));
@@ -446,8 +422,6 @@ export default function DashboardContent() {
                 <HeroLeadStory
                     paper={papers[0] ?? null}
                     onReadFull={(p) => router.push(`/paper/${p.db_id || p.id}`)}
-                    onBookmark={handleBookmark}
-                    isBookmarked={papers[0] ? isInLibrary(papers[0].arxiv_id) : false}
                 />
             </section>
 
@@ -533,8 +507,6 @@ export default function DashboardContent() {
                                                         const idx = papers.indexOf(p);
                                                         setPeekIndex(idx >= 0 ? idx : 0);
                                                     }}
-                                                    onBookmark={handleBookmark}
-                                                    isBookmarked={isInLibrary(paper.arxiv_id)}
                                                     isFocused={focusedPaperId === paper.arxiv_id}
                                                 />
                                             ))}
@@ -550,8 +522,6 @@ export default function DashboardContent() {
                                                         const idx = papers.indexOf(p);
                                                         setPeekIndex(idx >= 0 ? idx : 0);
                                                     }}
-                                                    onBookmark={handleBookmark}
-                                                    isBookmarked={isInLibrary(paper.arxiv_id)}
                                                     isFocused={focusedPaperId === paper.arxiv_id}
                                                 />
                                             ))}

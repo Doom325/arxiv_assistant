@@ -22,7 +22,6 @@ export default function PaperDetail() {
     const [similarPapers, setSimilarPapers] = useState<Paper[]>([]);
     const [loading, setLoading] = useState(true);
     const [summarizing, setSummarizing] = useState(false);
-    const [isBookmarked, setIsBookmarked] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [paperPatterns, setPaperPatterns] = useState<PaperPattern | null>(null);
     const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -54,10 +53,6 @@ export default function PaperDetail() {
             const similar = await getSimilarPapers(id);
             setSimilarPapers(similar.map(transformPaper));
 
-            if (data.id) {
-                checkBookmark(data.id);
-            }
-
             // Load pattern classification
             try {
                 const patterns = await getPaperPatterns(data.arxiv_id || id);
@@ -69,15 +64,6 @@ export default function PaperDetail() {
             console.error("[PAPER DETAIL] Error loading paper:", e);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const checkBookmark = async (db_id: number) => {
-        try {
-            const ids = await getBookmarkedIds();
-            setIsBookmarked(ids.includes(db_id));
-        } catch (e) {
-            console.error(e);
         }
     };
 
@@ -155,21 +141,6 @@ export default function PaperDetail() {
         }
     };
 
-    const toggleBookmark = async () => {
-        if (!paper?.db_id) return;
-        try {
-            if (isBookmarked) {
-                await removeBookmark(paper.db_id);
-                setIsBookmarked(false);
-            } else {
-                await addBookmark(paper.db_id);
-                setIsBookmarked(true);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
     const handleEmailSummary = async () => {
         if (!paper?.db_id) return;
         setEmailStatus("sending");
@@ -229,8 +200,6 @@ export default function PaperDetail() {
                     <div className="flex-1 max-w-4xl space-y-16">
                         <PaperHero
                             paper={paper}
-                            isBookmarked={isBookmarked}
-                            onBookmark={toggleBookmark}
                             emailStatus={emailStatus}
                             onEmail={handleEmailSummary}
                         />

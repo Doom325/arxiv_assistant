@@ -1,13 +1,11 @@
 "use client";
 
-import { Calendar, FileText, Clock, Mail, Bookmark, Check, X, ExternalLink, Loader2 } from "lucide-react";
+import { Calendar, FileText, Clock, Mail, Check, X, ExternalLink, Loader2 } from "lucide-react";
 import { Paper } from "../../lib/api";
 import HeroDecoration from "../HeroDecoration";
 
 interface PaperHeroProps {
   paper: Paper;
-  isBookmarked: boolean;
-  onBookmark: () => void;
   emailStatus: "idle" | "sending" | "sent" | "error";
   onEmail: () => void;
 }
@@ -30,10 +28,10 @@ function estimateReadingTime(paper: Paper): number {
   return Math.max(1, Math.round(estimatedTotal / 200));
 }
 
+import BookmarkButton from "../BookmarkButton";
+
 export default function PaperHero({
   paper,
-  isBookmarked,
-  onBookmark,
   emailStatus,
   onEmail,
 }: PaperHeroProps) {
@@ -127,15 +125,11 @@ export default function PaperHero({
         </button>
 
         {/* Bookmark button */}
-        <button
-          onClick={onBookmark}
+        <BookmarkButton
+          paper={paper}
           className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white"
-          title={isBookmarked ? "Remove bookmark" : "Bookmark"}
-        >
-          <Bookmark
-            className={`h-[18px] w-[18px] ${isBookmarked ? "fill-current" : ""}`}
-          />
-        </button>
+          iconClassName="h-[18px] w-[18px]"
+        />
 
         {/* Open PDF CTA */}
         <a

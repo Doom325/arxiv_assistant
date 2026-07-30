@@ -3,16 +3,17 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 import { Paper } from "../../lib/api";
 import { estimateReadingTime, getCategoryAccent } from "../../lib/categoryColors";
+
+import { useLibrary } from "../LibraryContext";
+import BookmarkButton from "../BookmarkButton";
 
 interface DashboardPaperCardProps {
   paper: Paper;
   variant: "large" | "compact";
   onPreview: (paper: Paper) => void;
-  onBookmark: (paper: Paper) => void;
-  isBookmarked: boolean;
   isFocused?: boolean;
 }
 
@@ -37,8 +38,10 @@ function extractAuthors(paper: Paper): string {
 
 /* ── Large Variant ──────────────────────────────────── */
 
-function LargeCard({ paper, onPreview, onBookmark, isBookmarked, isFocused }: DashboardPaperCardProps) {
+function LargeCard({ paper, onPreview, isFocused }: DashboardPaperCardProps) {
   const router = useRouter();
+  const { bookmarkedMap } = useLibrary();
+  const isBookmarked = paper.db_id ? (bookmarkedMap[paper.db_id] ?? []).length > 0 : false;
   const readingTime = estimateReadingTime(paper.summary || paper.generated_summary);
   const category = primaryCategory(paper);
   const pubDate = formatDate(paper.published_date);
@@ -54,23 +57,13 @@ function LargeCard({ paper, onPreview, onBookmark, isBookmarked, isFocused }: Da
       `}
     >
       {/* Bookmark — top-right corner */}
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onBookmark(paper);
-        }}
-        className="absolute top-5 right-5 z-10"
-        aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-      >
-        <Bookmark
-          className={`h-5 w-5 transition-colors ${
-            isBookmarked
-              ? "fill-accent text-accent"
-              : "text-foreground-muted hover:text-accent"
-          }`}
+      <div className="absolute top-5 right-5 z-10">
+        <BookmarkButton
+          paper={paper}
+          className=""
+          iconClassName="h-5 w-5 hover:text-accent"
         />
-      </button>
+      </div>
 
       {/* Bookmarked reading indicator */}
       {isBookmarked && (
@@ -138,8 +131,10 @@ function LargeCard({ paper, onPreview, onBookmark, isBookmarked, isFocused }: Da
 
 /* ── Compact Variant ────────────────────────────────── */
 
-function CompactCard({ paper, onPreview, onBookmark, isBookmarked, isFocused }: DashboardPaperCardProps) {
+function CompactCard({ paper, onPreview, isFocused }: DashboardPaperCardProps) {
   const router = useRouter();
+  const { bookmarkedMap } = useLibrary();
+  const isBookmarked = paper.db_id ? (bookmarkedMap[paper.db_id] ?? []).length > 0 : false;
   const category = primaryCategory(paper);
 
   return (
@@ -184,22 +179,11 @@ function CompactCard({ paper, onPreview, onBookmark, isBookmarked, isFocused }: 
         )}
 
         {/* Bookmark — smaller */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onBookmark(paper);
-          }}
-          aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-        >
-          <Bookmark
-            className={`h-4 w-4 transition-colors ${
-              isBookmarked
-                ? "fill-accent text-accent"
-                : "text-foreground-muted/40 hover:text-accent"
-            }`}
-          />
-        </button>
+        <BookmarkButton
+          paper={paper}
+          className=""
+          iconClassName="h-4 w-4 hover:text-accent"
+        />
       </div>
     </article>
   );
