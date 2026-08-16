@@ -3,7 +3,7 @@
 import logging
 import re
 from datetime import date
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, Text, text
@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/papers", tags=["search"])
 
 
-def parse_query(query: str):
+def parse_query(query: str) -> Tuple[str, Dict[str, Optional[str]]]:
     """Parses search query for metadata operators like category:, after:, before:, author:."""
-    filters = {
+    filters: Dict[str, Optional[str]] = {
         'category': None,
         'after': None,
         'before': None,
@@ -256,7 +256,7 @@ def search_papers(
 
 
 @router.post("/chat")
-def chat_with_papers(query: str, db: Session = Depends(get_db)):
+def chat_with_papers(query: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     # 1. Search relevant papers using the new PaperEmbedding table
     query_embedding = query_cache.get_or_generate(
         query, task_type="retrieval_query", db=db,

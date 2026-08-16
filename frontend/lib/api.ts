@@ -176,7 +176,12 @@ async function handleApiError(res: Response, fallback: string): Promise<never> {
                 message = errorData.detail;
             } else if (Array.isArray(errorData.detail)) {
                 message = errorData.detail
-                    .map((e: any) => e.msg || e.message || JSON.stringify(e))
+                    .map((e: unknown) => {
+                        if (typeof e === "object" && e !== null && "msg" in e) {
+                            return String((e as { msg: unknown }).msg);
+                        }
+                        return JSON.stringify(e);
+                    })
                     .join("; ");
             } else {
                 message = JSON.stringify(errorData.detail);

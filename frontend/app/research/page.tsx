@@ -73,10 +73,10 @@ function ResearchContent() {
                     endDate: endDate || undefined,
                 },
             );
-            const transformed = data.map((p: any) => ({
+            const transformed = data.map((p: Paper & { category?: string }) => ({
                 ...p,
-                id: p.arxiv_id,
-                db_id: p.id,
+                id: p.arxiv_id || p.id,
+                db_id: p.db_id,
                 categories: Array.isArray(p.categories)
                     ? p.categories
                     : [p.category || "cs.AI"],
