@@ -25,6 +25,7 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - EMAIL_SENDER=onboarding@resend.dev
       - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - GROBID_URL=http://grobid:8070
       - MIGRATING=${MIGRATING:-0}
 

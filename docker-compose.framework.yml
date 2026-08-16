@@ -29,6 +29,7 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - EMAIL_SENDER=onboarding@resend.dev
       - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       # LiteLLM gateway (for any local LLM calls from backend, e.g. chat)
       - LITELLM_BASE_URL=http://host.docker.internal:4000/v1
       - LITELLM_API_KEY=${LITELLM_API_KEY}
