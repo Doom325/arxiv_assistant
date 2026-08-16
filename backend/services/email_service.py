@@ -1,8 +1,10 @@
-import resend
+import html
 import logging
 import markdown
 import re
+from typing import Any
 from jinja2 import Template
+import resend
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -12,21 +14,21 @@ resend.api_key = settings.RESEND_API_KEY
 
 
 class EmailService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.sender_email = settings.EMAIL_SENDER
         if not settings.RESEND_API_KEY:
             logger.warning("⚠️ RESEND_API_KEY not set! Email sending will fail.")
         else:
             logger.info(f"✅ Email service initialized with Resend (sender: {self.sender_email})")
 
-    def _send(self, to_email: str, subject: str, html: str, text: str) -> tuple[bool, str]:
+    def _send(self, to_email: str, subject: str, html_content: str, text: str) -> tuple[bool, str]:
         """Send email via Resend API."""
         try:
             result = resend.Emails.send({
                 "from": f"Arxiv Assistant <{self.sender_email}>",
                 "to": [to_email],
                 "subject": subject,
-                "html": html,
+                "html": html_content,
                 "text": text,
             })
             logger.info(f"✅ Email sent to {to_email}: {result}")
@@ -36,7 +38,7 @@ class EmailService:
             logger.error(f"❌ Email to {to_email} failed: {error_msg}")
             return False, error_msg
 
-    def _get_paper_app_url(self, paper) -> str:
+    def _get_paper_app_url(self, paper: Any) -> str:
         """Returns the web URL to open the paper in Arxiv Assistant."""
         base_url = settings.FRONTEND_URL.rstrip("/")
         paper_id = getattr(paper, "arxiv_id", None) or getattr(paper, "id", None)
@@ -44,7 +46,7 @@ class EmailService:
             return f"{base_url}/paper/{paper_id}"
         return base_url
 
-    def send_daily_digest(self, user_email: str, papers: list):
+    def send_daily_digest(self, user_email: str, papers: list[Any]) -> None:
         """Sends a daily digest email with the given papers."""
         if not papers:
             logger.info(f"No papers to send to {user_email}")
@@ -60,12 +62,11 @@ class EmailService:
         else:
             logger.error(f"Failed to send daily digest to {user_email}: {detail}")
 
-    def send_paper_summary(self, recipient_email: str, paper) -> tuple[bool, str]:
+    def send_paper_summary(self, recipient_email: str, paper: Any) -> tuple[bool, str]:
         """Sends a single paper summary email. Returns (success, detail)."""
         subject = f"📄 {paper.title}"
         app_url = self._get_paper_app_url(paper)
 
-        # Plain text
         summary_text = paper.generated_summary or paper.summary or "No summary available."
         clean_summary = summary_text.replace("**", "").replace("#", "")
         text_content = (
@@ -77,15 +78,23 @@ class EmailService:
             f"---\nSent by Arxiv Assistant"
         )
 
-        # HTML
+        html_content = self._generate_single_paper_html(paper, app_url)
+        return self._send(recipient_email, subject, html_content, text_content)
+
+    def _generate_single_paper_html(self, paper: Any, app_url: str) -> str:
+        """Generates the HTML email body for a single paper summary."""
+        safe_title = html.escape(str(paper.title or ""))
+        safe_category = html.escape(str(paper.category or ""))
+        published_str = str(paper.published_date or "")
+
         if paper.generated_summary:
             summary_html = markdown.markdown(paper.generated_summary)
         elif paper.summary:
-            summary_html = f"<p>{paper.summary}</p>"
+            summary_html = f"<p>{html.escape(paper.summary)}</p>"
         else:
             summary_html = "<p><em>No summary available yet.</em></p>"
 
-        html_content = f"""<!DOCTYPE html>
+        return f"""<!DOCTYPE html>
 <html>
 <head><style>
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f3f4f6; margin: 0; padding: 0; }}
@@ -104,20 +113,19 @@ class EmailService:
 </style></head>
 <body>
     <div class="container">
-        <div class="header"><h1>{paper.title}</h1></div>
-        <div class="meta">{paper.category} &bull; {paper.published_date}</div>
+        <div class="header"><h1>{safe_title}</h1></div>
+        <div class="meta">{safe_category} &bull; {published_str}</div>
         <div class="summary">{summary_html}</div>
         <div class="actions">
-            <a href="{app_url}" class="btn btn-primary">Read in Arxiv Assistant &rarr;</a>
-            <a href="{paper.pdf_url}" class="btn btn-secondary">View on arXiv</a>
+            <a href="{app_url}" class="btn btn-primary" style="background-color:#4f46e5;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:6px;display:inline-block;">Read in Arxiv Assistant &rarr;</a>
+            <a href="{paper.pdf_url}" class="btn btn-secondary" style="background-color:#f3f4f6;color:#374151;border:1px solid #d1d5db;padding:10px 20px;text-decoration:none;border-radius:6px;display:inline-block;">View on arXiv</a>
         </div>
         <div class="footer"><p>Sent by Arxiv Assistant</p></div>
     </div>
 </body>
 </html>"""
-        return self._send(recipient_email, subject, html_content, text_content)
 
-    def _parse_summary(self, markdown_text: str) -> dict:
+    def _parse_summary(self, markdown_text: str) -> dict[str, str]:
         if not markdown_text:
             return {"teaser": "", "content": ""}
         match = re.search(r"1\.\s*\*\*Core Problem\*\*:(.*?)(?=\n\s*\d+\.\s*\*\*Key Innovation|\Z)", markdown_text, re.DOTALL)
@@ -125,7 +133,7 @@ class EmailService:
             return {'teaser': match.group(1).strip(), 'content': markdown_text}
         return {'teaser': markdown_text[:150] + "...", 'content': markdown_text}
 
-    def _generate_text(self, papers: list) -> str:
+    def _generate_text(self, papers: list[Any]) -> str:
         lines = ["arXiv Daily Digest", "Your curated research update", "=" * 30, ""]
         for p in papers:
             app_url = self._get_paper_app_url(p)
@@ -141,7 +149,7 @@ class EmailService:
         lines.append("\nSent by Arxiv Assistant")
         return "\n".join(lines)
 
-    def _generate_html(self, papers: list) -> str:
+    def _generate_html(self, papers: list[Any]) -> str:
         template_str = """<!DOCTYPE html>
 <html><head><style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f3f4f6; margin: 0; padding: 0; }
@@ -178,8 +186,8 @@ class EmailService:
             {% endif %}
         </div>
         <div class="actions">
-            <a href="{{ app_url(paper) }}" class="btn btn-primary">Read in Arxiv Assistant &rarr;</a>
-            <a href="{{ paper.pdf_url }}" class="btn btn-secondary">View on arXiv</a>
+            <a href="{{ app_url(paper) }}" class="btn btn-primary" style="background-color:#4f46e5;color:#ffffff;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;">Read in Arxiv Assistant &rarr;</a>
+            <a href="{{ paper.pdf_url }}" class="btn btn-secondary" style="background-color:#f3f4f6;color:#374151;border:1px solid #d1d5db;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;">View on arXiv</a>
         </div>
     </div>
     {% endfor %}

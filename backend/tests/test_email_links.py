@@ -30,6 +30,34 @@ def test_paper_app_url_resolution():
     url_id = email_service._get_paper_app_url(paper_with_id_only)
     assert url_id == f"{settings.FRONTEND_URL.rstrip('/')}/paper/99"
 
+    # Edge case: No IDs present
+    paper_no_id = Paper(
+        id=None,
+        arxiv_id=None,
+        title="No ID Paper",
+        summary="Abstract",
+        published_date=date(2025, 1, 1),
+        category="cs.AI",
+        pdf_url="https://arxiv.org/pdf/unknown.pdf",
+    )
+    url_none = email_service._get_paper_app_url(paper_no_id)
+    assert url_none == settings.FRONTEND_URL.rstrip("/")
+
+
+def test_trailing_slash_handling():
+    with patch.object(settings, "FRONTEND_URL", "http://localhost:3000/"):
+        paper = Paper(
+            id=1,
+            arxiv_id="2501.00001",
+            title="Trailing Slash Test",
+            summary="Abstract",
+            published_date=date(2025, 1, 1),
+            category="cs.AI",
+            pdf_url="https://arxiv.org/pdf/2501.00001.pdf",
+        )
+        url = email_service._get_paper_app_url(paper)
+        assert url == "http://localhost:3000/paper/2501.00001"
+
 
 def test_generate_text_includes_both_links():
     paper = Paper(
@@ -73,14 +101,14 @@ def test_generate_html_includes_both_links():
     assert "View on arXiv" in html
 
 
-def test_send_paper_summary_includes_both_links():
+def test_send_paper_summary_includes_both_links_and_escapes_html():
     paper = Paper(
         id=3,
         arxiv_id="2501.00003",
-        title="Single Paper Summary",
-        summary="Summary test.",
+        title="Single Paper Summary <Special & Math>",
+        category="cs.AI <Experimental>",
+        summary="Summary with <brackets> & symbols.",
         published_date=date(2025, 1, 17),
-        category="cs.AI",
         pdf_url="https://arxiv.org/pdf/2501.00003.pdf",
     )
 
@@ -97,3 +125,7 @@ def test_send_paper_summary_includes_both_links():
         assert "https://arxiv.org/pdf/2501.00003.pdf" in html_content
         assert expected_app_url in text_content
         assert "https://arxiv.org/pdf/2501.00003.pdf" in text_content
+
+        # Verify HTML escaping
+        assert "&lt;Special &amp; Math&gt;" in html_content
+        assert "&lt;Experimental&gt;" in html_content
