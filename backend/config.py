@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     EMAIL_RECIPIENTS: str = "sumanth.gttpt@gmail.com" # Comma separated list
     RESEND_API_KEY: str = ""
+    FRONTEND_URL: str = "http://localhost:3000"
 
     @property
     def RECIPIENT_LIST(self) -> list[str]:

@@ -36,6 +36,14 @@ class EmailService:
             logger.error(f"❌ Email to {to_email} failed: {error_msg}")
             return False, error_msg
 
+    def _get_paper_app_url(self, paper) -> str:
+        """Returns the web URL to open the paper in Arxiv Assistant."""
+        base_url = settings.FRONTEND_URL.rstrip("/")
+        paper_id = getattr(paper, "arxiv_id", None) or getattr(paper, "id", None)
+        if paper_id:
+            return f"{base_url}/paper/{paper_id}"
+        return base_url
+
     def send_daily_digest(self, user_email: str, papers: list):
         """Sends a daily digest email with the given papers."""
         if not papers:
@@ -55,6 +63,7 @@ class EmailService:
     def send_paper_summary(self, recipient_email: str, paper) -> tuple[bool, str]:
         """Sends a single paper summary email. Returns (success, detail)."""
         subject = f"📄 {paper.title}"
+        app_url = self._get_paper_app_url(paper)
 
         # Plain text
         summary_text = paper.generated_summary or paper.summary or "No summary available."
@@ -63,7 +72,8 @@ class EmailService:
             f"Paper: {paper.title}\n"
             f"Category: {paper.category} | Published: {paper.published_date}\n\n"
             f"Summary:\n{clean_summary}\n\n"
-            f"Read Full Paper: {paper.pdf_url}\n\n"
+            f"Read in Arxiv Assistant: {app_url}\n"
+            f"View on arXiv: {paper.pdf_url}\n\n"
             f"---\nSent by Arxiv Assistant"
         )
 
@@ -86,7 +96,10 @@ class EmailService:
     .summary {{ font-size: 14px; color: #4b5563; background-color: #f9fafb; padding: 16px; border-radius: 6px; border-left: 4px solid #4f46e5; }}
     .summary strong {{ color: #1f2937; font-weight: 600; }}
     .summary p {{ margin-bottom: 10px; }}
-    .btn {{ display: inline-block; background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500; margin-top: 20px; }}
+    .actions {{ margin-top: 20px; }}
+    .btn {{ display: inline-block; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500; margin-right: 10px; }}
+    .btn-primary {{ background-color: #4f46e5; color: #ffffff !important; }}
+    .btn-secondary {{ background-color: #f3f4f6; color: #374151 !important; border: 1px solid #d1d5db; }}
     .footer {{ text-align: center; font-size: 12px; color: #9ca3af; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px; }}
 </style></head>
 <body>
@@ -94,7 +107,10 @@ class EmailService:
         <div class="header"><h1>{paper.title}</h1></div>
         <div class="meta">{paper.category} &bull; {paper.published_date}</div>
         <div class="summary">{summary_html}</div>
-        <a href="{paper.pdf_url}" class="btn">Read Full Paper &rarr;</a>
+        <div class="actions">
+            <a href="{app_url}" class="btn btn-primary">Read in Arxiv Assistant &rarr;</a>
+            <a href="{paper.pdf_url}" class="btn btn-secondary">View on arXiv</a>
+        </div>
         <div class="footer"><p>Sent by Arxiv Assistant</p></div>
     </div>
 </body>
@@ -110,11 +126,13 @@ class EmailService:
         return {'teaser': markdown_text[:150] + "...", 'content': markdown_text}
 
     def _generate_text(self, papers: list) -> str:
-        lines = ["arXiv Daily Digest", "Your curated research update", "="*30, ""]
+        lines = ["arXiv Daily Digest", "Your curated research update", "=" * 30, ""]
         for p in papers:
+            app_url = self._get_paper_app_url(p)
             lines.append(f"Title: {p.title}")
             lines.append(f"Category: {p.category} | Date: {p.published_date}")
-            lines.append(f"Link: {p.pdf_url}")
+            lines.append(f"Arxiv Assistant: {app_url}")
+            lines.append(f"arXiv Link: {p.pdf_url}")
             if p.generated_summary:
                 lines.append(f"\nSummary:\n{p.generated_summary.replace('**', '').replace('#', '')}")
             else:
@@ -132,17 +150,21 @@ class EmailService:
     .header h1 { margin: 0; font-size: 24px; } .header p { margin: 5px 0 0 0; opacity: 0.9; font-size: 15px; }
     .paper { border: 1px solid #e5e7eb; padding: 20px; margin-bottom: 24px; border-radius: 8px; }
     .title { color: #111827; font-size: 18px; font-weight: 700; text-decoration: none; display: block; margin-bottom: 8px; }
+    .title:hover { color: #4f46e5; text-decoration: underline; }
     .meta { color: #6b7280; font-size: 13px; margin-bottom: 16px; font-weight: 500; text-transform: uppercase; }
     .ai-summary { background-color: #f9fafb; padding: 16px; border-radius: 6px; border-left: 4px solid #4f46e5; margin-top: 10px; }
     .badge { background-color: #4f46e5; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; text-transform: uppercase; font-weight: bold; }
-    .btn { display: inline-block; background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-size: 14px; margin-top: 16px; }
+    .actions { margin-top: 16px; }
+    .btn { display: inline-block; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500; margin-right: 10px; margin-top: 4px; }
+    .btn-primary { background-color: #4f46e5; color: #ffffff !important; }
+    .btn-secondary { background-color: #f3f4f6; color: #374151 !important; border: 1px solid #d1d5db; }
     .footer { text-align: center; font-size: 12px; color: #9ca3af; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
 </style></head>
 <body><div class="container">
     <div class="header"><h1>arXiv Daily Digest</h1><p>Your curated research update</p></div>
     {% for paper in papers %}
     <div class="paper">
-        <a href="{{ paper.pdf_url }}" class="title">{{ paper.title }}</a>
+        <a href="{{ app_url(paper) }}" class="title">{{ paper.title }}</a>
         <div class="meta">{{ paper.category }} • {{ paper.published_date }}</div>
         <div class="summary">
             {% if paper.generated_summary %}
@@ -155,13 +177,21 @@ class EmailService:
                 <p>{{ paper.summary[:400] }}...</p>
             {% endif %}
         </div>
-        <a href="{{ paper.pdf_url }}" class="btn">Read Full Paper</a>
+        <div class="actions">
+            <a href="{{ app_url(paper) }}" class="btn btn-primary">Read in Arxiv Assistant &rarr;</a>
+            <a href="{{ paper.pdf_url }}" class="btn btn-secondary">View on arXiv</a>
+        </div>
     </div>
     {% endfor %}
     <div class="footer"><p>Sent by Arxiv Assistant</p></div>
 </div></body></html>"""
         template = Template(template_str)
-        return template.render(papers=papers, md=markdown.markdown, parse_func=self._parse_summary)
+        return template.render(
+            papers=papers,
+            md=markdown.markdown,
+            parse_func=self._parse_summary,
+            app_url=self._get_paper_app_url,
+        )
 
 
 email_service = EmailService()
