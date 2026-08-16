@@ -10,6 +10,7 @@ from sqlalchemy import func, Text, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db
 from models import Paper, PaperEmbedding
 from schemas import PaperResponse
@@ -86,14 +87,14 @@ def search_papers(
     end_date: Optional[date] = None,
     db: Session = Depends(get_db)
 ):
+    is_postgres = "sqlite" not in settings.DATABASE_URL
+
     # 1. Parse query for filters
     clean_query, metadata_filters = parse_query(query)
 
     # 1.5 Exact Match Lookup (Atomic with scoped timeout)
     exact_match_paper = None
     if metadata_filters.get('arxiv_id'):
-        from config import settings
-        is_postgres = "sqlite" not in settings.DATABASE_URL
         try:
             if is_postgres:
                 db.execute(text("SET LOCAL statement_timeout = 50;"))

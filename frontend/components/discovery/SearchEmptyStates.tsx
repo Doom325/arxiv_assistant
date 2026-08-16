@@ -54,26 +54,35 @@ export function SearchNoResults() {
 
 interface SearchErrorProps {
     onRetry: () => void;
+    errorMessage?: string | null;
 }
 
-export function SearchError({ onRetry }: SearchErrorProps) {
+export function SearchError({ onRetry, errorMessage }: SearchErrorProps) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-center py-16 bg-surface-card rounded-2xl shadow-warm-sm"
+            className="text-center py-16 bg-surface-card rounded-2xl shadow-warm-sm px-6"
         >
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 mb-6">
                 <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
 
             <h3 className="text-xl font-medium text-foreground mb-2">
-                Something went wrong
+                Search Failed
             </h3>
-            <p className="text-foreground-secondary max-w-md mx-auto mb-6">
-                We couldn&apos;t complete your search. Please try again.
+            
+            <p className="text-foreground-secondary max-w-md mx-auto mb-4 text-sm">
+                We encountered an issue while performing your search.
             </p>
+
+            {errorMessage && (
+                <div className="max-w-lg mx-auto mb-6 p-3 rounded-lg bg-red-50/50 border border-red-200/60 text-red-700 text-xs font-mono break-words text-left">
+                    <span className="font-semibold block mb-0.5 text-red-800">Error Detail:</span>
+                    {errorMessage}
+                </div>
+            )}
 
             <RippleButton
                 onClick={onRetry}
