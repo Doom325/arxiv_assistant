@@ -147,7 +147,7 @@ class TestGetOrGenerate:
     def _make_cache() -> QueryEmbeddingCache:
         return QueryEmbeddingCache(max_size=64)
 
-    @patch("services.query_embedding_cache.llm_service")
+    @patch("services.query_embedding_cache.embedding_service")
     def test_lru_hit_skips_db_and_api(
         self,
         mock_llm: MagicMock,
@@ -170,7 +170,7 @@ class TestGetOrGenerate:
         db.query.assert_not_called()
         mock_llm.generate_embedding.assert_not_called()
 
-    @patch("services.query_embedding_cache.llm_service")
+    @patch("services.query_embedding_cache.embedding_service")
     def test_miss_calls_api_and_caches(
         self,
         mock_llm: MagicMock,
@@ -190,7 +190,7 @@ class TestGetOrGenerate:
         assert result == [0.3] * 768
         mock_llm.generate_embedding.assert_called_once()
 
-    @patch("services.query_embedding_cache.llm_service")
+    @patch("services.query_embedding_cache.embedding_service")
     def test_invalid_embedding_not_cached(
         self,
         mock_llm: MagicMock,
@@ -210,7 +210,7 @@ class TestGetOrGenerate:
         # LRU should NOT contain this entry
         assert len(cache._lru) == 0
 
-    @patch("services.query_embedding_cache.llm_service")
+    @patch("services.query_embedding_cache.embedding_service")
     def test_case_insensitive_hit(
         self,
         mock_llm: MagicMock,

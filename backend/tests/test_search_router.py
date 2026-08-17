@@ -90,20 +90,22 @@ class TestParseQuery:
         assert filters["category"] == "cs.AI"
         assert filters["author"] == "Smith"
 
-def test_search_db_timeout(client, mocker):
+def test_search_db_timeout(client, monkeypatch):
     """Test that a database timeout during atomic lookup returns a 503 Service Unavailable."""
     from sqlalchemy.exc import OperationalError
+    from sqlalchemy.orm import Session
     
     # Mock the database query to raise an OperationalError (simulating a timeout)
-    mocker.patch(
-        "sqlalchemy.orm.Session.query",
-        side_effect=OperationalError("timeout", params=None, orig=None)
-    )
+    def mock_query(*args, **kwargs):
+        raise OperationalError("timeout", params=None, orig=None)
+        
+    monkeypatch.setattr(Session, "query", mock_query)
     
     response = client.post("/papers/search?query=arxiv:2310.01405")
     
     assert response.status_code == 503
     assert response.json()["detail"] == "Search database timeout"
+
 
 def test_search_exact_match_found_no_text(client, db_session):
     # Add a mock paper
@@ -119,7 +121,8 @@ def test_search_exact_match_found_no_text(client, db_session):
     assert len(data) == 1
     assert data[0]["title"] == "Exact Match Paper"
 
-def test_search_exact_match_found_with_text(client, db_session, mocker):
+
+def test_search_exact_match_found_with_text(client, db_session):
     # Add an exact match paper and some other paper
     from models import Paper
     from datetime import datetime
@@ -129,7 +132,6 @@ def test_search_exact_match_found_with_text(client, db_session, mocker):
     db_session.add(p2)
     db_session.commit()
     
-    # Mock reciprocal_rank_fusion or just let it run. It will run Keyword search (fallback since SQLite)
     # We pass some text so it does not bypass LLM
     response = client.post("/papers/search?query=arxiv:2310.01405 some text")
     assert response.status_code == 200
@@ -138,7 +140,38 @@ def test_search_exact_match_found_with_text(client, db_session, mocker):
     # The exact match should be at rank 1 (index 0)
     assert data[0]["title"] == "Exact Match Paper"
 
+
 def test_search_exact_match_not_found_no_text(client):
     response = client.post("/papers/search?query=arxiv:9999.99999")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_search_plain_text_query(client, db_session):
+    """Test searching with standard keyword/semantic queries without arxiv_id."""
+    from models import Paper
+    from datetime import datetime
+    p = Paper(
+        arxiv_id="2401.00001",
+        title="Attention Is All You Need with Transformers",
+        summary="A novel neural network architecture based on self-attention mechanisms.",
+        published_date=datetime.now(),
+        category="cs.CL",
+        pdf_url="http://example.com/pdf",
+    )
+    db_session.add(p)
+    db_session.commit()
+
+    response = client.post("/papers/search?query=transformer")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 1
+    assert data[0]["arxiv_id"] == "2401.00001"
+
+
+def test_search_plain_text_no_results(client):
+    """Test searching with a query that matches no papers."""
+    response = client.post("/papers/search?query=nonexistentqueryxyz")
+    assert response.status_code == 200
+    assert response.json() == []
+

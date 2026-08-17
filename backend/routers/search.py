@@ -3,13 +3,14 @@
 import logging
 import re
 from datetime import date
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, Text, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db
 from models import Paper, PaperEmbedding
 from schemas import PaperResponse
@@ -21,9 +22,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/papers", tags=["search"])
 
 
-def parse_query(query: str):
+def parse_query(query: str) -> Tuple[str, Dict[str, Optional[str]]]:
     """Parses search query for metadata operators like category:, after:, before:, author:."""
-    filters = {
+    filters: Dict[str, Optional[str]] = {
         'category': None,
         'after': None,
         'before': None,
@@ -86,14 +87,14 @@ def search_papers(
     end_date: Optional[date] = None,
     db: Session = Depends(get_db)
 ):
+    is_postgres = "sqlite" not in settings.DATABASE_URL
+
     # 1. Parse query for filters
     clean_query, metadata_filters = parse_query(query)
 
     # 1.5 Exact Match Lookup (Atomic with scoped timeout)
     exact_match_paper = None
     if metadata_filters.get('arxiv_id'):
-        from config import settings
-        is_postgres = "sqlite" not in settings.DATABASE_URL
         try:
             if is_postgres:
                 db.execute(text("SET LOCAL statement_timeout = 50;"))
@@ -255,7 +256,7 @@ def search_papers(
 
 
 @router.post("/chat")
-def chat_with_papers(query: str, db: Session = Depends(get_db)):
+def chat_with_papers(query: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     # 1. Search relevant papers using the new PaperEmbedding table
     query_embedding = query_cache.get_or_generate(
         query, task_type="retrieval_query", db=db,

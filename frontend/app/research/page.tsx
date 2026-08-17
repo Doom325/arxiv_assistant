@@ -22,7 +22,7 @@ function ResearchContent() {
     const [papers, setPapers] = useState<Paper[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
-    const [error, setError] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Filter state
     const [category, setCategory] = useState("");
@@ -46,7 +46,7 @@ function ResearchContent() {
 
         setLoading(true);
         setHasSearched(true);
-        setError(false);
+        setError(null);
 
         // Sync to URL
         if (!searchOverride) {
@@ -73,10 +73,10 @@ function ResearchContent() {
                     endDate: endDate || undefined,
                 },
             );
-            const transformed = data.map((p: any) => ({
+            const transformed = data.map((p: Paper & { category?: string }) => ({
                 ...p,
-                id: p.arxiv_id,
-                db_id: p.id,
+                id: p.arxiv_id || p.id,
+                db_id: p.db_id,
                 categories: Array.isArray(p.categories)
                     ? p.categories
                     : [p.category || "cs.AI"],
@@ -92,9 +92,9 @@ function ResearchContent() {
             }
 
             setPapers(transformed);
-        } catch (err) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(true);
+            setError(err instanceof Error ? err.message : "Failed to execute search query.");
         } finally {
             setLoading(false);
         }
@@ -162,7 +162,10 @@ function ResearchContent() {
             {loading ? (
                 <SearchSkeleton count={6} />
             ) : error ? (
-                <SearchError onRetry={() => handleSearch(undefined, query)} />
+                <SearchError
+                    errorMessage={error}
+                    onRetry={() => handleSearch(undefined, query)}
+                />
             ) : papers.length > 0 ? (
                 <StaggerGrid className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                     {papers.map((paper) => (

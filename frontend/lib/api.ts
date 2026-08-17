@@ -2,8 +2,6 @@ const API_URL = typeof window === 'undefined'
     ? (process.env.INTERNAL_API_URL || "http://backend:8000")
     : "/api"; // Forced relative path for stability
 
-console.log("[API DEBUG] API_URL:", API_URL, "| Environment:", typeof window === 'undefined' ? "Server" : "Client");
-
 export interface Citation {
     title?: string | null;
     authors: string[];
@@ -168,6 +166,44 @@ export interface QueueStats {
     estimated_reading_time_minutes?: number;
 }
 
+// Helper to extract descriptive error messages from backend responses
+async function handleApiError(res: Response, fallback: string): Promise<never> {
+    let message = fallback;
+    try {
+        const errorData = await res.json();
+        if (errorData?.detail) {
+            if (typeof errorData.detail === "string") {
+                message = errorData.detail;
+            } else if (Array.isArray(errorData.detail)) {
+                message = errorData.detail
+                    .map((e: unknown) => {
+                        if (typeof e === "object" && e !== null && "msg" in e) {
+                            return String((e as { msg: unknown }).msg);
+                        }
+                        return JSON.stringify(e);
+                    })
+                    .join("; ");
+            } else {
+                message = JSON.stringify(errorData.detail);
+            }
+        } else if (errorData?.error) {
+            message = typeof errorData.error === "string" ? errorData.error : JSON.stringify(errorData.error);
+        } else if (errorData?.message) {
+            message = errorData.message;
+        }
+    } catch {
+        try {
+            const text = await res.text();
+            if (text && text.trim().length > 0 && text.length < 200) {
+                message = text.trim();
+            }
+        } catch {
+            // Keep fallback
+        }
+    }
+    throw new Error(message);
+}
+
 // ─────────────────────────────────────────────────────
 // Unified API object
 // ─────────────────────────────────────────────────────
@@ -182,20 +218,19 @@ export const api = {
             if (filters.endDate) url += `&end_date=${encodeURIComponent(filters.endDate)}`;
         }
         const res = await fetch(url);
-        if (!res.ok) throw new Error("Failed to fetch papers");
+        if (!res.ok) await handleApiError(res, "Failed to fetch papers");
         return res.json();
     },
 
     getPaper: async (id: string) => {
-        console.log(`[API DEBUG] Fetching paper ${id} from ${API_URL}/papers/${id}`);
         const response = await fetch(`${API_URL}/papers/${id}`);
-        if (!response.ok) throw new Error("Failed to fetch paper");
+        if (!response.ok) await handleApiError(response, "Failed to fetch paper");
         return response.json();
     },
 
     getSimilarPapers: async (id: string | number): Promise<Paper[]> => {
         const response = await fetch(`${API_URL}/papers/${id}/similar`);
-        if (!response.ok) throw new Error("Failed to fetch similar papers");
+        if (!response.ok) await handleApiError(response, "Failed to fetch similar papers");
         return response.json();
     },
 
@@ -206,8 +241,7 @@ export const api = {
             body: JSON.stringify({ query }),
         });
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || "Failed to add paper");
+            await handleApiError(response, "Failed to add paper");
         }
         return response.json();
     },
@@ -224,7 +258,7 @@ export const api = {
         const response = await fetch(url, {
             method: "POST",
         });
-        if (!response.ok) throw new Error("Failed to start summarization");
+        if (!response.ok) await handleApiError(response, "Failed to start summarization");
         return response.json();
     },
 
@@ -234,7 +268,7 @@ export const api = {
         models: { id: string; provider: "gemini" | "local" }[];
     }> => {
         const response = await fetch(`${API_URL}/models/summarization`);
-        if (!response.ok) throw new Error("Failed to fetch models");
+        if (!response.ok) await handleApiError(response, "Failed to fetch models");
         return response.json();
     },
 
@@ -244,7 +278,7 @@ export const api = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(recipient ? { recipient } : {}),
         });
-        if (!response.ok) throw new Error("Failed to send email");
+        if (!response.ok) await handleApiError(response, "Failed to send email");
         return response.json();
     },
 
@@ -259,7 +293,9 @@ export const api = {
         const res = await fetch(url, {
             method: "POST",
         });
-        if (!res.ok) throw new Error("Failed to search papers");
+        if (!res.ok) {
+            await handleApiError(res, `Search request failed (${res.status})`);
+        }
         return res.json();
     },
 
