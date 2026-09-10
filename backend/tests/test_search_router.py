@@ -142,3 +142,83 @@ def test_search_exact_match_not_found_no_text(client):
     response = client.post("/papers/search?query=arxiv:9999.99999")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_search_plain_text_query(client, db_session):
+    """Test standard keyword search without arxiv: prefix (checks is_postgres scoping)."""
+    from models import Paper
+    from datetime import datetime
+    p = Paper(
+        arxiv_id="2401.00001",
+        title="Deep Reinforcement Learning for Agents",
+        summary="A study on RL algorithms",
+        published_date=datetime.now(),
+        category="cs.AI",
+        pdf_url="http://example.com/pdf",
+    )
+    db_session.add(p)
+    db_session.commit()
+
+    response = client.post("/papers/search?query=Reinforcement")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 1
+    assert data[0]["title"] == "Deep Reinforcement Learning for Agents"
+
+
+def test_search_empty_query(client):
+    response = client.post("/papers/search?query=")
+    assert response.status_code == 200
+    assert response.json() == []
+
+    response = client.post("/papers/search?query=   ")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_search_operational_error_returns_503(client, mocker):
+    from sqlalchemy.exc import OperationalError
+
+    mocker.patch(
+        "services.query_embedding_cache.query_cache.get_or_generate",
+        side_effect=OperationalError("connection lost", params=None, orig=None),
+    )
+    mocker.patch(
+        "sqlalchemy.orm.Session.query",
+        side_effect=OperationalError("connection lost", params=None, orig=None),
+    )
+
+    response = client.post("/papers/search?query=machine learning")
+    assert response.status_code == 503
+    assert "Search database is currently unavailable" in response.json()["detail"]
+
+
+def test_search_general_exception_returns_500(client, mocker):
+    mocker.patch(
+        "routers.search.parse_query",
+        side_effect=RuntimeError("Parsing corrupted"),
+    )
+
+    response = client.post("/papers/search?query=machine learning")
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Search failed: Parsing corrupted"
+
+
+def test_chat_empty_query_returns_400(client):
+    response = client.post("/papers/chat?query=")
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Chat query cannot be empty"
+
+
+def test_chat_operational_error_returns_503(client, mocker):
+    from sqlalchemy.exc import OperationalError
+
+    mocker.patch(
+        "services.query_embedding_cache.query_cache.get_or_generate",
+        side_effect=OperationalError("connection lost", params=None, orig=None),
+    )
+
+    response = client.post("/papers/chat?query=what is transformers?")
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Database is currently unavailable for chat"
+
