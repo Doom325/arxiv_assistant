@@ -89,11 +89,12 @@ def search_papers(
     # 1. Parse query for filters
     clean_query, metadata_filters = parse_query(query)
 
+    from config import settings
+    is_postgres = "sqlite" not in settings.DATABASE_URL
+
     # 1.5 Exact Match Lookup (Atomic with scoped timeout)
     exact_match_paper = None
     if metadata_filters.get('arxiv_id'):
-        from config import settings
-        is_postgres = "sqlite" not in settings.DATABASE_URL
         try:
             if is_postgres:
                 db.execute(text("SET LOCAL statement_timeout = 50;"))
