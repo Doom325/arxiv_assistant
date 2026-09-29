@@ -29,6 +29,57 @@ from services.query_embedding_cache import query_cache
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Daily digest selection: watermark on Paper.id (ingestion order), persisted
+# in the last successful email_digest JobLog. Selecting by ingestion order
+# instead of arXiv's submission date means a paper the arXiv API serves a
+# day late lands in the next digest instead of being dropped forever.
+DIGEST_JOB_NAME = "email_digest"
+DIGEST_WATERMARK_KEY = "max_paper_id"
+DIGEST_MAX_AGE_DAYS = 7
+DIGEST_CATEGORY = "cs.AI"
+
+
+def _latest_digest_watermark(db: Session) -> int | None:
+    """Max Paper.id sent by the last successful digest, or None if never."""
+    last = (
+        db.query(JobLog)
+        .filter(JobLog.job_name == DIGEST_JOB_NAME, JobLog.status == "SUCCESS")
+        .order_by(JobLog.id.desc())
+        .first()
+    )
+    if last is None or not last.job_details:
+        return None
+    return last.job_details.get(DIGEST_WATERMARK_KEY)
+
+
+def _select_digest_papers(db: Session, watermark: int | None) -> list[Paper]:
+    """cs.AI-primary papers for today's digest, oldest id first.
+
+    With a watermark: every matching paper ingested since the last
+    successful digest, bounded to papers published in the last
+    ``DIGEST_MAX_AGE_DAYS`` so a historical backfill (scripts/backfill_*)
+    can't flood one digest with old papers. Bootstrap (no watermark yet):
+    the legacy rule — papers published yesterday IST.
+    """
+    query = db.query(Paper).filter(Paper.category == DIGEST_CATEGORY)
+    if watermark is None:
+        ist = pytz.timezone("Asia/Kolkata")
+        yesterday = datetime.datetime.now(ist).date() - datetime.timedelta(days=1)
+        return (
+            query.filter(func.date(Paper.published_date) == yesterday)
+            .order_by(Paper.id.asc())
+            .all()
+        )
+    cutoff = datetime.datetime.utcnow() - datetime.timedelta(
+        days=DIGEST_MAX_AGE_DAYS
+    )
+    return (
+        query.filter(Paper.id > watermark, Paper.published_date >= cutoff)
+        .order_by(Paper.id.asc())
+        .all()
+    )
+
+
 def _collect_categories(db: Session) -> set:
     """Union of user-configured categories, falling back to defaults."""
     configs = db.query(UserConfig).all()
@@ -191,54 +242,102 @@ def process_papers():
         db.close()
 
 def send_daily_email_digest():
-    """Separate job for sending emails once a day."""
-    logger.info("Preparing Daily Email Digest...")
+    """Send the daily cs.AI digest, tracking an ingestion high-water mark.
+
+    Selects every cs.AI paper ingested since the last successful digest
+    (see ``_select_digest_papers``). The watermark (max selected Paper.id)
+    is persisted in this job's JobLog and advances only after every
+    recipient's send is confirmed — a failed send marks the job FAILED and
+    the next run retries the same papers.
+    """
+    logger.info("Preparing daily email digest...")
     db: Session = SessionLocal()
-    
-    # Track this job too!
+
     job_log = JobLog(
-        job_name="email_digest",
+        job_name=DIGEST_JOB_NAME,
         status="RUNNING",
-        start_time=datetime.datetime.utcnow()
+        start_time=datetime.datetime.utcnow(),
     )
     db.add(job_log)
     db.commit()
-    
+
     try:
-        # 1. Determine Date Range (Yesterday IST)
-        ist = pytz.timezone('Asia/Kolkata')
-        yesterday = datetime.datetime.now(ist).date() - datetime.timedelta(days=1)
-        
-        logger.info(f"Generating digest for date: {yesterday}")
-        
-        # 2. Fetch papers from LOCAL DB
-        # Restrict to CS.AI category as requested by user
-        # Also use a date range to be safe with datetime comparisons
-        papers = db.query(Paper).filter(
-            func.date(Paper.published_date) == yesterday,
-            Paper.category == "cs.AI"
-        ).all()
-        
-        digest_count = len(papers)
-        
-        if papers:
-            for email in settings.RECIPIENT_LIST:
-                email_service.send_daily_digest(email, papers)
-                logger.info(f"Sent daily digest to {email}")
-        
+        watermark = _latest_digest_watermark(db)
+        mode = "watermark" if watermark is not None else "bootstrap"
+        papers = _select_digest_papers(db, watermark)
+        # From the rows actually selected, not a fresh max(id) at send
+        # time — a paper inserted mid-run must surface in the next digest.
+        max_paper_id = max((p.id for p in papers), default=None)
+
+        recipients = settings.RECIPIENT_LIST
+        failures: list[str] = []
+        if papers and recipients:
+            for email in recipients:
+                sent, detail = email_service.send_daily_digest(email, papers)
+                if sent:
+                    logger.info(f"Sent daily digest to {email}")
+                else:
+                    failures.append(f"{email}: {detail}")
+
+        if failures or (papers and not recipients):
+            # Nothing was confirmed delivered — don't advance the
+            # watermark, the next run retries these papers. An empty
+            # recipient list is the same failure class: papers would be
+            # silently swallowed if we marked SUCCESS.
+            job_log.status = "FAILED"
+            job_log.error_message = (
+                "; ".join(failures)
+                if failures
+                else "No recipients configured (EMAIL_RECIPIENTS empty)"
+            )
+            job_log.job_details = {
+                "mode": mode,
+                "count": len(papers),
+                "max_paper_id": max_paper_id,
+                "watermark_advanced": False,
+            }
+            logger.error("Digest send failed; watermark not advanced")
+            return
+
         job_log.status = "SUCCESS"
-        job_log.job_details = {"date": str(yesterday), "count": digest_count}
+        job_log.job_details = {
+            "mode": mode,
+            "count": len(papers),
+            "max_paper_id": max_paper_id,
+        }
         if not papers:
-            job_log.error_message = "No papers found for date"
-                
+            job_log.error_message = "No new cs.AI papers since last digest"
+        logger.info(
+            "Digest complete: %d papers (mode=%s, watermark=%s)",
+            len(papers),
+            mode,
+            max_paper_id,
+        )
     except Exception as e:
-        logger.error(f"Failed to send daily digest: {e}")
+        logger.exception("Failed to send daily digest")
         job_log.status = "FAILED"
         job_log.error_message = str(e)
     finally:
         job_log.end_time = datetime.datetime.utcnow()
         db.commit()
         db.close()
+
+
+def run_daily_poll_and_digest():
+    """09:00 IST entry point: poll arXiv, then send the digest.
+
+    The digest runs even when the poll raises — papers already in the DB
+    still deserve their email, and the watermark guarantees anything the
+    failed poll would have ingested lands in the next digest. Kept out of
+    ``process_papers`` because scripts/seed_db.py calls it directly and
+    must not send email.
+    """
+    try:
+        process_papers()
+    except Exception:
+        logger.exception("Daily poll raised — sending digest anyway")
+    send_daily_email_digest()
+
 
 def run_batch_summarization():
     logger.info("Starting Daily Batch Summarization Job...")
@@ -326,37 +425,30 @@ scheduler = BackgroundScheduler()
 
 ist_timezone = pytz.timezone('Asia/Kolkata')
 
-# 1. Ingestion Job: Daily at 09:00 IST.
+# 1. Poll + Digest Job: Daily at 09:00 IST.
 #    arXiv announces once per day at 20:00 ET. Correct conversion:
 #    20:00 EDT (summer) → 05:30 IST next day; 20:00 EST (winter) →
 #    06:30 IST next day. 09:00 IST sits ~2.5h after the EST announce
 #    and ~3.5h after the EDT announce — safely past both DST windows.
-#    Must run before the email-digest job below so yesterday's papers
-#    are ingested first.
+#    The digest runs in the same wrapper right after the poll, so
+#    freshly ingested papers go out the same morning. (The old separate
+#    10:00 digest job selected papers by submission date and raced the
+#    poll, which dropped late-arriving papers.)
 scheduler.add_job(
-    process_papers,
+    run_daily_poll_and_digest,
     CronTrigger(hour=9, minute=0, timezone=ist_timezone),
 )
 
-# 2. Email Job: Daily at 10:00 IST.
-#    Runs one hour after the 09:00 IST paper poll — ordering matters
-#    because the digest reads yesterday's cs.AI papers from the local
-#    DB, which the poll is responsible for populating.
-scheduler.add_job(
-    send_daily_email_digest,
-    CronTrigger(hour=10, minute=0, timezone=ist_timezone),
-)
-
-# 3. Batch Summarization Job: Daily at 11:00 PM IST
+# 2. Batch Summarization Job: Daily at 11:00 PM IST
 scheduler.add_job(run_batch_summarization, CronTrigger(hour=23, minute=0, timezone=ist_timezone))
 
-# 4. Reading Queue Rescore: Daily at 2:00 AM IST (20:30 UTC)
+# 3. Reading Queue Rescore: Daily at 2:00 AM IST (20:30 UTC)
 scheduler.add_job(
     rescore_reading_queues,
     CronTrigger(hour=2, minute=0, timezone=ist_timezone),
 )
 
-# 5. Query Cache Cleanup: Weekly Sunday at 3:00 AM IST
+# 4. Query Cache Cleanup: Weekly Sunday at 3:00 AM IST
 scheduler.add_job(
     cleanup_query_embedding_cache,
     CronTrigger(day_of_week="sun", hour=3, minute=0, timezone=ist_timezone),

@@ -46,21 +46,21 @@ class EmailService:
             return f"{base_url}/paper/{paper_id}"
         return base_url
 
-    def send_daily_digest(self, user_email: str, papers: list[Any]) -> None:
-        """Sends a daily digest email with the given papers."""
+    def send_daily_digest(self, user_email: str, papers: list[Any]) -> tuple[bool, str]:
+        """Sends a daily digest email with the given papers.
+
+        Returns (success, detail) so the scheduler only advances the
+        digest watermark on a confirmed send.
+        """
         if not papers:
             logger.info(f"No papers to send to {user_email}")
-            return
+            return True, "no papers"
 
         subject = f"arXiv Daily Digest - {len(papers)} New Papers"
         text_content = self._generate_text(papers)
         html_content = self._generate_html(papers)
 
-        success, detail = self._send(user_email, subject, html_content, text_content)
-        if success:
-            logger.info(f"Sent daily digest to {user_email}")
-        else:
-            logger.error(f"Failed to send daily digest to {user_email}: {detail}")
+        return self._send(user_email, subject, html_content, text_content)
 
     def send_paper_summary(self, recipient_email: str, paper: Any) -> tuple[bool, str]:
         """Sends a single paper summary email. Returns (success, detail)."""
