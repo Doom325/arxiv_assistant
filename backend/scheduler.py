@@ -267,7 +267,11 @@ def send_daily_email_digest():
         papers = _select_digest_papers(db, watermark)
         # From the rows actually selected, not a fresh max(id) at send
         # time — a paper inserted mid-run must surface in the next digest.
-        max_paper_id = max((p.id for p in papers), default=None)
+        # An empty run carries the prior watermark forward (default=watermark):
+        # writing None here would erase it, and the next run would revert to
+        # bootstrap — which happens every weekend, when arXiv announces
+        # nothing new on Fri/Sat nights.
+        max_paper_id = max((p.id for p in papers), default=watermark)
 
         recipients = settings.RECIPIENT_LIST
         failures: list[str] = []

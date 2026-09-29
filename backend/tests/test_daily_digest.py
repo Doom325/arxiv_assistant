@@ -140,6 +140,45 @@ class TestWatermarkSelection:
         assert log.status == "SUCCESS"
         assert log.job_details["count"] == 0
 
+    def test_empty_watermark_run_carries_prior_watermark_forward(
+        self, digest_scheduler, db_session, send_digest_ok
+    ):
+        """Operator audit regression: a quiet day (no new papers) must not
+        erase the watermark. Writing max_paper_id=None on the empty SUCCESS
+        row made the next run revert to bootstrap — the original bug, hit
+        every weekend (no Fri/Sat announcements) — and late-ingested
+        papers from the gap were dropped."""
+        sent_paper = _make_paper(
+            db_session,
+            "2609.0001",
+            datetime.datetime.utcnow() - datetime.timedelta(days=1),
+        )
+        _seed_digest_log(db_session, max_paper_id=sent_paper.id)
+
+        # Quiet day: the only paper is already sent → nothing selected.
+        digest_scheduler.send_daily_email_digest()
+        quiet_log = (
+            db_session.query(JobLog)
+            .filter_by(job_name="email_digest")
+            .order_by(JobLog.id.desc())
+            .first()
+        )
+        assert quiet_log.status == "SUCCESS"
+        assert quiet_log.job_details["count"] == 0
+        assert quiet_log.job_details["mode"] == "watermark"
+        assert quiet_log.job_details["max_paper_id"] == sent_paper.id
+
+        # Late arrival during the gap must still be picked up by the next
+        # run — watermark mode, not bootstrap.
+        late_paper = _make_paper(
+            db_session,
+            "2609.0002",
+            datetime.datetime.utcnow() - datetime.timedelta(days=3),
+        )
+        digest_scheduler.send_daily_email_digest()
+
+        assert _sent_paper_ids(send_digest_ok) == [[late_paper.id]]
+
     def test_paper_older_than_7_days_is_excluded(
         self, digest_scheduler, db_session, send_digest_ok
     ):
