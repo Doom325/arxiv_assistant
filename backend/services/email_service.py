@@ -62,6 +62,58 @@ class EmailService:
 
         return self._send(user_email, subject, html_content, text_content)
 
+    def send_catchup_digest(
+        self, user_email: str, papers: list[Any], heading: str
+    ) -> tuple[bool, str]:
+        """Send a compact catch-up digest (one line of abstract per paper).
+
+        The card template in ``_generate_html`` costs ~1.3KB per paper, so a
+        full day of cs.AI (~150-300 papers) exceeds Gmail's ~102KB clipping
+        limit; this list format fits ~250 papers under it.
+        """
+        subject = f"{heading} ({len(papers)} papers)"
+        return self._send(
+            user_email,
+            subject,
+            self._generate_compact_html(papers, subject),
+            self._generate_compact_text(papers, subject),
+        )
+
+    @staticmethod
+    def _one_line(abstract: str | None, limit: int = 150) -> str:
+        """First sentence of the abstract, capped at ``limit`` characters."""
+        text = " ".join((abstract or "").split())
+        first = re.split(r"(?<=[.!?])\s", text, maxsplit=1)[0]
+        return first if len(first) <= limit else first[: limit - 1].rstrip() + "…"
+
+    def _generate_compact_html(self, papers: list[Any], heading: str) -> str:
+        # Styles live in one <style> block, not inline per paper: at ~250
+        # papers the per-item bytes decide whether Gmail clips the email.
+        items = "".join(
+            f'<li><a class="t" href="{html.escape(self._get_paper_app_url(p))}">'
+            f'{html.escape(p.title or "")}</a><br>{html.escape(self._one_line(p.summary))} '
+            f'<a class="x" href="{html.escape(p.pdf_url or "")}">arXiv</a></li>'
+            for p in papers
+        )
+        return (
+            "<!DOCTYPE html><html><head><style>"
+            "body{font-family:Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.4;"
+            "color:#4b5563;max-width:900px;margin:0 auto;padding:16px}"
+            "h2{color:#4f46e5;margin:0 0 12px}ol{padding-left:24px;margin:0}li{margin:0 0 10px}"
+            ".t{color:#111827;font-weight:600;text-decoration:none}.x{color:#4f46e5}"
+            "</style></head><body>"
+            f"<h2>{html.escape(heading)}</h2><ol>{items}</ol>"
+            '<p style="color:#9ca3af;font-size:12px">Sent by Arxiv Assistant</p></body></html>'
+        )
+
+    def _generate_compact_text(self, papers: list[Any], heading: str) -> str:
+        lines = [heading, ""]
+        for i, p in enumerate(papers, 1):
+            lines.append(f"{i}. {p.title}")
+            lines.append(f"   {self._one_line(p.summary)}")
+            lines.append(f"   {self._get_paper_app_url(p)}")
+        return "\n".join(lines)
+
     def send_paper_summary(self, recipient_email: str, paper: Any) -> tuple[bool, str]:
         """Sends a single paper summary email. Returns (success, detail)."""
         subject = f"📄 {paper.title}"
