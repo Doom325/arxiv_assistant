@@ -169,9 +169,41 @@ def test_search_plain_text_query(client, db_session):
     assert data[0]["arxiv_id"] == "2401.00001"
 
 
+def test_search_plain_text_keyword_query(client, db_session):
+    """Test standard keyword search without arxiv: prefix (checks is_postgres scoping)."""
+    from models import Paper
+    from datetime import datetime
+    p = Paper(
+        arxiv_id="2401.00002",
+        title="Deep Reinforcement Learning for Agents",
+        summary="A study on RL algorithms",
+        published_date=datetime.now(),
+        category="cs.AI",
+        pdf_url="http://example.com/pdf",
+    )
+    db_session.add(p)
+    db_session.commit()
+
+    response = client.post("/papers/search?query=Reinforcement")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 1
+    assert data[0]["title"] == "Deep Reinforcement Learning for Agents"
+
+
 def test_search_plain_text_no_results(client):
     """Test searching with a query that matches no papers."""
     response = client.post("/papers/search?query=nonexistentqueryxyz")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_search_empty_query(client):
+    response = client.post("/papers/search?query=")
+    assert response.status_code == 200
+    assert response.json() == []
+
+    response = client.post("/papers/search?query=   ")
     assert response.status_code == 200
     assert response.json() == []
 

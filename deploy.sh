@@ -65,6 +65,7 @@ EOT
     echo RESEND_API_KEY=$RESEND_KEY >> ~/arxiv_assistant/.env
     echo LITELLM_API_KEY=$LITELLM_KEY >> ~/arxiv_assistant/.env
     echo FRAMEWORK_IP=$FRAMEWORK_IP >> ~/arxiv_assistant/.env
+    echo FRONTEND_URL=http://$KHADAS_IP:3000 >> ~/arxiv_assistant/.env
 "
 
 # 4. Build and Run
