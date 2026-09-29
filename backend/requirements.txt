@@ -3,7 +3,7 @@ click==8.1.7
 uvicorn==0.23.2
 psycopg2-binary==2.9.9
 pgvector==0.2.4
-sqlalchemy
+sqlalchemy>=2.0,<2.1  # 2.1 defaults postgresql:// to psycopg3; we ship psycopg2-binary
 pydantic
 pydantic-settings
 python-dotenv
