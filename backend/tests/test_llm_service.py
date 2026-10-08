@@ -1,11 +1,10 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from services.llm_service import GeminiProvider, OllamaProvider, get_llm_service
-from config import settings
 
 @pytest.fixture
 def gemini_provider():
-    with patch('services.llm_service.genai.Client') as MockClient:
+    with patch('services.llm_service.genai.Client'):
         provider = GeminiProvider()
         return provider
 
@@ -142,6 +141,9 @@ def test_gemini_list_summarization_models(gemini_provider):
     models = gemini_provider.list_summarization_models()
     assert isinstance(models, list)
     assert gemini_provider.default_summarization_model() in models
+    assert "gemini-3.8-flash" in models
+    assert "gemini-3.7-flash" in models
+    assert "gemini-2.0-flash" not in models
 
 
 @patch('requests.get')

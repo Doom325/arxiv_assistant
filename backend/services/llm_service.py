@@ -2,7 +2,6 @@ from google import genai
 from google.genai import types
 import requests
 import json
-import re
 from abc import ABC, abstractmethod
 from config import settings
 from core.text_utils import sanitize_text as _sanitize_text
@@ -44,16 +43,26 @@ class LLMProvider(ABC):
         """Classify a paper using the V6 CoT prompt. Returns parsed JSON or None on failure."""
         raise NotImplementedError("Subclass must implement classify_paper")
 
-_GEMINI_SUMMARIZATION_MODEL = 'gemini-3-flash-preview'
+_GEMINI_SUMMARIZATION_MODEL = 'gemini-3.8-flash'
 
 # Co-located with _GEMINI_SUMMARIZATION_MODEL so additions/removals stay together.
 # Gemini's /models endpoint returns embedding + legacy models we don't want to
-# surface as summarization choices, so we curate this list manually.
+# surface as summarization choices, so we curate this list manually based on
+# models available over the API supporting generateContent.
 _GEMINI_SUMMARIZATION_MODELS = [
     _GEMINI_SUMMARIZATION_MODEL,
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-pro-preview',
+    'gemini-3.1-flash-lite',
+    'gemini-3-flash-preview',
     'gemini-2.5-pro',
     'gemini-2.5-flash',
-    'gemini-2.0-flash',
+    'gemini-flash-latest',
+    'gemini-pro-latest',
+    'gemini-flash-lite-latest',
 ]
 
 
