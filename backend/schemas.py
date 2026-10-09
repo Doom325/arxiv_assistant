@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from typing import List, Optional, Union, Any
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 class Citation(BaseModel):
     title: Any = None
@@ -24,6 +24,14 @@ class PaperResponse(BaseModel):
     summary_status: Optional[str] = None
     summary_error: Optional[Any] = None
     summary_attempted_at: Optional[datetime] = None
+
+    @field_serializer("summary_attempted_at")
+    def serialize_summary_attempted_at(self, dt: Optional[datetime]) -> Optional[str]:
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
 
 class PaperSection(BaseModel):
     title: str

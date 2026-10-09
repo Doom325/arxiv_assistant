@@ -25,7 +25,7 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
       - NVIDIA_BASE_URL=${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
-      - LLM_NVIDIA_MODEL=${LLM_NVIDIA_MODEL:-meta/llama-3.3-70b-instruct}
+      - LLM_NVIDIA_MODEL=${LLM_NVIDIA_MODEL:-nvidia/nemotron-3-super-120b-a12b}
       - EMAIL_SENDER=onboarding@resend.dev
       - EMAIL_RECIPIENTS=sumanth.gttpt@gmail.com
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}

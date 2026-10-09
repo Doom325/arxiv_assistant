@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     LITELLM_API_KEY: str = ""
     NVIDIA_API_KEY: str = ""
     NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
-    LLM_NVIDIA_MODEL: str = "meta/llama-3.3-70b-instruct"
+    LLM_NVIDIA_MODEL: str = "nvidia/nemotron-3-super-120b-a12b"
     LLM_EMBEDDING_MODEL: str = "embeddinggemma:latest"
     LLM_CHAT_MODEL: str = "nemotron3:nano"  # RAG chat + summarization + universal fallback. nemotron-3-nano (hybrid SSM-MoE) — ~4-7x faster than gemma4:31b at equal/better quality
     LLM_SUMMARIZATION_MODEL: str | None = None  # Falls back to LLM_CHAT_MODEL if unset

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { api } from "./api";
+import { api, parseServerDate } from "./api";
 
 interface UseSummarizeResult {
     summarizing: boolean;
@@ -88,12 +88,13 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
                         const updated = await api.getPaper(String(paperId));
 
                         if (updated.summary_status === "failed") {
-                            const attemptedAt = updated.summary_attempted_at
-                                ? new Date(updated.summary_attempted_at)
-                                : null;
+                            const attemptedAt = parseServerDate(
+                                updated.summary_attempted_at
+                            );
                             const isFresh =
-                                !!attemptedAt &&
-                                attemptedAt >= sessionStartedAt;
+                                !attemptedAt ||
+                                attemptedAt.getTime() >=
+                                    sessionStartedAt.getTime() - 30000;
                             if (!isFresh) {
                                 // Stale failure — keep polling.
                                 return;

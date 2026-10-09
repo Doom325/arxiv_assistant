@@ -660,3 +660,15 @@ export const getPatternOverview = api.getPatternOverview;
 export const getPatternPapers = api.getPatternPapers;
 export const getPaperPatterns = api.getPaperPatterns;
 export const emailPaperSummary = api.emailPaperSummary;
+
+/**
+ * Safely parses server date strings into Date objects.
+ * Server ISO timestamps from naive UTC lack a trailing 'Z'.
+ * This ensures they are consistently parsed as UTC rather than client local time.
+ */
+export function parseServerDate(val?: string | null): Date | null {
+    if (!val) return null;
+    const str = val.endsWith("Z") || val.includes("+") ? val : `${val}Z`;
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+}

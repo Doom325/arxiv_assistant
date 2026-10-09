@@ -41,6 +41,10 @@ function getInitialCustomConfig(): {
     const saved = localStorage.getItem(CUSTOM_CONFIG_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
+      const customModel =
+        !parsed.customModel || parsed.customModel === "meta/llama-3.3-70b-instruct"
+          ? "nvidia/nemotron-3-super-120b-a12b"
+          : parsed.customModel;
       return {
         isCustomMode: Boolean(parsed.isCustomMode),
         customProvider:
@@ -49,7 +53,7 @@ function getInitialCustomConfig(): {
           parsed.customProvider === "local"
             ? parsed.customProvider
             : "nvidia",
-        customModel: parsed.customModel || "meta/llama-3.3-70b-instruct",
+        customModel,
         customEndpoint: parsed.customEndpoint || "https://integrate.api.nvidia.com/v1",
       };
     }
@@ -59,7 +63,7 @@ function getInitialCustomConfig(): {
   return {
     isCustomMode: false,
     customProvider: "nvidia",
-    customModel: "meta/llama-3.3-70b-instruct",
+    customModel: "nvidia/nemotron-3-super-120b-a12b",
     customEndpoint: "https://integrate.api.nvidia.com/v1",
   };
 }
@@ -135,7 +139,7 @@ export default function AISynthesisSection({
       newModel = "gemini-3.8-flash";
       newEndpoint = "";
     } else if (newProvider === "nvidia") {
-      newModel = "meta/llama-3.3-70b-instruct";
+      newModel = "nvidia/nemotron-3-super-120b-a12b";
       newEndpoint = "https://integrate.api.nvidia.com/v1";
     } else if (newProvider === "local") {
       newModel = "nemotron3:nano";

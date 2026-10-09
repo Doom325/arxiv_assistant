@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { generateSummary, addBookmark, removeBookmark, getBookmarkedIds, Paper, getPaper, getSimilarPapers, getPaperPatterns, PaperPattern, emailPaperSummary } from "../../../lib/api";
+import { generateSummary, addBookmark, removeBookmark, getBookmarkedIds, Paper, getPaper, getSimilarPapers, getPaperPatterns, PaperPattern, emailPaperSummary, parseServerDate } from "../../../lib/api";
 import { showSummaryCompleteNotification, requestNotificationPermission } from "../../../lib/notifications";
 import { ArrowLeft } from "lucide-react";
 import ErrorBoundary from "../../../components/ErrorBoundary";
@@ -101,11 +101,13 @@ export default function PaperDetail() {
                     const updatedPaper = await getPaper(id);
 
                     if (updatedPaper.summary_status === "failed") {
-                        const attemptedAt = updatedPaper.summary_attempted_at
-                            ? new Date(updatedPaper.summary_attempted_at)
-                            : null;
+                        const attemptedAt = parseServerDate(
+                            updatedPaper.summary_attempted_at
+                        );
                         const isFresh =
-                            !!attemptedAt && attemptedAt >= sessionStartedAt;
+                            !attemptedAt ||
+                            attemptedAt.getTime() >=
+                                sessionStartedAt.getTime() - 30000;
                         if (!isFresh) {
                             // Stale failure from a prior session — ignore and
                             // keep polling for this session's real result.

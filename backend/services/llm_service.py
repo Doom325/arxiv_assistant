@@ -431,7 +431,7 @@ class NvidiaProvider(LLMProvider):
 
     def __init__(self, base_url: str | None = None, api_key: str | None = None):
         self.base_url = (base_url or settings.NVIDIA_BASE_URL).strip()
-        self.api_key = api_key or settings.NVIDIA_API_KEY
+        self.api_key = api_key if api_key is not None else settings.NVIDIA_API_KEY
         self.model_name = settings.LLM_NVIDIA_MODEL or _NVIDIA_DEFAULT_SUMMARIZATION_MODEL
 
     def _headers(self) -> dict:
@@ -445,6 +445,21 @@ class NvidiaProvider(LLMProvider):
         if not url.endswith("/chat/completions"):
             url = f"{url}/chat/completions"
         return url
+
+    @staticmethod
+    def _parse_error_detail(resp: requests.Response | None) -> str:
+        if resp is None:
+            return ""
+        try:
+            err = resp.json()
+            if isinstance(err, dict):
+                error_obj = err.get("error")
+                if isinstance(error_obj, dict) and error_obj.get("message"):
+                    return str(error_obj["message"])
+                return str(err.get("detail") or err.get("title") or "")
+        except Exception:
+            pass
+        return (resp.text or "")[:300]
 
     def summarize_text(self, text: str, model: str | None = None, temperature: float | None = None) -> str:
         if not self.api_key:
@@ -463,7 +478,13 @@ class NvidiaProvider(LLMProvider):
             response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"]
+            msg = data["choices"][0]["message"]
+            return msg.get("content") or msg.get("reasoning_content") or ""
+        except requests.exceptions.HTTPError as e:
+            detail = self._parse_error_detail(e.response)
+            err_msg = f"NVIDIA API {e.response.status_code}: {detail}" if detail else str(e)
+            logger.error(f"NVIDIA summarization error: {err_msg}")
+            raise RuntimeError(err_msg) from e
         except Exception as e:
             logger.error(f"NVIDIA summarization error: {e}")
             raise e
@@ -496,19 +517,27 @@ class NvidiaProvider(LLMProvider):
         try:
             response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
             response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
+            data = response.json()
+            msg = data["choices"][0]["message"]
+            return msg.get("content") or msg.get("reasoning_content") or ""
+        except requests.exceptions.HTTPError as e:
+            detail = self._parse_error_detail(e.response)
+            err_msg = f"NVIDIA API {e.response.status_code}: {detail}" if detail else str(e)
+            logger.error(f"NVIDIA chat error: {err_msg}")
+            return f"Error: {err_msg}"
         except Exception as e:
             logger.error(f"NVIDIA chat error: {e}")
             return "Error generating response."
 
 
-_NVIDIA_DEFAULT_SUMMARIZATION_MODEL = "meta/llama-3.3-70b-instruct"
+_NVIDIA_DEFAULT_SUMMARIZATION_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 _NVIDIA_SUMMARIZATION_MODELS = [
     _NVIDIA_DEFAULT_SUMMARIZATION_MODEL,
-    "nvidia/llama-3.1-nemotron-70b-instruct",
-    "deepseek-ai/deepseek-r1",
-    "mistralai/mixtral-8x22b-instruct-v0.1",
-    "qwen/qwen2.5-72b-instruct",
+    "nvidia/nemotron-3-ultra-550b-a55b",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+    "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "openai/gpt-oss-20b",
+    "meta/llama-3.2-11b-vision-instruct",
 ]
 
 
