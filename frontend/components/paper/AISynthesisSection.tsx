@@ -91,9 +91,7 @@ export default function AISynthesisSection({
       .then((res) => {
         if (cancelled) return;
         setModels(res.models);
-        if (!selectedModel) {
-          setSelectedModel(res.default ?? res.models[0]?.id ?? "");
-        }
+        setSelectedModel((prev) => prev || res.default || res.models[0]?.id || "");
       })
       .catch((e) => {
         if (cancelled) return;
@@ -103,7 +101,7 @@ export default function AISynthesisSection({
     return () => {
       cancelled = true;
     };
-  }, [selectedModel]);
+  }, []);
 
   // Save custom configuration when modified
   const updateCustomConfig = (

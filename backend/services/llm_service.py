@@ -474,7 +474,7 @@ class NvidiaProvider(LLMProvider):
     def default_summarization_model(self) -> str:
         return self.model_name
 
-    def generate_embedding(self, text: str, output_dimensionality: int = None) -> list[float]:
+    def generate_embedding(self, text: str, output_dimensionality: int | None = None) -> list[float]:
         raise NotImplementedError("NVIDIA embedding generation not implemented")
 
     def chat(self, history: list, user_message: str, context: str) -> str:
@@ -526,6 +526,69 @@ _local_summarization_provider: OllamaProvider | None = None
 _nvidia_summarization_provider: NvidiaProvider | None = None
 
 
+def _route_by_explicit_provider(provider: str, endpoint: str | None) -> tuple[LLMProvider, str] | None:
+    global _gemini_summarization_provider, _local_summarization_provider, _nvidia_summarization_provider
+    if provider == "nvidia":
+        if endpoint:
+            return NvidiaProvider(base_url=endpoint), "nvidia"
+        if _nvidia_summarization_provider is None:
+            _nvidia_summarization_provider = NvidiaProvider()
+        return _nvidia_summarization_provider, "nvidia"
+    if provider == "gemini":
+        if _gemini_summarization_provider is None:
+            _gemini_summarization_provider = GeminiProvider()
+        return _gemini_summarization_provider, "gemini"
+    if provider == "local":
+        if endpoint:
+            p = OllamaProvider()
+            p.base_url = endpoint
+            return p, "local"
+        if _local_summarization_provider is None:
+            _local_summarization_provider = OllamaProvider()
+        return _local_summarization_provider, "local"
+    return None
+
+
+def _route_by_endpoint(endpoint: str) -> tuple[LLMProvider, str]:
+    endpoint_lower = endpoint.lower()
+    if "nvidia" in endpoint_lower or "nim" in endpoint_lower:
+        return NvidiaProvider(base_url=endpoint), "nvidia"
+    p = OllamaProvider()
+    p.base_url = endpoint
+    return p, "local"
+
+
+def _route_by_model(model: str) -> tuple[LLMProvider, str] | None:
+    global _gemini_summarization_provider, _nvidia_summarization_provider
+    if model in set(_GEMINI_SUMMARIZATION_MODELS) or model.startswith("gemini-"):
+        if _gemini_summarization_provider is None:
+            _gemini_summarization_provider = GeminiProvider()
+        return _gemini_summarization_provider, "gemini"
+    if model in set(_NVIDIA_SUMMARIZATION_MODELS) or any(
+        model.startswith(pfx)
+        for pfx in ("nvidia/", "meta/llama", "mistralai/", "deepseek-ai/", "qwen/")
+    ):
+        if _nvidia_summarization_provider is None:
+            _nvidia_summarization_provider = NvidiaProvider()
+        return _nvidia_summarization_provider, "nvidia"
+    return None
+
+
+def _route_by_default_setting() -> tuple[LLMProvider, str]:
+    global _gemini_summarization_provider, _local_summarization_provider, _nvidia_summarization_provider
+    if settings.AI_PROVIDER == "gemini":
+        if _gemini_summarization_provider is None:
+            _gemini_summarization_provider = GeminiProvider()
+        return _gemini_summarization_provider, "gemini"
+    if settings.AI_PROVIDER == "nvidia":
+        if _nvidia_summarization_provider is None:
+            _nvidia_summarization_provider = NvidiaProvider()
+        return _nvidia_summarization_provider, "nvidia"
+    if _local_summarization_provider is None:
+        _local_summarization_provider = OllamaProvider()
+    return _local_summarization_provider, "local"
+
+
 def get_summarization_provider(
     model: str | None = None,
     provider: str | None = None,
@@ -534,69 +597,20 @@ def get_summarization_provider(
     """Pick the right provider for a summarization request based on the chosen
     model, explicit provider, and/or custom endpoint. Returns (provider, provider_name).
     """
-    global _gemini_summarization_provider, _local_summarization_provider, _nvidia_summarization_provider
+    if provider:
+        res = _route_by_explicit_provider(provider.lower().strip(), endpoint)
+        if res:
+            return res
 
-    normalized_provider = provider.lower().strip() if provider else None
-
-    # 1. Explicit provider routing
-    if normalized_provider == "nvidia":
-        if endpoint:
-            return NvidiaProvider(base_url=endpoint), "nvidia"
-        if _nvidia_summarization_provider is None:
-            _nvidia_summarization_provider = NvidiaProvider()
-        return _nvidia_summarization_provider, "nvidia"
-
-    if normalized_provider == "gemini":
-        if _gemini_summarization_provider is None:
-            _gemini_summarization_provider = GeminiProvider()
-        return _gemini_summarization_provider, "gemini"
-
-    if normalized_provider == "local":
-        if endpoint:
-            provider_inst = OllamaProvider()
-            provider_inst.base_url = endpoint
-            return provider_inst, "local"
-        if _local_summarization_provider is None:
-            _local_summarization_provider = OllamaProvider()
-        return _local_summarization_provider, "local"
-
-    # 2. Inferred routing by custom endpoint
     if endpoint:
-        endpoint_lower = endpoint.lower()
-        if "nvidia" in endpoint_lower or "nim" in endpoint_lower:
-            return NvidiaProvider(base_url=endpoint), "nvidia"
-        provider_inst = OllamaProvider()
-        provider_inst.base_url = endpoint
-        return provider_inst, "local"
+        return _route_by_endpoint(endpoint)
 
-    # 3. Inferred routing by model name
     if model:
-        if model in set(_GEMINI_SUMMARIZATION_MODELS) or model.startswith("gemini-"):
-            if _gemini_summarization_provider is None:
-                _gemini_summarization_provider = GeminiProvider()
-            return _gemini_summarization_provider, "gemini"
+        res = _route_by_model(model)
+        if res:
+            return res
 
-        if model in set(_NVIDIA_SUMMARIZATION_MODELS) or any(
-            model.startswith(pfx)
-            for pfx in ("nvidia/", "meta/llama", "mistralai/", "deepseek-ai/", "qwen/")
-        ):
-            if _nvidia_summarization_provider is None:
-                _nvidia_summarization_provider = NvidiaProvider()
-            return _nvidia_summarization_provider, "nvidia"
-
-    # 4. Default fallback based on settings.AI_PROVIDER
-    if settings.AI_PROVIDER == "gemini":
-        if _gemini_summarization_provider is None:
-            _gemini_summarization_provider = GeminiProvider()
-        return _gemini_summarization_provider, "gemini"
-    elif settings.AI_PROVIDER == "nvidia":
-        if _nvidia_summarization_provider is None:
-            _nvidia_summarization_provider = NvidiaProvider()
-        return _nvidia_summarization_provider, "nvidia"
-
-    if _local_summarization_provider is None:
-        _local_summarization_provider = OllamaProvider()
-    return _local_summarization_provider, "local"
+    return _route_by_default_setting()
 
 
 def list_all_summarization_models() -> list[dict]:
