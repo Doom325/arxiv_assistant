@@ -166,6 +166,27 @@ export interface QueueStats {
     estimated_reading_time_minutes?: number;
 }
 
+export interface SummarizationProviderInfo {
+    name: string;
+    configured: boolean;
+    default_model: string;
+    default_endpoint?: string;
+    models?: string[];
+    supports_custom_endpoint: boolean;
+}
+
+export interface SummarizationModelItem {
+    id: string;
+    provider: "gemini" | "local" | "nvidia" | string;
+}
+
+export interface SummarizationModelsResponse {
+    default_provider: string;
+    default: string | null;
+    models: SummarizationModelItem[];
+    providers?: Record<string, SummarizationProviderInfo>;
+}
+
 // Helper to extract descriptive error messages from backend responses
 async function handleApiError(res: Response, fallback: string): Promise<never> {
     let message = fallback;
@@ -246,11 +267,20 @@ export const api = {
         return response.json();
     },
 
-    generateSummary: async (paperId: number, force: boolean = false, model?: string, temperature?: number) => {
+    generateSummary: async (
+        paperId: number,
+        force: boolean = false,
+        model?: string,
+        temperature?: number,
+        provider?: string,
+        endpoint?: string
+    ) => {
         const params = new URLSearchParams();
         if (force) params.set("force", "true");
         if (model) params.set("model", model);
         if (temperature !== undefined) params.set("temperature", String(temperature));
+        if (provider) params.set("provider", provider);
+        if (endpoint) params.set("endpoint", endpoint);
         const qs = params.toString();
         const url = qs
             ? `${API_URL}/papers/${paperId}/summarize?${qs}`
@@ -262,11 +292,7 @@ export const api = {
         return response.json();
     },
 
-    getSummarizationModels: async (): Promise<{
-        default_provider: string;
-        default: string | null;
-        models: { id: string; provider: "gemini" | "local" }[];
-    }> => {
+    getSummarizationModels: async (): Promise<SummarizationModelsResponse> => {
         const response = await fetch(`${API_URL}/models/summarization`);
         if (!response.ok) await handleApiError(response, "Failed to fetch models");
         return response.json();

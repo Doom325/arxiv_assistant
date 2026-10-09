@@ -222,14 +222,57 @@ def test_get_summarization_provider_routes_gemini_model_to_gemini():
 
 
 def test_get_summarization_provider_routes_unknown_model_to_local():
-    """A model that's not in the Gemini list must route to OllamaProvider (gateway)."""
+    """A model that's not in the Gemini or Nvidia list must route to OllamaProvider (gateway)."""
     from services import llm_service as svc
     with patch('services.llm_service.GeminiProvider') as MockG, \
-         patch('services.llm_service.OllamaProvider') as MockO:
+         patch('services.llm_service.OllamaProvider') as MockO, \
+         patch('services.llm_service.NvidiaProvider') as MockN:
         svc._gemini_summarization_provider = None
         svc._local_summarization_provider = None
+        svc._nvidia_summarization_provider = None
 
         _, name = svc.get_summarization_provider("gemma3:27b")
         assert name == "local"
         MockO.assert_called_once()
         MockG.assert_not_called()
+        MockN.assert_not_called()
+
+
+def test_get_summarization_provider_routes_nvidia_model_to_nvidia():
+    """A model in _NVIDIA_SUMMARIZATION_MODELS routes to NvidiaProvider."""
+    from services import llm_service as svc
+    with patch('services.llm_service.GeminiProvider') as MockG, \
+         patch('services.llm_service.OllamaProvider') as MockO, \
+         patch('services.llm_service.NvidiaProvider') as MockN:
+        svc._gemini_summarization_provider = None
+        svc._local_summarization_provider = None
+        svc._nvidia_summarization_provider = None
+
+        _, name = svc.get_summarization_provider(svc._NVIDIA_SUMMARIZATION_MODELS[0])
+        assert name == "nvidia"
+        MockN.assert_called_once()
+        MockG.assert_not_called()
+        MockO.assert_not_called()
+
+
+def test_get_summarization_provider_explicit_provider_param():
+    """Explicit provider param wins over model inference."""
+    from services import llm_service as svc
+    with patch('services.llm_service.NvidiaProvider') as MockN:
+        svc._nvidia_summarization_provider = None
+        _, name = svc.get_summarization_provider(model="custom-model", provider="nvidia")
+        assert name == "nvidia"
+        MockN.assert_called_once()
+
+
+def test_get_summarization_provider_custom_endpoint_param():
+    """Custom endpoint param creates a dynamic provider with that base_url."""
+    from services import llm_service as svc
+    with patch('services.llm_service.NvidiaProvider') as MockN:
+        _, name = svc.get_summarization_provider(
+            model="meta/llama-3.3-70b-instruct",
+            provider="nvidia",
+            endpoint="https://my-nim.internal/v1"
+        )
+        assert name == "nvidia"
+        MockN.assert_called_once_with(base_url="https://my-nim.internal/v1")

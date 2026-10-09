@@ -418,3 +418,109 @@ def settings_stale_seconds() -> int:
     """Helper to read the configured stale threshold for tests."""
     from config import settings
     return settings.SUMMARY_RUN_STALE_THRESHOLD_SECONDS
+
+
+class TestNvidiaProviderAndCustomEndpoints:
+    def test_nvidia_provider_chat_url_construction(self):
+        from services.llm_service import NvidiaProvider
+        p1 = NvidiaProvider(base_url="https://integrate.api.nvidia.com/v1")
+        assert p1._chat_url() == "https://integrate.api.nvidia.com/v1/chat/completions"
+
+        p2 = NvidiaProvider(base_url="https://custom.nim.org/v1/chat/completions")
+        assert p2._chat_url() == "https://custom.nim.org/v1/chat/completions"
+
+    def test_nvidia_provider_missing_api_key_raises(self):
+        from services.llm_service import NvidiaProvider
+        p = NvidiaProvider(base_url="https://integrate.api.nvidia.com/v1", api_key="")
+        with pytest.raises(ValueError, match="NVIDIA API key is not configured"):
+            p.summarize_text("Sample paper text")
+
+    def test_nvidia_provider_successful_summary(self):
+        from services.llm_service import NvidiaProvider
+        p = NvidiaProvider(base_url="https://integrate.api.nvidia.com/v1", api_key="nvapi-test123")
+        mock_response = patch("requests.post")
+        with mock_response as mock_post:
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.json.return_value = {
+                "choices": [{"message": {"content": "Generated Nvidia Summary"}}]
+            }
+            res = p.summarize_text("Paper text here", model="meta/llama-3.3-70b-instruct")
+            assert res == "Generated Nvidia Summary"
+            mock_post.assert_called_once()
+            call_kwargs = mock_post.call_args.kwargs
+            assert call_kwargs["headers"]["Authorization"] == "Bearer nvapi-test123"
+            assert call_kwargs["json"]["model"] == "meta/llama-3.3-70b-instruct"
+
+    def test_custom_gemini_model_accepted(self, client, db_session, sample_paper, tmp_path):
+        pdf_path = tmp_path / f"{sample_paper.arxiv_id}.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
+             patch.object(
+                 integrations.summarization_service,
+                 "generate_summary",
+                 return_value="custom summary",
+             ) as mock_gen, \
+             _patch_session_local(db_session):
+            response = client.post(
+                f"/papers/{sample_paper.id}/summarize?force=true&provider=gemini&model=gemini-2.0-custom-exp"
+            )
+            assert response.status_code == 200
+            assert response.json()["model"] == "gemini-2.0-custom-exp"
+            assert response.json()["provider"] == "gemini"
+            mock_gen.assert_called_once()
+            assert mock_gen.call_args.kwargs["model"] == "gemini-2.0-custom-exp"
+            assert mock_gen.call_args.kwargs["provider"] == "gemini"
+
+    def test_custom_nvidia_endpoint_accepted(self, client, db_session, sample_paper, tmp_path):
+        pdf_path = tmp_path / f"{sample_paper.arxiv_id}.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        custom_endpoint = "https://my-nim.example.internal:8000/v1"
+        with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
+             patch.object(
+                 integrations.summarization_service,
+                 "generate_summary",
+                 return_value="nvidia summary",
+             ) as mock_gen, \
+             _patch_session_local(db_session):
+            response = client.post(
+                f"/papers/{sample_paper.id}/summarize?force=true&provider=nvidia&model=meta/llama-3.3-70b-instruct&endpoint={custom_endpoint}"
+            )
+            assert response.status_code == 200
+            assert response.json()["endpoint"] == custom_endpoint
+            assert response.json()["provider"] == "nvidia"
+            mock_gen.assert_called_once()
+            assert mock_gen.call_args.kwargs["endpoint"] == custom_endpoint
+            assert mock_gen.call_args.kwargs["provider"] == "nvidia"
+
+    def test_invalid_endpoint_url_rejected(self, client, sample_paper):
+        response = client.post(
+            f"/papers/{sample_paper.id}/summarize?provider=nvidia&endpoint=not-a-valid-url"
+        )
+        assert response.status_code == 400
+        assert "Invalid endpoint URL" in response.json()["detail"]
+
+        response_bad_scheme = client.post(
+            f"/papers/{sample_paper.id}/summarize?provider=nvidia&endpoint=ftp://host.com/v1"
+        )
+        assert response_bad_scheme.status_code == 400
+        assert "Invalid endpoint URL" in response_bad_scheme.json()["detail"]
+
+    def test_unsupported_provider_rejected(self, client, sample_paper):
+        response = client.post(
+            f"/papers/{sample_paper.id}/summarize?provider=unsupported_provider"
+        )
+        assert response.status_code == 400
+        assert "Unsupported provider" in response.json()["detail"]
+
+    def test_models_endpoint_includes_providers_metadata(self, client):
+        response = client.get("/models/summarization")
+        assert response.status_code == 200
+        body = response.json()
+        assert "providers" in body
+        assert "nvidia" in body["providers"]
+        assert "gemini" in body["providers"]
+        assert "local" in body["providers"]
+        assert body["providers"]["nvidia"]["supports_custom_endpoint"] is True
+

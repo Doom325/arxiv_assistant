@@ -7,7 +7,13 @@ interface UseSummarizeResult {
     summarizing: boolean;
     updatedSummary: string | null;
     error: string | null;
-    triggerSummarize: (force?: boolean, model?: string, temperature?: number) => void;
+    triggerSummarize: (
+        force?: boolean,
+        model?: string,
+        temperature?: number,
+        provider?: string,
+        endpoint?: string
+    ) => void;
 }
 
 export function useSummarize(paperId: number | null): UseSummarizeResult {
@@ -54,7 +60,13 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
     useEffect(() => cleanup, [cleanup]);
 
     const triggerSummarize = useCallback(
-        async (force?: boolean, model?: string, temperature?: number) => {
+        async (
+            force?: boolean,
+            model?: string,
+            temperature?: number,
+            provider?: string,
+            endpoint?: string
+        ) => {
             if (!paperId) return;
             const sessionStartedAt = new Date();
             sessionStartRef.current = sessionStartedAt;
@@ -62,7 +74,14 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
             setError(null);
 
             try {
-                await api.generateSummary(paperId, force ?? false, model, temperature);
+                await api.generateSummary(
+                    paperId,
+                    force ?? false,
+                    model,
+                    temperature,
+                    provider,
+                    endpoint
+                );
 
                 pollRef.current = setInterval(async () => {
                     try {

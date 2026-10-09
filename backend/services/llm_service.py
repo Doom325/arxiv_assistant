@@ -426,39 +426,173 @@ Example: {{"entities": [{{"type": "Model", "value": "GPT-4"}}, {{"type": "Datase
             logger.error(f"Gateway entity extraction error: {e}")
             return []
 
+class NvidiaProvider(LLMProvider):
+    """NVIDIA Cloud / NIM provider using OpenAI-compatible chat completions."""
+
+    def __init__(self, base_url: str | None = None, api_key: str | None = None):
+        self.base_url = (base_url or settings.NVIDIA_BASE_URL).strip()
+        self.api_key = api_key or settings.NVIDIA_API_KEY
+        self.model_name = settings.LLM_NVIDIA_MODEL or _NVIDIA_DEFAULT_SUMMARIZATION_MODEL
+
+    def _headers(self) -> dict:
+        h = {"Content-Type": "application/json"}
+        if self.api_key:
+            h["Authorization"] = f"Bearer {self.api_key}"
+        return h
+
+    def _chat_url(self) -> str:
+        url = self.base_url.rstrip("/")
+        if not url.endswith("/chat/completions"):
+            url = f"{url}/chat/completions"
+        return url
+
+    def summarize_text(self, text: str, model: str | None = None, temperature: float | None = None) -> str:
+        if not self.api_key:
+            raise ValueError(
+                "NVIDIA API key is not configured. Set NVIDIA_API_KEY in environment or .env."
+            )
+        prompt = SUMMARIZATION_PROMPT.format(text=self.sanitize_text(text))
+        payload = {
+            "model": model or self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 3000,
+            "temperature": DEFAULT_SUMMARIZATION_TEMPERATURE if temperature is None else temperature,
+            "stream": False,
+        }
+        try:
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.error(f"NVIDIA summarization error: {e}")
+            raise e
+
+    def list_summarization_models(self) -> list[str]:
+        return list(_NVIDIA_SUMMARIZATION_MODELS)
+
+    def default_summarization_model(self) -> str:
+        return self.model_name
+
+    def generate_embedding(self, text: str, output_dimensionality: int = None) -> list[float]:
+        raise NotImplementedError("NVIDIA embedding generation not implemented")
+
+    def chat(self, history: list, user_message: str, context: str) -> str:
+        if not self.api_key:
+            raise ValueError("NVIDIA API key is not configured.")
+        prompt = f"""
+        Context from research papers:
+        {context}
+
+        User Question: {user_message}
+
+        Answer the question based on the context provided.
+        """
+        payload = {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        }
+        try:
+            response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.error(f"NVIDIA chat error: {e}")
+            return "Error generating response."
+
+
+_NVIDIA_DEFAULT_SUMMARIZATION_MODEL = "meta/llama-3.3-70b-instruct"
+_NVIDIA_SUMMARIZATION_MODELS = [
+    _NVIDIA_DEFAULT_SUMMARIZATION_MODEL,
+    "nvidia/llama-3.1-nemotron-70b-instruct",
+    "deepseek-ai/deepseek-r1",
+    "mistralai/mixtral-8x22b-instruct-v0.1",
+    "qwen/qwen2.5-72b-instruct",
+]
+
+
 def get_llm_service():
     if settings.AI_PROVIDER == "gemini":
         return GeminiProvider()
+    elif settings.AI_PROVIDER == "nvidia":
+        return NvidiaProvider()
     else:
         return OllamaProvider()
 
 
 _gemini_summarization_provider: GeminiProvider | None = None
 _local_summarization_provider: OllamaProvider | None = None
+_nvidia_summarization_provider: NvidiaProvider | None = None
 
 
-def get_summarization_provider(model: str | None) -> tuple[LLMProvider, str]:
+def get_summarization_provider(
+    model: str | None = None,
+    provider: str | None = None,
+    endpoint: str | None = None,
+) -> tuple[LLMProvider, str]:
     """Pick the right provider for a summarization request based on the chosen
-    model. Returns (provider, provider_name).
-
-    Routing rules:
-    - If ``model`` is in the curated Gemini list, route to Gemini (requires GEMINI_API_KEY).
-    - Else, route to the LiteLLM gateway (Ollama-compatible path).
-    - If ``model`` is None, fall back to the configured ``AI_PROVIDER``.
-
-    Both providers are lazy-constructed and cached so the dropdown can mix
-    Gemini + local models regardless of which AI_PROVIDER is configured.
+    model, explicit provider, and/or custom endpoint. Returns (provider, provider_name).
     """
-    global _gemini_summarization_provider, _local_summarization_provider
+    global _gemini_summarization_provider, _local_summarization_provider, _nvidia_summarization_provider
 
-    is_gemini = bool(model) and model in set(_GEMINI_SUMMARIZATION_MODELS)
-    if model is None:
-        is_gemini = settings.AI_PROVIDER == "gemini"
+    normalized_provider = provider.lower().strip() if provider else None
 
-    if is_gemini:
+    # 1. Explicit provider routing
+    if normalized_provider == "nvidia":
+        if endpoint:
+            return NvidiaProvider(base_url=endpoint), "nvidia"
+        if _nvidia_summarization_provider is None:
+            _nvidia_summarization_provider = NvidiaProvider()
+        return _nvidia_summarization_provider, "nvidia"
+
+    if normalized_provider == "gemini":
         if _gemini_summarization_provider is None:
             _gemini_summarization_provider = GeminiProvider()
         return _gemini_summarization_provider, "gemini"
+
+    if normalized_provider == "local":
+        if endpoint:
+            provider_inst = OllamaProvider()
+            provider_inst.base_url = endpoint
+            return provider_inst, "local"
+        if _local_summarization_provider is None:
+            _local_summarization_provider = OllamaProvider()
+        return _local_summarization_provider, "local"
+
+    # 2. Inferred routing by custom endpoint
+    if endpoint:
+        endpoint_lower = endpoint.lower()
+        if "nvidia" in endpoint_lower or "nim" in endpoint_lower:
+            return NvidiaProvider(base_url=endpoint), "nvidia"
+        provider_inst = OllamaProvider()
+        provider_inst.base_url = endpoint
+        return provider_inst, "local"
+
+    # 3. Inferred routing by model name
+    if model:
+        if model in set(_GEMINI_SUMMARIZATION_MODELS) or model.startswith("gemini-"):
+            if _gemini_summarization_provider is None:
+                _gemini_summarization_provider = GeminiProvider()
+            return _gemini_summarization_provider, "gemini"
+
+        if model in set(_NVIDIA_SUMMARIZATION_MODELS) or any(
+            model.startswith(pfx)
+            for pfx in ("nvidia/", "meta/llama", "mistralai/", "deepseek-ai/", "qwen/")
+        ):
+            if _nvidia_summarization_provider is None:
+                _nvidia_summarization_provider = NvidiaProvider()
+            return _nvidia_summarization_provider, "nvidia"
+
+    # 4. Default fallback based on settings.AI_PROVIDER
+    if settings.AI_PROVIDER == "gemini":
+        if _gemini_summarization_provider is None:
+            _gemini_summarization_provider = GeminiProvider()
+        return _gemini_summarization_provider, "gemini"
+    elif settings.AI_PROVIDER == "nvidia":
+        if _nvidia_summarization_provider is None:
+            _nvidia_summarization_provider = NvidiaProvider()
+        return _nvidia_summarization_provider, "nvidia"
 
     if _local_summarization_provider is None:
         _local_summarization_provider = OllamaProvider()
@@ -466,16 +600,16 @@ def get_summarization_provider(model: str | None) -> tuple[LLMProvider, str]:
 
 
 def list_all_summarization_models() -> list[dict]:
-    """Union of Gemini + local gateway models, each tagged with its provider.
-    Gemini models are only included when GEMINI_API_KEY is configured;
-    gateway models are only included when the gateway responds (or via the
-    fallback to configured model names if it doesn't).
-    """
+    """Union of Gemini + NVIDIA + local gateway models, each tagged with its provider."""
     out: list[dict] = []
 
     if settings.FINAL_GOOGLE_API_KEY:
         for m in _GEMINI_SUMMARIZATION_MODELS:
             out.append({"id": m, "provider": "gemini"})
+
+    if settings.NVIDIA_API_KEY:
+        for m in _NVIDIA_SUMMARIZATION_MODELS:
+            out.append({"id": m, "provider": "nvidia"})
 
     try:
         local = OllamaProvider().list_summarization_models()
@@ -486,6 +620,35 @@ def list_all_summarization_models() -> list[dict]:
         out.append({"id": m, "provider": "local"})
 
     return out
+
+
+def get_summarization_providers_metadata() -> dict:
+    """Returns metadata for all supported summarization providers,
+    including default models, default endpoints, and configuration status."""
+    return {
+        "gemini": {
+            "name": "Google Gemini",
+            "configured": bool(settings.FINAL_GOOGLE_API_KEY),
+            "default_model": _GEMINI_SUMMARIZATION_MODEL,
+            "models": list(_GEMINI_SUMMARIZATION_MODELS),
+            "supports_custom_endpoint": False,
+        },
+        "nvidia": {
+            "name": "NVIDIA Cloud (NIM)",
+            "configured": bool(settings.NVIDIA_API_KEY),
+            "default_model": settings.LLM_NVIDIA_MODEL or _NVIDIA_DEFAULT_SUMMARIZATION_MODEL,
+            "default_endpoint": settings.NVIDIA_BASE_URL,
+            "models": list(_NVIDIA_SUMMARIZATION_MODELS),
+            "supports_custom_endpoint": True,
+        },
+        "local": {
+            "name": "Local (LiteLLM Gateway)",
+            "configured": True,
+            "default_model": settings.LLM_SUMMARIZATION_MODEL or settings.LLM_CHAT_MODEL,
+            "default_endpoint": settings.LITELLM_BASE_URL,
+            "supports_custom_endpoint": True,
+        },
+    }
 
 def get_embedding_service():
     """Returns the provider used for embeddings. Can differ from the main LLM provider.

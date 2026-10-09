@@ -1,9 +1,7 @@
 import logging
-import sys
 import os
 from services.arxiv_service import arxiv_service
 from services.llm_service import llm_service, get_summarization_provider
-from config import settings
 from services.prompts import SUMMARIZATION_PROMPT_MLX
 
 # Try importing MLX (only works on Apple Silicon)
@@ -29,7 +27,14 @@ class SummarizationService:
             self.model, self.tokenizer = load(self.model_repo)
             logger.info("Model loaded.")
 
-    def generate_summary(self, pdf_path: str, model: str | None = None, temperature: float | None = None) -> str:
+    def generate_summary(
+        self,
+        pdf_path: str,
+        model: str | None = None,
+        temperature: float | None = None,
+        provider: str | None = None,
+        endpoint: str | None = None,
+    ) -> str:
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
@@ -40,18 +45,18 @@ class SummarizationService:
 
         # MLX is a Mac dev-only fallback used by mac_worker and ignores
         # user-supplied model/temperature. On real deployments (Khadas, Framework)
-        # HAS_MLX is False and routing is decided per-model:
-        #   - Gemini-listed models → GeminiProvider (uses GEMINI_API_KEY)
-        #   - Everything else → OllamaProvider (LiteLLM gateway)
-        if HAS_MLX and not model:
+        # HAS_MLX is False and routing is decided per-model/provider:
+        if HAS_MLX and not model and not provider and not endpoint:
             return self._generate_with_mlx(text, pdf_path)
 
-        provider, provider_name = get_summarization_provider(model)
+        provider_inst, provider_name = get_summarization_provider(
+            model=model, provider=provider, endpoint=endpoint
+        )
         logger.info(
             f"Routing summarization of {pdf_path} via provider={provider_name} "
-            f"(model={model or 'default'}, temp={temperature})"
+            f"(model={model or 'default'}, temp={temperature}, endpoint={endpoint or 'default'})"
         )
-        return provider.summarize_text(text, model=model, temperature=temperature)
+        return provider_inst.summarize_text(text, model=model, temperature=temperature)
 
     def _generate_with_mlx(self, text: str, pdf_path: str) -> str:
         # Load Model (Lazy load)

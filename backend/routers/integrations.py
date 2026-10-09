@@ -23,13 +23,14 @@ from models.paper import (
     SUMMARY_STATUS_RUNNING,
     SUMMARY_STATUS_SUCCEEDED,
 )
+from urllib.parse import urlparse
 from services.arxiv_service import arxiv_service
 from services.email_service import email_service
 from services.gdrive import GoogleDriveService, NeedAuthException
 from services.llm_service import (
-    llm_service,
     get_summarization_provider,
     list_all_summarization_models,
+    get_summarization_providers_metadata,
 )
 from services.summarization_service import summarization_service
 
@@ -73,7 +74,14 @@ def _record_summary_failure(
     db.commit()
 
 
-def run_summarization(paper_id: int, pdf_url: str, model: Optional[str] = None, temperature: Optional[float] = None):
+def run_summarization(
+    paper_id: int,
+    pdf_url: str,
+    model: Optional[str] = None,
+    temperature: Optional[float] = None,
+    provider: Optional[str] = None,
+    endpoint: Optional[str] = None,
+):
     """Background task: uses its own DB session (request session may be closed)."""
     db = SessionLocal()
     try:
@@ -128,7 +136,13 @@ def run_summarization(paper_id: int, pdf_url: str, model: Optional[str] = None, 
 
         pdf_path = os.path.join(pdf_dir, filename)
 
-        summary = summarization_service.generate_summary(pdf_path, model=model, temperature=temperature)
+        summary = summarization_service.generate_summary(
+            pdf_path,
+            model=model,
+            temperature=temperature,
+            provider=provider,
+            endpoint=endpoint,
+        )
 
         # Naive UTC (see _record_summary_failure).
         now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -169,6 +183,8 @@ def summarize_paper(
     force: bool = False,
     model: Optional[str] = None,
     temperature: Optional[float] = None,
+    provider: Optional[str] = None,
+    endpoint: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     if temperature is not None and not (0.0 <= temperature <= 2.0):
@@ -180,16 +196,38 @@ def summarize_paper(
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
 
-    # The frontend dropdown isn't a security boundary — anything reaching this
-    # endpoint must be on the curated allowlist (Gemini static list ∪ LiteLLM
-    # gateway /models response).
+    if provider:
+        provider = provider.lower().strip()
+        if provider not in {"gemini", "nvidia", "local"}:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported provider '{provider}'. Must be 'gemini', 'nvidia', or 'local'.",
+            )
+
+    if endpoint:
+        endpoint = endpoint.strip()
+        parsed_url = urlparse(endpoint)
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid endpoint URL '{endpoint}'. Must start with http:// or https:// with a valid host.",
+            )
+
+    # Validate model selection:
+    # 1. Preset models on the curated allowlist are always valid.
+    # 2. Custom requests (with explicit provider or endpoint) allow custom model names.
+    # 3. Arbitrary model strings without custom provider/endpoint are rejected.
     if model:
+        model = model.strip()
         try:
             allowed = {m["id"] for m in list_all_summarization_models()}
         except Exception as e:
             logger.error(f"Failed to load model allowlist: {e}")
             raise HTTPException(status_code=502, detail="Cannot validate model")
-        if model not in allowed:
+
+        is_allowed_preset = model in allowed
+        is_custom_request = bool(provider or endpoint)
+        if not is_allowed_preset and not is_custom_request:
             raise HTTPException(
                 status_code=400,
                 detail=f"Unknown model '{model}'. See GET /models/summarization.",
@@ -252,17 +290,30 @@ def summarize_paper(
             detail="Summarization already in progress",
         )
 
-    background_tasks.add_task(run_summarization, paper_id, paper.pdf_url, model, temperature)
-    return {"message": "Summarization started", "model": model, "temperature": temperature}
+    background_tasks.add_task(
+        run_summarization,
+        paper_id,
+        paper.pdf_url,
+        model,
+        temperature,
+        provider,
+        endpoint,
+    )
+    return {
+        "message": "Summarization started",
+        "model": model,
+        "temperature": temperature,
+        "provider": provider,
+        "endpoint": endpoint,
+    }
 
 
 @router.get("/models/summarization")
 def list_summarization_models():
     """All models the user can pick for summary generation, across providers.
-    Each model is tagged with its provider ("gemini" or "local") so the
-    frontend can group them. The configured ``AI_PROVIDER`` only chooses the
-    *default* selection — the user can pick a model from the other provider
-    too, and routing is per-model."""
+    Each model is tagged with its provider ("gemini", "nvidia", or "local") so the
+    frontend can group them. Also returns provider metadata with default models
+    and endpoints."""
     try:
         models = list_all_summarization_models()
     except Exception as e:
@@ -279,6 +330,7 @@ def list_summarization_models():
         "default_provider": settings.AI_PROVIDER,
         "default": default,
         "models": models,
+        "providers": get_summarization_providers_metadata(),
     }
 
 
@@ -313,7 +365,7 @@ def email_paper_summary(paper_id: int, request: EmailPaperRequest = EmailPaperRe
 def email_debug():
     """Debug endpoint to check email service configuration."""
     try:
-        import resend as _r
+        import resend  # noqa: F401
         resend_installed = True
     except ImportError:
         resend_installed = False
@@ -425,7 +477,7 @@ def export_to_gdrive(list_name: str, background_tasks: BackgroundTasks, custom_f
         return {"message": "No papers found in the specified list"}
 
     try:
-        gdrive = GoogleDriveService(
+        GoogleDriveService(
             credentials_path=os.path.join(os.path.dirname(__file__), "..", "credentials.json"),
             token_path=os.path.join(os.path.dirname(__file__), "..", "token.json")
         )
