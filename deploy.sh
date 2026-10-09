@@ -10,11 +10,11 @@ export SSHPASS="${KHADAS_PASSWORD:-khadas}"
 
 echo "🚀 Starting Deployment to Khadas Edge 2 ($KHADAS_IP)..."
 
-## 0. Get API keys from local backend/.env and root .env
+# 0. Get API keys from local backend/.env and root .env
 GEMINI_KEY=$(grep GEMINI_API_KEY "$PROJECT_DIR/backend/.env" | cut -d'=' -f2 | tr -d '"')
 RESEND_KEY=$(grep RESEND_API_KEY "$PROJECT_DIR/backend/.env" | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
 LITELLM_KEY=$(grep '^LITELLM_API_KEY=' "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
-NVIDIA_KEY=$(grep '^NVIDIA_API_KEY=' "$PROJECT_DIR/backend/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || grep '^NVIDIA_API_KEY=' "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
+NVIDIA_KEY=$(grep -h '^NVIDIA_API_KEY=' "$PROJECT_DIR/backend/.env" "$PROJECT_DIR/.env" 2>/dev/null | head -n1 | cut -d'=' -f2 | tr -d '"')
 if [ -z "$LITELLM_KEY" ]; then
     echo "❌ LITELLM_API_KEY not found in $PROJECT_DIR/.env — aborting."
     exit 1
