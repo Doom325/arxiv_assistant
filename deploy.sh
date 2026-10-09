@@ -10,10 +10,11 @@ export SSHPASS="${KHADAS_PASSWORD:-khadas}"
 
 echo "🚀 Starting Deployment to Khadas Edge 2 ($KHADAS_IP)..."
 
-# 0. Get API keys from local backend/.env and root .env
+## 0. Get API keys from local backend/.env and root .env
 GEMINI_KEY=$(grep GEMINI_API_KEY "$PROJECT_DIR/backend/.env" | cut -d'=' -f2 | tr -d '"')
 RESEND_KEY=$(grep RESEND_API_KEY "$PROJECT_DIR/backend/.env" | cut -d'=' -f2 | tr -d '"' 2>/dev/null || echo "")
 LITELLM_KEY=$(grep '^LITELLM_API_KEY=' "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
+NVIDIA_KEY=$(grep '^NVIDIA_API_KEY=' "$PROJECT_DIR/backend/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || grep '^NVIDIA_API_KEY=' "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "")
 if [ -z "$LITELLM_KEY" ]; then
     echo "❌ LITELLM_API_KEY not found in $PROJECT_DIR/.env — aborting."
     exit 1
@@ -51,7 +52,7 @@ sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" \
     "rm -f ~/arxiv_assistant/backend/models.py ~/arxiv_assistant/backend/models_orig.py"
 
 # 3. Handle Environment Variables (Frontend/Backend)
-echo "� Updating remote .env files..."
+echo "📝 Updating remote .env files..."
 sshpass -e ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$KHADAS_IP" "
     cat <<EOT > ~/arxiv_assistant/backend/.env
 DATABASE_URL=postgresql://user:password@db:5432/arxiv_db
@@ -59,11 +60,13 @@ PDF_SAVE_DIR=/app/data/pdfs
 CHROME_PATH=/usr/bin/google-chrome
 GEMINI_API_KEY=$GEMINI_KEY
 LITELLM_API_KEY=$LITELLM_KEY
+NVIDIA_API_KEY=$NVIDIA_KEY
 EOT
     # Pre-write API keys to root .env (DATA_DIR/DB_STORAGE appended by step 4)
     echo GEMINI_API_KEY=$GEMINI_KEY > ~/arxiv_assistant/.env
     echo RESEND_API_KEY=$RESEND_KEY >> ~/arxiv_assistant/.env
     echo LITELLM_API_KEY=$LITELLM_KEY >> ~/arxiv_assistant/.env
+    echo NVIDIA_API_KEY=$NVIDIA_KEY >> ~/arxiv_assistant/.env
     echo FRAMEWORK_IP=$FRAMEWORK_IP >> ~/arxiv_assistant/.env
     echo FRONTEND_URL=http://$KHADAS_IP:3000 >> ~/arxiv_assistant/.env
 "
