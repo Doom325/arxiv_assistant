@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { getSummarizationModels } from "@/lib/api";
+import { formatMarkdownTables, markdownTableComponents } from "@/lib/markdown";
 
 interface AISynthesisSectionProps {
   summary: string | null | undefined;
@@ -473,8 +474,9 @@ export default function AISynthesisSection({
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
               rehypePlugins={[rehypeKatex]}
+              components={markdownTableComponents}
             >
-              {summary}
+              {formatMarkdownTables(summary)}
             </ReactMarkdown>
           </div>
           <p className="text-foreground-muted text-xs mt-6">

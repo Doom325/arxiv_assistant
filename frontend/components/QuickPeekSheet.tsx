@@ -14,6 +14,7 @@ import BookmarkButton from "./BookmarkButton";
 import RippleButton from "./RippleButton";
 import { getCategoryColor, estimateReadingTime } from "../lib/categoryColors";
 import { useSummarize } from "../lib/useSummarize";
+import { formatMarkdownTables, markdownTableComponents } from "../lib/markdown";
 
 interface QuickPeekSheetProps {
     paper: Paper | null;
@@ -215,8 +216,9 @@ export default function QuickPeekSheet({
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm, remarkMath]}
                                             rehypePlugins={[rehypeKatex]}
+                                            components={markdownTableComponents}
                                         >
-                                            {displaySummary}
+                                            {formatMarkdownTables(displaySummary)}
                                         </ReactMarkdown>
                                     </div>
                                 ) : !summarizing && (
