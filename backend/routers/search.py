@@ -177,6 +177,7 @@ def _fetch_semantic_ids(
         )
     except Exception as e:
         logger.error(f"Embedding failed: {e}")
+        db.rollback()
         return []
     if not query_embedding:
         return []

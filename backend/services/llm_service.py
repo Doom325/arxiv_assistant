@@ -32,7 +32,12 @@ class LLMProvider(ABC):
         return _sanitize_text(text)
 
     @abstractmethod
-    def generate_embedding(self, text: str, output_dimensionality: int = None) -> list[float]:
+    def generate_embedding(
+        self,
+        text: str,
+        task_type: str = "retrieval_document",
+        output_dimensionality: int | None = None,
+    ) -> list[float]:
         pass
 
     @abstractmethod
@@ -280,11 +285,16 @@ class OllamaProvider(LLMProvider):
             logger.error(f"Gateway metrics error: {e}")
             raise e
 
-    def generate_embedding(self, text: str, output_dimensionality: int = None) -> list[float]:
+    def generate_embedding(
+        self,
+        text: str,
+        task_type: str = "retrieval_document",
+        output_dimensionality: int | None = None,
+    ) -> list[float]:
         """Generate an embedding through the gateway's /v1/embeddings endpoint.
 
-        output_dimensionality is accepted for interface parity but ignored —
-        the gateway-registered model decides the vector dimensionality.
+        task_type and output_dimensionality are accepted for interface parity
+        but ignored — the gateway-registered model decides the vector dimensionality.
         """
         text = text.replace("\x00", "")
         truncated_text = text[:settings.LLM_EMBEDDING_TRUNCATION]
@@ -495,7 +505,12 @@ class NvidiaProvider(LLMProvider):
     def default_summarization_model(self) -> str:
         return self.model_name
 
-    def generate_embedding(self, text: str, output_dimensionality: int | None = None) -> list[float]:
+    def generate_embedding(
+        self,
+        text: str,
+        task_type: str = "retrieval_document",
+        output_dimensionality: int | None = None,
+    ) -> list[float]:
         raise NotImplementedError("NVIDIA embedding generation not implemented")
 
     def chat(self, history: list, user_message: str, context: str) -> str:

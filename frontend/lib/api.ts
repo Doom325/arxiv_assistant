@@ -191,36 +191,39 @@ export interface SummarizationModelsResponse {
 async function handleApiError(res: Response, fallback: string): Promise<never> {
     let message = fallback;
     try {
-        const errorData = await res.json();
-        if (errorData?.detail) {
-            if (typeof errorData.detail === "string") {
-                message = errorData.detail;
-            } else if (Array.isArray(errorData.detail)) {
-                message = errorData.detail
-                    .map((e: unknown) => {
-                        if (typeof e === "object" && e !== null && "msg" in e) {
-                            return String((e as { msg: unknown }).msg);
-                        }
-                        return JSON.stringify(e);
-                    })
-                    .join("; ");
-            } else {
-                message = JSON.stringify(errorData.detail);
+        const rawText = await res.text();
+        if (rawText && rawText.trim().length > 0) {
+            try {
+                const errorData = JSON.parse(rawText) as Record<string, unknown>;
+                if (errorData?.detail) {
+                    if (typeof errorData.detail === "string") {
+                        message = errorData.detail;
+                    } else if (Array.isArray(errorData.detail)) {
+                        message = errorData.detail
+                            .map((e: unknown) => {
+                                if (typeof e === "object" && e !== null && "msg" in e) {
+                                    return String((e as { msg: unknown }).msg);
+                                }
+                                return JSON.stringify(e);
+                            })
+                            .join("; ");
+                    } else {
+                        message = JSON.stringify(errorData.detail);
+                    }
+                } else if (errorData?.error) {
+                    message = typeof errorData.error === "string" ? errorData.error : JSON.stringify(errorData.error);
+                } else if (errorData?.message) {
+                    message = String(errorData.message);
+                }
+            } catch {
+                const firstLine = rawText.trim().split("\n")[0]?.trim();
+                if (firstLine) {
+                    message = firstLine.slice(0, 300);
+                }
             }
-        } else if (errorData?.error) {
-            message = typeof errorData.error === "string" ? errorData.error : JSON.stringify(errorData.error);
-        } else if (errorData?.message) {
-            message = errorData.message;
         }
     } catch {
-        try {
-            const text = await res.text();
-            if (text && text.trim().length > 0 && text.length < 200) {
-                message = text.trim();
-            }
-        } catch {
-            // Keep fallback
-        }
+        // Keep fallback
     }
     throw new Error(message);
 }

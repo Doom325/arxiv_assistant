@@ -286,3 +286,31 @@ def test_search_filter_only_query(client, db_session):
     assert data[0]["arxiv_id"] == "2403.00001"
 
 
+def test_search_embedding_failure_falls_back_to_keyword(client, db_session, monkeypatch):
+    """When query_cache.get_or_generate raises an exception, search rolls back and falls back to keyword search."""
+    from datetime import datetime
+    from models import Paper
+    from services.query_embedding_cache import query_cache
+
+    p = Paper(
+        arxiv_id="2401.00099",
+        title="Resilient Hybrid Search Architecture",
+        summary="Fallback keyword search when embedding fails.",
+        published_date=datetime.now(),
+        category="cs.IR",
+        pdf_url="http://example.com/pdf",
+    )
+    db_session.add(p)
+    db_session.commit()
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("embedding service unavailable")
+
+    monkeypatch.setattr(query_cache, "get_or_generate", boom)
+
+    response = client.post("/papers/search?query=Resilient")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["arxiv_id"] == "2401.00099"
+
