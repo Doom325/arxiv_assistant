@@ -143,6 +143,7 @@ export default function DashboardContent() {
     const [dateStart, setDateStart] = useState<string | null>(initialFilters.dateStart);
     const [dateEnd, setDateEnd] = useState<string | null>(initialFilters.dateEnd);
     const [searchQuery, setSearchQuery] = useState<string>(initialFilters.searchQuery);
+    const [searchInput, setSearchInput] = useState<string>(initialFilters.searchQuery);
     const [sortBy, setSortBy] = useState<string>(initialFilters.sortBy);
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
@@ -210,6 +211,13 @@ export default function DashboardContent() {
     /* ── Peek navigation ── */
     const handlePeekPrev = () => setPeekIndex((prev) => Math.max(prev - 1, 0));
     const handlePeekNext = () => setPeekIndex((prev) => Math.min(prev + 1, papers.length - 1));
+    const handlePreviewPaper = useCallback(
+        (paper: Paper) => {
+            const idx = papers.findIndex((item) => item.arxiv_id === paper.arxiv_id);
+            setPeekIndex(idx >= 0 ? idx : 0);
+        },
+        [papers],
+    );
 
     /* ── viewMode persistence (9.12.4) ── */
     useEffect(() => {
@@ -249,8 +257,22 @@ export default function DashboardContent() {
         setDateStart((prev) => (prev === next.dateStart ? prev : next.dateStart));
         setDateEnd((prev) => (prev === next.dateEnd ? prev : next.dateEnd));
         setSearchQuery((prev) => (prev === next.searchQuery ? prev : next.searchQuery));
+        setSearchInput((prev) => (prev === next.searchQuery ? prev : next.searchQuery));
         setSortBy((prev) => (prev === next.sortBy ? prev : next.sortBy));
     }, [searchParams, searchParamsString]);
+
+    /* ── Debounce search input before firing API / URL sync ── */
+    useEffect(() => {
+        if (searchInput === searchQuery) return;
+        if (!searchInput.trim()) {
+            setSearchQuery("");
+            return;
+        }
+        const timer = setTimeout(() => {
+            setSearchQuery(searchInput);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchInput, searchQuery]);
 
     /* ── Fetch papers ── */
     const fetchPapers = useCallback(async (pageNum: number, isRefresh = false) => {
@@ -442,6 +464,7 @@ export default function DashboardContent() {
         setSelectedCategories([]);
         setDateStart(null);
         setDateEnd(null);
+        setSearchInput("");
         setSearchQuery("");
         setSortBy("relevance");
     };
@@ -456,6 +479,9 @@ export default function DashboardContent() {
     const weeklyTrend: "up" | "down" | "flat" =
         weeklyDelta > 0 ? "up" : weeklyDelta < 0 ? "down" : "flat";
 
+    const isSearchActive = shouldUseDashboardSearchApi(searchQuery);
+    const useFlatFeed = isSearchActive || sortBy === "title";
+
     /* ── Sorted date keys ── */
     const sortedDateKeys = Object.keys(groupedPapers).sort((a, b) => {
         if (a === "unknown") return 1;
@@ -465,33 +491,34 @@ export default function DashboardContent() {
 
     return (
         <div className="bg-background space-y-12 px-12 pt-8 pb-24">
-            {/* ── Hero Lead Story (full width) ── */}
-            <section>
-                <HeroLeadStory
-                    paper={papers[0] ?? null}
-                    onReadFull={(p) => router.push(`/paper/${p.db_id || p.id}`)}
-                />
-            </section>
-
-            {/* ── Stats + Category Chart row ── */}
-            {papers.length > 0 && (
-                <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Category chart: spans 2 cols on large screens */}
-                    <div className="lg:col-span-2">
-                        <CategoryChart
-                            categoryData={categoryData ?? []}
-                            dailyData={sparklineData ?? []}
+            {/* ── Hero Lead Story + Stats row (archive browse mode only) ── */}
+            {!isSearchActive && (
+                <>
+                    <section>
+                        <HeroLeadStory
+                            paper={papers[0] ?? null}
+                            onReadFull={(p) => router.push(`/paper/${p.db_id || p.id}`)}
                         />
-                    </div>
+                    </section>
 
-                    {/* Stats sidebar: right column */}
-                    <ActivityStats
-                        totalPapers={stats?.total_papers ?? 0}
-                        weeklyDelta={weeklyDelta}
-                        weeklyTrend={weeklyTrend}
-                        pulseScore={stats?.category_count ?? 0}
-                    />
-                </section>
+                    {papers.length > 0 && (
+                        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2">
+                                <CategoryChart
+                                    categoryData={categoryData ?? []}
+                                    dailyData={sparklineData ?? []}
+                                />
+                            </div>
+
+                            <ActivityStats
+                                totalPapers={stats?.total_papers ?? 0}
+                                weeklyDelta={weeklyDelta}
+                                weeklyTrend={weeklyTrend}
+                                pulseScore={stats?.category_count ?? 0}
+                            />
+                        </section>
+                    )}
+                </>
             )}
 
             {/* ── Filter Bar (full width) ── */}
@@ -510,75 +537,99 @@ export default function DashboardContent() {
                     onSortChange={setSortBy}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
+                    searchQuery={searchInput}
+                    onSearchChange={setSearchInput}
                     onReset={handleResetFilters}
                 />
             </section>
 
-            {/* ── Paper Feed (date-grouped) ── */}
+            {/* ── Paper Feed (flat during search/title sort, date-grouped when browsing archive) ── */}
             {papers.length === 0 && loading ? (
                 <>
-                    <SkeletonBentoGrid />
+                    {!isSearchActive && <SkeletonBentoGrid />}
                     {viewMode === "grid" ? <SkeletonGrid count={6} /> : <SkeletonList />}
                 </>
             ) : (
                 <ErrorBoundary>
-                    <div className="space-y-10">
-                        {sortedDateKeys.map((dateKey) => {
-                            const groupPapers = groupedPapers[dateKey];
-                            const todayGroup = isToday(dateKey);
-                            return (
-                                <DashboardDateGroup
-                                    key={dateKey}
-                                    label={formatDateLabel(dateKey)}
-                                    itemCount={groupPapers.length}
-                                    isCollapsed={collapsedGroups.has(dateKey)}
-                                    onToggle={() => toggleGroup(dateKey)}
-                                    badge={todayGroup ? `${groupPapers.length} new` : undefined}
-                                >
-                                    {/* 9.12: Grid vs List layout */}
-                                    {viewMode === "grid" ? (
-                                        <div
-                                            className={
-                                                todayGroup
-                                                    ? "grid grid-cols-2 gap-6"
-                                                    : "grid grid-cols-2 lg:grid-cols-3 gap-4"
-                                            }
-                                        >
-                                            {groupPapers.map((paper) => (
-                                                <DashboardPaperCard
-                                                    key={paper.arxiv_id}
-                                                    paper={paper}
-                                                    variant={todayGroup ? "large" : "compact"}
-                                                    onPreview={(p) => {
-                                                        const idx = papers.indexOf(p);
-                                                        setPeekIndex(idx >= 0 ? idx : 0);
-                                                    }}
-                                                    isFocused={focusedPaperId === paper.arxiv_id}
-                                                />
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {groupPapers.map((paper) => (
-                                                <DashboardPaperCard
-                                                    key={paper.arxiv_id}
-                                                    paper={paper}
-                                                    variant="compact"
-                                                    onPreview={(p) => {
-                                                        const idx = papers.indexOf(p);
-                                                        setPeekIndex(idx >= 0 ? idx : 0);
-                                                    }}
-                                                    isFocused={focusedPaperId === paper.arxiv_id}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </DashboardDateGroup>
-                            );
-                        })}
-                    </div>
+                    {useFlatFeed ? (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between text-xs text-foreground-muted">
+                                <span>
+                                    Showing {papers.length} {papers.length === 1 ? "result" : "results"}
+                                    {isSearchActive ? ` for "${searchQuery.trim()}"` : ""}
+                                </span>
+                                <span className="uppercase tracking-wider">
+                                    Sorted by {sortBy}
+                                </span>
+                            </div>
+                            <div
+                                className={
+                                    viewMode === "grid"
+                                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                                        : "space-y-3"
+                                }
+                            >
+                                {papers.map((paper) => (
+                                    <DashboardPaperCard
+                                        key={paper.arxiv_id}
+                                        paper={paper}
+                                        variant={viewMode === "grid" ? "large" : "compact"}
+                                        onPreview={handlePreviewPaper}
+                                        isFocused={focusedPaperId === paper.arxiv_id}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-10">
+                            {sortedDateKeys.map((dateKey) => {
+                                const groupPapers = groupedPapers[dateKey];
+                                const todayGroup = isToday(dateKey);
+                                return (
+                                    <DashboardDateGroup
+                                        key={dateKey}
+                                        label={formatDateLabel(dateKey)}
+                                        itemCount={groupPapers.length}
+                                        isCollapsed={collapsedGroups.has(dateKey)}
+                                        onToggle={() => toggleGroup(dateKey)}
+                                        badge={todayGroup ? `${groupPapers.length} new` : undefined}
+                                    >
+                                        {viewMode === "grid" ? (
+                                            <div
+                                                className={
+                                                    todayGroup
+                                                        ? "grid grid-cols-2 gap-6"
+                                                        : "grid grid-cols-2 lg:grid-cols-3 gap-4"
+                                                }
+                                            >
+                                                {groupPapers.map((paper) => (
+                                                    <DashboardPaperCard
+                                                        key={paper.arxiv_id}
+                                                        paper={paper}
+                                                        variant={todayGroup ? "large" : "compact"}
+                                                        onPreview={handlePreviewPaper}
+                                                        isFocused={focusedPaperId === paper.arxiv_id}
+                                                    />
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {groupPapers.map((paper) => (
+                                                    <DashboardPaperCard
+                                                        key={paper.arxiv_id}
+                                                        paper={paper}
+                                                        variant="compact"
+                                                        onPreview={handlePreviewPaper}
+                                                        isFocused={focusedPaperId === paper.arxiv_id}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </DashboardDateGroup>
+                                );
+                            })}
+                        </div>
+                    )}
                 </ErrorBoundary>
             )}
 

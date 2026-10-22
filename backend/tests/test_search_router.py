@@ -207,3 +207,82 @@ def test_search_empty_query(client):
     assert response.status_code == 200
     assert response.json() == []
 
+
+def test_search_sort_by_newest_and_title(client, db_session):
+    """Test that sort_by='newest', 'date', and 'title' order results as expected."""
+    from datetime import date
+    from models import Paper
+
+    older = Paper(
+        arxiv_id="2401.10001",
+        title="Zebra Agents in Practice",
+        summary="A study on multi-agent orchestration.",
+        published_date=date(2024, 1, 10),
+        category="cs.AI",
+        pdf_url="http://example.com/1.pdf",
+    )
+    newer = Paper(
+        arxiv_id="2402.10002",
+        title="Alpha Agents in Practice",
+        summary="Another study on multi-agent orchestration.",
+        published_date=date(2024, 2, 15),
+        category="cs.AI",
+        pdf_url="http://example.com/2.pdf",
+    )
+    db_session.add_all([older, newer])
+    db_session.commit()
+
+    newest_resp = client.post(
+        "/papers/search?query=orchestration&sort_by=newest"
+    )
+    assert newest_resp.status_code == 200
+    newest_data = newest_resp.json()
+    assert [p["arxiv_id"] for p in newest_data[:2]] == ["2402.10002", "2401.10001"]
+
+    date_resp = client.post(
+        "/papers/search?query=orchestration&sort_by=date"
+    )
+    assert date_resp.status_code == 200
+    assert [p["arxiv_id"] for p in date_resp.json()[:2]] == ["2402.10002", "2401.10001"]
+
+    title_resp = client.post(
+        "/papers/search?query=orchestration&sort_by=title"
+    )
+    assert title_resp.status_code == 200
+    assert [p["title"] for p in title_resp.json()[:2]] == [
+        "Alpha Agents in Practice",
+        "Zebra Agents in Practice",
+    ]
+
+
+def test_search_filter_only_query(client, db_session):
+    """Test searching with only metadata filters (e.g. category:cs.RO) and no residual text."""
+    from datetime import date
+    from models import Paper
+
+    p_ro = Paper(
+        arxiv_id="2403.00001",
+        title="Robotic Manipulation Policy",
+        summary="Learning dexterous policies.",
+        published_date=date(2024, 3, 1),
+        category="cs.RO",
+        pdf_url="http://example.com/ro.pdf",
+    )
+    p_cl = Paper(
+        arxiv_id="2403.00002",
+        title="Language Modeling Basics",
+        summary="Tokenization and scaling.",
+        published_date=date(2024, 3, 2),
+        category="cs.CL",
+        pdf_url="http://example.com/cl.pdf",
+    )
+    db_session.add_all([p_ro, p_cl])
+    db_session.commit()
+
+    resp = client.post("/papers/search?query=category:cs.RO")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    assert data[0]["arxiv_id"] == "2403.00001"
+
+

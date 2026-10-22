@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import {
   X,
   ChevronLeft,
   ChevronRight,
   Sparkles,
   Check,
+  ArrowUpRight,
+  ExternalLink,
 } from "lucide-react";
 import { Paper } from "../../lib/api";
 import { useSummarize } from "../../lib/useSummarize";
@@ -32,8 +34,6 @@ interface DashboardQuickPeekProps {
  *  - AI Synthesis Findings (deep green card)
  *  - Metadata detail grid
  *  - Prev/next footer with paper titles
- *
- * Returns null on viewports < 1024px (fall back to QuickPeekSheet).
  */
 export default function DashboardQuickPeek({
   paper,
@@ -47,28 +47,29 @@ export default function DashboardQuickPeek({
   prevTitle,
   nextTitle,
 }: DashboardQuickPeekProps) {
-  // Narrow viewport fallback
-  const [isWide, setIsWide] = useState(false);
+  // Close on Escape
   useEffect(() => {
-    const check = () => setIsWide(window.innerWidth >= 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   // AI summary hook — useSummarize expects numeric db_id
   const { summarizing, updatedSummary, error, triggerSummarize } =
     useSummarize(paper?.db_id ?? null);
-
-  if (!isWide) return null;
 
   // ── Derived display values ───────────────────────────
   const displaySummary =
     updatedSummary || paper?.generated_summary || null;
 
   const authorDisplay = (() => {
-    if (!paper?.sources) return null;
-    // Paper type doesn't have authors directly — try sources or fallback
+    const maybeAuthors = (paper as (Paper & { authors?: string[] }) | null)?.authors;
+    if (Array.isArray(maybeAuthors) && maybeAuthors.length > 0) {
+      return maybeAuthors.slice(0, 2).join(", ");
+    }
     return null;
   })();
 
@@ -124,18 +125,26 @@ export default function DashboardQuickPeek({
   const boldPart = titleWords.slice(2).join(" ");
 
   return (
-    <div
-      className={`fixed top-[60px] right-0 bottom-0 w-[420px] z-20
-        border-l border-white/40
-        transition-transform duration-300 ease-in-out
-        flex flex-col
-        ${isOpen ? "translate-x-0" : "translate-x-full"}`}
-      style={{
-        backgroundColor: "var(--color-surface-overlay)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-      }}
-    >
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 top-[60px] z-30 bg-black/15"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      <div
+        className={`fixed top-[60px] right-0 bottom-0 w-full sm:w-[420px] z-40
+          border-l border-white/40
+          transition-transform duration-300 ease-in-out
+          flex flex-col
+          ${isOpen ? "translate-x-0" : "translate-x-full pointer-events-none"}`}
+        style={{
+          backgroundColor: "var(--color-surface-overlay)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+      >
       {/* ── Header ──────────────────────────────────────── */}
       <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0">
         <div className="flex items-center gap-2">
@@ -182,7 +191,11 @@ export default function DashboardQuickPeek({
             )}
 
             {/* Mixed-weight headline */}
-            <h2 className="leading-tight mb-3" style={{ fontFamily: "var(--font-display)" }}>
+            <h2
+              onClick={() => onReadFull(paper)}
+              className="leading-tight mb-3 cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
               {italicPart && (
                 <span className="block text-lg font-extralight italic text-foreground-secondary mb-0.5">
                   {italicPart}
@@ -202,11 +215,38 @@ export default function DashboardQuickPeek({
             </h2>
 
             {/* Metadata: date + reading time */}
-            <div className="flex items-center gap-6 text-[11px] font-medium uppercase tracking-widest text-foreground-muted mb-8">
+            <div className="flex items-center gap-6 text-[11px] font-medium uppercase tracking-widest text-foreground-muted mb-5">
               {dateDisplay && <span>{dateDisplay}</span>}
               <span style={{ color: "var(--color-accent)" }} className="font-bold">
                 {readingTime}
               </span>
+            </div>
+
+            {/* Primary actions: Read Full Paper + PDF */}
+            <div className="flex items-center gap-2.5 mb-8">
+              <button
+                type="button"
+                onClick={() => onReadFull(paper)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-[0.98]"
+                style={{
+                  backgroundColor: "var(--color-accent)",
+                  color: "var(--color-on-accent)",
+                }}
+              >
+                Read Full Paper
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </button>
+              {paper.pdf_url && (
+                <a
+                  href={paper.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-surface-inset text-foreground-secondary hover:text-foreground text-xs font-bold uppercase tracking-wider transition-colors"
+                >
+                  PDF
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
             </div>
 
             {/* ── Abstract with drop cap ───────────────────── */}
@@ -394,7 +434,8 @@ export default function DashboardQuickPeek({
           <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
