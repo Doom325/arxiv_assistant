@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useInView } from "react-intersection-observer";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Paper } from "../lib/api";
@@ -8,8 +8,13 @@ import { SkeletonGrid, SkeletonList, SkeletonBentoGrid } from "./SkeletonCard";
 import { api } from "../lib/api";
 import ErrorBoundary from "./ErrorBoundary";
 import { useKeyboardNav } from "../lib/useKeyboardNav";
-import ShortcutOverlay from "./ShortcutOverlay";
-import { useLibrary } from "./LibraryContext";
+import {
+    parseDashboardSearchParams,
+    serializeDashboardSearchParams,
+    hasActiveDashboardFilters,
+    shouldUseDashboardSearchApi,
+    writeDashboardCacheIfEligible,
+} from "../lib/navigation";
 
 // New dashboard components
 import HeroLeadStory from "./dashboard/HeroLeadStory";
@@ -117,22 +122,28 @@ export default function DashboardContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const { bookmarkedMap, refreshLibrary } = useLibrary();
+    const initialFilters = parseDashboardSearchParams(searchParams);
+    const lastPushedQueryRef = useRef<string | null>(null);
+    const searchParamsString = searchParams.toString();
+    const latestSearchParamsStringRef = useRef(searchParamsString);
+    const lastSyncedFilterKeyRef = useRef(serializeDashboardSearchParams(initialFilters));
+    const isInitialLoadRef = useRef(true);
 
     /* ── Paper state ── */
     const [papers, setPapers] = useState<Paper[]>([]);
     const [loading, setLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true);
     const [page, setPage] = useState(0);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [isMounted, setIsMounted] = useState(false);
 
-    /* ── Filter state ── */
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [dateStart, setDateStart] = useState<string | null>(null);
-    const [dateEnd, setDateEnd] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [sortBy, setSortBy] = useState("relevance");
+    /* ── Filter state (initialized from URL searchParams) ── */
+    const [selectedCategories, setSelectedCategories] = useState<string[]>(
+        initialFilters.selectedCategories,
+    );
+    const [dateStart, setDateStart] = useState<string | null>(initialFilters.dateStart);
+    const [dateEnd, setDateEnd] = useState<string | null>(initialFilters.dateEnd);
+    const [searchQuery, setSearchQuery] = useState<string>(initialFilters.searchQuery);
+    const [sortBy, setSortBy] = useState<string>(initialFilters.sortBy);
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
     /* ── Collapse state for date groups ── */
@@ -164,6 +175,7 @@ export default function DashboardContent() {
     /* ── Quick-peek state ── */
     const [peekIndex, setPeekIndex] = useState<number>(-1);
     const peekPaper = peekIndex >= 0 && peekIndex < papers.length ? papers[peekIndex] : null;
+    const handlePeekByIndex = useCallback((index: number) => setPeekIndex(index), []);
 
     /* ── Infinite scroll ── */
     const { ref, inView } = useInView({
@@ -171,10 +183,12 @@ export default function DashboardContent() {
         triggerOnce: false,
     });
 
-    /* ── Keyboard navigation (9.11) ── */
-    const { focusedIndex, showShortcuts, setShowShortcuts } = useKeyboardNav({
+    /* ── Item-level keyboard navigation (global chords & ? handled in AppShell) ── */
+    const { focusedIndex } = useKeyboardNav({
         itemCount: papers.length,
-        onPeek: (index) => setPeekIndex(index),
+        onPeek: handlePeekByIndex,
+        enableChords: false,
+        enableOverlayShortcut: false,
     });
 
     // Derive focusedPaperId from focusedIndex
@@ -192,9 +206,6 @@ export default function DashboardContent() {
         });
         return groups;
     }, [papers]);
-
-    // Flat list for peek prev/next
-    const flatPapers = useMemo(() => Object.values(groupedPapers).flat(), [groupedPapers]);
 
     /* ── Peek navigation ── */
     const handlePeekPrev = () => setPeekIndex((prev) => Math.max(prev - 1, 0));
@@ -217,21 +228,35 @@ export default function DashboardContent() {
     /* ── Mount ── */
     useEffect(() => {
         setIsMounted(true);
-        // Initialize filters from URL params after mount
-        const cat = searchParams.get("category");
-        if (cat) setSelectedCategories(cat.split(","));
-        setDateStart(searchParams.get("start") || null);
-        setDateEnd(searchParams.get("end") || null);
-        setSearchQuery(searchParams.get("q") || "");
-        setSortBy(searchParams.get("sort") || "relevance");
-    }, []); // Only on mount
+    }, []);
+
+    /* ── Sync external URL searchParams navigation to filter state ── */
+    useEffect(() => {
+        latestSearchParamsStringRef.current = searchParamsString;
+        if (
+            lastPushedQueryRef.current !== null &&
+            searchParamsString === lastPushedQueryRef.current
+        ) {
+            lastPushedQueryRef.current = null;
+            return;
+        }
+        const next = parseDashboardSearchParams(searchParams);
+        setSelectedCategories((prev) =>
+            prev.join(",") === next.selectedCategories.join(",")
+                ? prev
+                : next.selectedCategories,
+        );
+        setDateStart((prev) => (prev === next.dateStart ? prev : next.dateStart));
+        setDateEnd((prev) => (prev === next.dateEnd ? prev : next.dateEnd));
+        setSearchQuery((prev) => (prev === next.searchQuery ? prev : next.searchQuery));
+        setSortBy((prev) => (prev === next.sortBy ? prev : next.sortBy));
+    }, [searchParams, searchParamsString]);
 
     /* ── Fetch papers ── */
     const fetchPapers = useCallback(async (pageNum: number, isRefresh = false) => {
         setLoading(true);
         try {
             const skip = pageNum * LIMIT;
-            // Use first selected category for API filter (API takes single category)
             const categoryFilter = selectedCategories.length > 0 ? selectedCategories[0] : undefined;
             const filters = {
                 category: categoryFilter,
@@ -239,12 +264,10 @@ export default function DashboardContent() {
                 endDate: dateEnd || undefined,
             };
 
-            let data;
-            if (searchQuery) {
-                data = await api.searchPapers(searchQuery, skip, LIMIT, sortBy, filters);
-            } else {
-                data = await api.getPapers(skip, LIMIT, filters);
-            }
+            const trimmedQuery = searchQuery.trim();
+            const data = shouldUseDashboardSearchApi(searchQuery)
+                ? await api.searchPapers(trimmedQuery, skip, LIMIT, sortBy, filters)
+                : await api.getPapers(skip, LIMIT, filters);
 
             if (!data || !Array.isArray(data)) {
                 setHasMore(false);
@@ -252,35 +275,30 @@ export default function DashboardContent() {
                 return;
             }
 
-            const transformed = data.map((p: any) => ({
+            const transformed: Paper[] = data.map((p: Paper & { category?: string }) => ({
                 ...p,
                 id: p.arxiv_id || `paper-${p.id}`,
-                db_id: p.id,
+                db_id: p.db_id ?? (typeof p.id === "number" ? p.id : undefined),
                 categories: Array.isArray(p.categories) ? p.categories : [p.category || "cs.AI"],
             }));
 
-            if (data.length < LIMIT) {
-                setHasMore(false);
-            } else {
-                setHasMore(true);
-            }
+            setHasMore(data.length >= LIMIT);
 
             setPapers((prev) => {
                 const next = isRefresh ? transformed : [...prev, ...transformed];
                 if (typeof sessionStorage !== "undefined") {
-                    try {
-                        sessionStorage.setItem("dashboard_papers", JSON.stringify(next));
-                        sessionStorage.setItem("dashboard_page", pageNum.toString());
-                        sessionStorage.setItem("dashboard_has_more", (data.length >= LIMIT).toString());
-                        sessionStorage.setItem("dashboard_cached_at", Date.now().toString());
-                    } catch (e) {
-                        console.error("Storage error", e);
-                    }
+                    writeDashboardCacheIfEligible(
+                        sessionStorage,
+                        { selectedCategories, dateStart, dateEnd, searchQuery, sortBy },
+                        next,
+                        pageNum,
+                        data.length >= LIMIT,
+                    );
                 }
                 return next;
             });
-        } catch (error) {
-            console.error("Fetch error", error);
+        } catch {
+            // Network/API error handled by empty/retry UI
         } finally {
             setLoading(false);
         }
@@ -297,27 +315,43 @@ export default function DashboardContent() {
 
     /* ── Sync filters to URL (9.14 — REQ-D14) ── */
     useEffect(() => {
-        if (!isMounted || isInitialLoad) return;
+        if (!isMounted || isInitialLoadRef.current) return;
 
-        const params = new URLSearchParams();
-        if (selectedCategories.length > 0) params.set("category", selectedCategories.join(","));
-        if (dateStart) params.set("start", dateStart);
-        if (dateEnd) params.set("end", dateEnd);
-        if (searchQuery) params.set("q", searchQuery);
-        if (sortBy !== "relevance") params.set("sort", sortBy);
+        const query = serializeDashboardSearchParams({
+            selectedCategories,
+            dateStart,
+            dateEnd,
+            searchQuery,
+            sortBy,
+        });
+        if (query === lastSyncedFilterKeyRef.current) return;
+        lastSyncedFilterKeyRef.current = query;
 
-        const query = params.toString();
-        router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        if (query !== latestSearchParamsStringRef.current) {
+            lastPushedQueryRef.current = query;
+            latestSearchParamsStringRef.current = query;
+            router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        }
 
         // Reset and fetch
         setPage(0);
         setHasMore(true);
         fetchPapers(0, true);
-    }, [selectedCategories, dateStart, dateEnd, searchQuery, sortBy, isMounted]);
+    }, [
+        selectedCategories,
+        dateStart,
+        dateEnd,
+        searchQuery,
+        sortBy,
+        isMounted,
+        fetchPapers,
+        pathname,
+        router,
+    ]);
 
     /* ── Initial Load / State Restore (9.14 — REQ-D08) ── */
     useEffect(() => {
-        if (!isMounted) return;
+        if (!isMounted || !isInitialLoadRef.current) return;
 
         const savedPapers = sessionStorage.getItem("dashboard_papers");
         const savedPage = sessionStorage.getItem("dashboard_page");
@@ -325,21 +359,29 @@ export default function DashboardContent() {
         const savedScroll = sessionStorage.getItem("dashboard_scroll");
         const cachedAt = parseInt(sessionStorage.getItem("dashboard_cached_at") || "0");
 
-        // Discard cached papers older than 30 minutes. Tabs left open across
-        // a daily-poll boundary (09:00 IST) would otherwise keep rendering
-        // the pre-poll list forever, since the restore short-circuits the
-        // fresh fetch below.
         const CACHE_TTL_MS = 30 * 60 * 1000;
         const cacheIsFresh = cachedAt > 0 && Date.now() - cachedAt < CACHE_TTL_MS;
+        const hasActiveFilters = hasActiveDashboardFilters({
+            selectedCategories,
+            dateStart,
+            dateEnd,
+            searchQuery,
+            sortBy,
+        });
 
-        if (savedPapers && cacheIsFresh && isInitialLoad && !searchParams.toString()) {
+        if (
+            savedPapers &&
+            cacheIsFresh &&
+            !searchParams.toString() &&
+            !hasActiveFilters
+        ) {
             try {
                 const parsed = JSON.parse(savedPapers);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     setPapers(parsed);
                     setPage(parseInt(savedPage || "0"));
                     setHasMore(savedHasMore === "true");
-                    setIsInitialLoad(false);
+                    isInitialLoadRef.current = false;
                     setLoading(false);
 
                     setTimeout(() => {
@@ -347,17 +389,23 @@ export default function DashboardContent() {
                     }, 100);
                     return;
                 }
-            } catch (e) {
-                console.error("Restore failed", e);
+            } catch {
                 sessionStorage.clear();
             }
         }
 
-        if (isInitialLoad) {
-            setIsInitialLoad(false);
-            fetchPapers(0, true);
-        }
-    }, [isMounted, isInitialLoad, fetchPapers, searchParams]);
+        isInitialLoadRef.current = false;
+        fetchPapers(0, true);
+    }, [
+        isMounted,
+        fetchPapers,
+        searchParams,
+        selectedCategories,
+        dateStart,
+        dateEnd,
+        searchQuery,
+        sortBy,
+    ]);
 
     /* ── Scroll Persistence ── */
     useEffect(() => {
@@ -565,9 +613,6 @@ export default function DashboardContent() {
                     )}
                 </div>
             )}
-
-            {/* ── Keyboard Shortcuts Overlay ── */}
-            <ShortcutOverlay open={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
             {/* ── Dashboard Quick Peek (9.9.8 wiring) ── */}
             <DashboardQuickPeek

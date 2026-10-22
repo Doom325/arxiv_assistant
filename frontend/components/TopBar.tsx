@@ -1,34 +1,25 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
-import { Menu, Bell, UserCircle, Search } from 'lucide-react'
-import ThemeToggle from './ThemeToggle'
+import { Menu, Search, Plus } from 'lucide-react'
+import { triggerOpenAddPaper } from '../lib/navigation'
 
-const STATUS_TABS = ['Unread', 'Reading', 'Read', 'Skipped'] as const
-type StatusTab = (typeof STATUS_TABS)[number]
-
-const QUEUE_ROUTES = ['/', '/queue']
-
-interface TopBarProps {
+export interface TopBarProps {
   onHamburgerOpen: () => void
-  statusFilter?: string
-  onStatusChange?: (status: string) => void
+  onAddPaperOpen?: () => void
 }
 
 export default function TopBar({
   onHamburgerOpen,
-  statusFilter = 'Unread',
-  onStatusChange,
+  onAddPaperOpen,
 }: TopBarProps) {
-  const pathname = usePathname()
-  const showStatusTabs = QUEUE_ROUTES.includes(pathname)
-
   function handleSearchClick() {
-    // CommandPalette is purely keyboard-driven (no programmatic open API).
-    // Dispatch a synthetic Cmd+K to trigger its existing keydown listener.
     window.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
     )
+  }
+
+  function handleAddPaperClick() {
+    triggerOpenAddPaper(onAddPaperOpen)
   }
 
   return (
@@ -39,11 +30,12 @@ export default function TopBar({
       {/* Left: hamburger + wordmark */}
       <div className="flex items-center gap-3 flex-shrink-0">
         <button
+          type="button"
           onClick={onHamburgerOpen}
           aria-label="Open navigation drawer"
           className="flex items-center justify-center h-8 w-8 rounded-md text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary transition-colors"
         >
-          <Menu size={20} />
+          <Menu size={20} aria-hidden="true" />
         </button>
 
         {/* Wordmark: "Scholar's" light + "Atelier" black italic */}
@@ -67,70 +59,32 @@ export default function TopBar({
         </span>
       </div>
 
-      {/* Center: status tabs (queue routes only) */}
-      {showStatusTabs && (
-        <nav
-          className="flex-1 flex items-center justify-center"
-          aria-label="Reading status filter"
-        >
-          <div className="flex items-center gap-0.5 bg-surface-inset rounded-full px-1 py-1">
-            {STATUS_TABS.map((tab) => {
-              const isActive = statusFilter === tab
-              return (
-                <button
-                  key={tab}
-                  onClick={() => onStatusChange?.(tab)}
-                  className={[
-                    'px-3 py-1 rounded-full text-sm transition-colors',
-                    isActive
-                      ? 'bg-accent text-on-accent font-medium'
-                      : 'text-foreground-secondary hover:text-foreground hover:bg-surface-card',
-                  ].join(' ')}
-                  aria-pressed={isActive}
-                >
-                  {tab}
-                </button>
-              )
-            })}
-          </div>
-        </nav>
-      )}
+      {/* Center spacer */}
+      <div className="flex-1" />
 
-      {/* Spacer when tabs are not shown */}
-      {!showStatusTabs && <div className="flex-1" />}
-
-      {/* Right: search + notifications + avatar */}
+      {/* Right: search + add paper */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Search input — click triggers CommandPalette */}
         <button
+          type="button"
           onClick={handleSearchClick}
           aria-label="Search — press ⌘K"
           className="flex items-center gap-2 h-8 px-3 rounded-md bg-surface-inset text-foreground-muted hover:bg-surface-card hover:text-foreground-secondary transition-colors text-sm"
         >
-          <Search size={15} />
+          <Search size={15} aria-hidden="true" />
           <span className="hidden sm:inline">Search</span>
           <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-foreground-muted border border-foreground-muted/30 rounded px-1 py-0.5 font-sans">
             ⌘K
           </kbd>
         </button>
 
-        {/* Theme toggle */}
-        <ThemeToggle />
-
-        {/* Notification bell — placeholder */}
         <button
-          aria-label="Notifications"
-          className="flex items-center justify-center h-8 w-8 rounded-md text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary transition-colors"
+          type="button"
+          onClick={handleAddPaperClick}
+          aria-label="Add Paper"
+          className="flex items-center gap-1.5 h-8 px-3 rounded-md bg-accent text-on-accent hover:bg-accent-hover transition-colors text-sm font-medium"
         >
-          <Bell size={18} />
-        </button>
-
-        {/* User avatar — placeholder */}
-        <button
-          aria-label="User account"
-          className="flex items-center justify-center h-8 w-8 rounded-md text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary transition-colors"
-        >
-          <UserCircle size={20} />
+          <Plus size={15} aria-hidden="true" />
+          <span>+ Add Paper</span>
         </button>
       </div>
     </header>

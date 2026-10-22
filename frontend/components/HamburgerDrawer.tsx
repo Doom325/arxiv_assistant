@@ -1,24 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
-  Compass,
-  Home,
-  Search,
-  Settings,
-  MessageSquare,
+  LayoutList,
+  Archive,
   BookOpen,
-  Bookmark,
-  BarChart3,
+  MessageSquare,
   Layers,
   GitBranch,
+  BarChart3,
+  Settings,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
+import { ALL_NAV_ROUTES, isRouteActive } from '../lib/navigation'
 import AddPaperForm from './AddPaperForm'
-
-// ─── LibraryRing widget (preserved from Sidebar.tsx) ────────────────────────
 
 function LibraryRing({
   total,
@@ -33,7 +30,7 @@ function LibraryRing({
 
   return (
     <div className="flex items-center gap-3 px-4 py-3">
-      <svg width="44" height="44" viewBox="0 0 44 44">
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
         <circle
           cx="22"
           cy="22"
@@ -77,23 +74,23 @@ function LibraryRing({
   )
 }
 
-// ─── Navigation items (preserved from Sidebar.tsx) ──────────────────────────
+const ROUTE_ICONS: Record<string, typeof LayoutList> = {
+  Queue: LayoutList,
+  Archive: Archive,
+  Library: BookOpen,
+  Chat: MessageSquare,
+  Patterns: Layers,
+  Timeline: GitBranch,
+  Analysis: BarChart3,
+  Settings: Settings,
+}
 
-const navigation = [
-  { name: 'Discover', href: '/', icon: Compass },
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Research', href: '/research', icon: Search },
-  { name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
-  { name: 'Analysis', href: '/analysis', icon: BarChart3 },
-  { name: 'Timeline', href: '/timeline', icon: GitBranch },
-  { name: 'Patterns', href: '/patterns', icon: Layers },
-  { name: 'Deep Dive', href: '/chat', icon: MessageSquare },
-  { name: 'Settings', href: '/settings', icon: Settings },
-]
+export const navigation = ALL_NAV_ROUTES.map((route) => ({
+  ...route,
+  icon: ROUTE_ICONS[route.name] ?? LayoutList,
+}))
 
-// ─── HamburgerDrawer ────────────────────────────────────────────────────────
-
-interface HamburgerDrawerProps {
+export interface HamburgerDrawerProps {
   isOpen: boolean
   onClose: () => void
 }
@@ -113,11 +110,11 @@ export default function HamburgerDrawer({
     api
       .getAnalyticsSummaryStats()
       .then((s) => setStats(s))
-      .catch(() => {}) // silently fail
+      .catch(() => {})
     api
       .getQueueStats()
       .then((qs) => setUnreadCount(qs.total_unread))
-      .catch(() => {}) // silently fail
+      .catch(() => {})
   }, [])
 
   return (
@@ -145,7 +142,7 @@ export default function HamburgerDrawer({
       >
         {/* Drawer header — aligns with 60px top bar */}
         <div className="h-[60px] flex items-center px-5 flex-shrink-0">
-          <BookOpen className="h-5 w-5 text-accent mr-2.5" />
+          <BookOpen className="h-5 w-5 text-accent mr-2.5" aria-hidden="true" />
           <span
             className="text-base leading-none select-none"
             style={{ fontFamily: 'var(--font-display)' }}
@@ -166,15 +163,16 @@ export default function HamburgerDrawer({
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5" aria-label="Drawer">
           {navigation.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = isRouteActive(pathname, item.activeOn)
             const Icon = item.icon
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 onClick={onClose}
+                aria-current={isActive ? 'page' : undefined}
                 className={[
                   'group flex items-center px-3 py-2.5 rounded-md text-sm transition-colors',
                   isActive
@@ -183,6 +181,7 @@ export default function HamburgerDrawer({
                 ].join(' ')}
               >
                 <Icon
+                  aria-hidden="true"
                   className={[
                     'mr-3 h-4 w-4 flex-shrink-0 transition-colors',
                     isActive
@@ -191,7 +190,7 @@ export default function HamburgerDrawer({
                   ].join(' ')}
                 />
                 {item.name}
-                {item.name === 'Discover' && unreadCount > 0 && (
+                {item.showBadge && unreadCount > 0 && (
                   <span className="ml-auto inline-flex items-center justify-center rounded-full bg-accent text-on-accent px-2 py-0.5 text-[10px] font-semibold min-w-[20px]">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
@@ -215,22 +214,9 @@ export default function HamburgerDrawer({
             <p className="text-xs font-semibold text-foreground-muted uppercase tracking-[0.08em] mb-3">
               On-Demand Addition
             </p>
-            <AddPaperForm />
+            <AddPaperForm onSuccess={onClose} />
           </div>
         </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-foreground-muted/10 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-sm font-medium text-on-accent flex-shrink-0">
-              U
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">User</p>
-              <p className="text-xs text-foreground-muted">Pro Plan</p>
-            </div>
-          </div>
-        </div>
       </div>
     </>
   )
