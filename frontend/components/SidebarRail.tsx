@@ -18,54 +18,27 @@ import {
 import ThemeToggle from './ThemeToggle'
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
-import { isRouteActive, SETTINGS_NAV_ROUTE } from '../lib/navigation'
+import {
+  CORE_NAV_ROUTES,
+  SETTINGS_NAV_ROUTE,
+  isRouteActive,
+} from '../lib/navigation'
 import { toast } from 'sonner'
 
-export const navItems = [
-  {
-    name: 'Queue',
-    href: '/queue',
-    icon: LayoutList,
-    activeOn: ['/', '/queue'],
-    showBadge: true,
-  },
-  {
-    name: 'Archive',
-    href: '/dashboard',
-    icon: Archive,
-    activeOn: ['/dashboard', '/research'],
-  },
-  {
-    name: 'Library',
-    href: '/bookmarks',
-    icon: BookOpen,
-    activeOn: ['/bookmarks'],
-  },
-  {
-    name: 'Chat',
-    href: '/chat',
-    icon: MessageSquare,
-    activeOn: ['/chat'],
-  },
-  {
-    name: 'Patterns',
-    href: '/patterns',
-    icon: Layers,
-    activeOn: ['/patterns'],
-  },
-  {
-    name: 'Timeline',
-    href: '/timeline',
-    icon: GitBranch,
-    activeOn: ['/timeline'],
-  },
-  {
-    name: 'Analysis',
-    href: '/analysis',
-    icon: BarChart3,
-    activeOn: ['/analysis'],
-  },
-]
+const CORE_ROUTE_ICONS: Record<string, typeof LayoutList> = {
+  Queue: LayoutList,
+  Archive: Archive,
+  Library: BookOpen,
+  Chat: MessageSquare,
+  Patterns: Layers,
+  Timeline: GitBranch,
+  Analysis: BarChart3,
+}
+
+export const navItems = CORE_NAV_ROUTES.map((route) => ({
+  ...route,
+  icon: CORE_ROUTE_ICONS[route.name] ?? LayoutList,
+}))
 
 export interface SidebarRailProps {
   onOpenShortcuts?: () => void

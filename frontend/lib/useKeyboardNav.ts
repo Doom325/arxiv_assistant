@@ -26,6 +26,15 @@ export function useKeyboardNav({
     const [showShortcuts, setShowShortcuts] = useState(false);
     const chordBufferRef = useRef<string | null>(null);
     const chordTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const onPeekRef = useRef(onPeek);
+    const onBookmarkRef = useRef(onBookmark);
+    const hasPeek = Boolean(onPeek);
+    const hasBookmark = Boolean(onBookmark);
+
+    useEffect(() => {
+        onPeekRef.current = onPeek;
+        onBookmarkRef.current = onBookmark;
+    }, [onPeek, onBookmark]);
 
     const isInputFocused = useCallback(() => {
         const el = document.activeElement as HTMLElement | null;
@@ -52,8 +61,8 @@ export function useKeyboardNav({
                 isInputFocused: isInputFocused(),
                 enableChords,
                 enableOverlayShortcut,
-                hasPeek: Boolean(onPeek),
-                hasBookmark: Boolean(onBookmark),
+                hasPeek,
+                hasBookmark,
             });
 
             if ("clearChord" in action && action.clearChord) {
@@ -79,10 +88,10 @@ export function useKeyboardNav({
                     break;
                 case "peek":
                     setFocusedIndex(action.nextFocusedIndex);
-                    onPeek?.(action.index);
+                    onPeekRef.current?.(action.index);
                     break;
                 case "bookmark":
-                    onBookmark?.(action.index);
+                    onBookmarkRef.current?.(action.index);
                     break;
                 case "toggle-shortcuts":
                     setShowShortcuts((prev) => !prev);
@@ -102,8 +111,8 @@ export function useKeyboardNav({
     }, [
         itemCount,
         focusedIndex,
-        onPeek,
-        onBookmark,
+        hasPeek,
+        hasBookmark,
         enableChords,
         enableOverlayShortcut,
         isInputFocused,

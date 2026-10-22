@@ -1,7 +1,7 @@
 'use client'
 
 import { Menu, Search, Plus } from 'lucide-react'
-import { OPEN_ADD_PAPER_EVENT } from '../lib/navigation'
+import { triggerOpenAddPaper } from '../lib/navigation'
 
 export interface TopBarProps {
   onHamburgerOpen: () => void
@@ -19,11 +19,7 @@ export default function TopBar({
   }
 
   function handleAddPaperClick() {
-    if (onAddPaperOpen) {
-      onAddPaperOpen()
-      return
-    }
-    window.dispatchEvent(new CustomEvent(OPEN_ADD_PAPER_EVENT))
+    triggerOpenAddPaper(onAddPaperOpen)
   }
 
   return (

@@ -17,19 +17,25 @@ import {
     Command as CommandIcon,
 } from "lucide-react";
 import { api, Paper } from "../lib/api";
-import { OPEN_ADD_PAPER_EVENT } from "../lib/navigation";
+import { ALL_NAV_ROUTES, triggerOpenAddPaper } from "../lib/navigation";
 import { getCategoryColor } from "../lib/categoryColors";
 
-export const pages = [
-    { name: "Queue", href: "/queue", icon: LayoutList },
-    { name: "Archive", href: "/dashboard", icon: Archive },
-    { name: "Library", href: "/bookmarks", icon: BookOpen },
-    { name: "Chat", href: "/chat", icon: MessageSquare },
-    { name: "Patterns", href: "/patterns", icon: Layers },
-    { name: "Timeline", href: "/timeline", icon: GitBranch },
-    { name: "Analysis", href: "/analysis", icon: BarChart3 },
-    { name: "Settings", href: "/settings", icon: Settings },
-];
+const ROUTE_ICONS: Record<string, typeof LayoutList> = {
+    Queue: LayoutList,
+    Archive: Archive,
+    Library: BookOpen,
+    Chat: MessageSquare,
+    Patterns: Layers,
+    Timeline: GitBranch,
+    Analysis: BarChart3,
+    Settings: Settings,
+};
+
+export const pages = ALL_NAV_ROUTES.map((route) => ({
+    name: route.name,
+    href: route.href,
+    icon: ROUTE_ICONS[route.name] ?? LayoutList,
+}));
 
 export default function CommandPalette() {
     const router = useRouter();
@@ -203,7 +209,7 @@ export default function CommandPalette() {
                                         value="Add paper from arXiv URL"
                                         onSelect={() => {
                                             setOpen(false);
-                                            window.dispatchEvent(new CustomEvent(OPEN_ADD_PAPER_EVENT));
+                                            triggerOpenAddPaper();
                                         }}
                                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-foreground-secondary cursor-pointer data-[selected=true]:bg-surface-inset data-[selected=true]:text-accent transition-colors"
                                     >

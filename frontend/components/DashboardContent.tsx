@@ -12,7 +12,8 @@ import {
     parseDashboardSearchParams,
     serializeDashboardSearchParams,
     hasActiveDashboardFilters,
-    shouldCacheDashboardPapers,
+    shouldUseDashboardSearchApi,
+    writeDashboardCacheIfEligible,
 } from "../lib/navigation";
 
 // New dashboard components
@@ -125,6 +126,7 @@ export default function DashboardContent() {
     const lastPushedQueryRef = useRef<string | null>(null);
     const searchParamsString = searchParams.toString();
     const latestSearchParamsStringRef = useRef(searchParamsString);
+    const lastSyncedFilterKeyRef = useRef(serializeDashboardSearchParams(initialFilters));
     const isInitialLoadRef = useRef(true);
 
     /* ── Paper state ── */
@@ -173,6 +175,7 @@ export default function DashboardContent() {
     /* ── Quick-peek state ── */
     const [peekIndex, setPeekIndex] = useState<number>(-1);
     const peekPaper = peekIndex >= 0 && peekIndex < papers.length ? papers[peekIndex] : null;
+    const handlePeekByIndex = useCallback((index: number) => setPeekIndex(index), []);
 
     /* ── Infinite scroll ── */
     const { ref, inView } = useInView({
@@ -183,7 +186,7 @@ export default function DashboardContent() {
     /* ── Item-level keyboard navigation (global chords & ? handled in AppShell) ── */
     const { focusedIndex } = useKeyboardNav({
         itemCount: papers.length,
-        onPeek: (index) => setPeekIndex(index),
+        onPeek: handlePeekByIndex,
         enableChords: false,
         enableOverlayShortcut: false,
     });
@@ -261,8 +264,9 @@ export default function DashboardContent() {
                 endDate: dateEnd || undefined,
             };
 
-            const data = searchQuery
-                ? await api.searchPapers(searchQuery, skip, LIMIT, sortBy, filters)
+            const trimmedQuery = searchQuery.trim();
+            const data = shouldUseDashboardSearchApi(searchQuery)
+                ? await api.searchPapers(trimmedQuery, skip, LIMIT, sortBy, filters)
                 : await api.getPapers(skip, LIMIT, filters);
 
             if (!data || !Array.isArray(data)) {
@@ -280,25 +284,16 @@ export default function DashboardContent() {
 
             setHasMore(data.length >= LIMIT);
 
-            const canCacheUnfiltered = shouldCacheDashboardPapers({
-                selectedCategories,
-                dateStart,
-                dateEnd,
-                searchQuery,
-                sortBy,
-            });
-
             setPapers((prev) => {
                 const next = isRefresh ? transformed : [...prev, ...transformed];
-                if (canCacheUnfiltered && typeof sessionStorage !== "undefined") {
-                    try {
-                        sessionStorage.setItem("dashboard_papers", JSON.stringify(next));
-                        sessionStorage.setItem("dashboard_page", pageNum.toString());
-                        sessionStorage.setItem("dashboard_has_more", (data.length >= LIMIT).toString());
-                        sessionStorage.setItem("dashboard_cached_at", Date.now().toString());
-                    } catch {
-                        // Ignore storage quota errors
-                    }
+                if (typeof sessionStorage !== "undefined") {
+                    writeDashboardCacheIfEligible(
+                        sessionStorage,
+                        { selectedCategories, dateStart, dateEnd, searchQuery, sortBy },
+                        next,
+                        pageNum,
+                        data.length >= LIMIT,
+                    );
                 }
                 return next;
             });
@@ -329,6 +324,9 @@ export default function DashboardContent() {
             searchQuery,
             sortBy,
         });
+        if (query === lastSyncedFilterKeyRef.current) return;
+        lastSyncedFilterKeyRef.current = query;
+
         if (query !== latestSearchParamsStringRef.current) {
             lastPushedQueryRef.current = query;
             latestSearchParamsStringRef.current = query;

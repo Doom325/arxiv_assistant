@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
-import { isRouteActive } from '../lib/navigation'
+import { ALL_NAV_ROUTES, isRouteActive } from '../lib/navigation'
 import AddPaperForm from './AddPaperForm'
 
 function LibraryRing({
@@ -74,57 +74,21 @@ function LibraryRing({
   )
 }
 
-export const navigation = [
-  {
-    name: 'Queue',
-    href: '/queue',
-    activeOn: ['/', '/queue'],
-    showBadge: true,
-    icon: LayoutList,
-  },
-  {
-    name: 'Archive',
-    href: '/dashboard',
-    activeOn: ['/dashboard', '/research'],
-    icon: Archive,
-  },
-  {
-    name: 'Library',
-    href: '/bookmarks',
-    activeOn: ['/bookmarks'],
-    icon: BookOpen,
-  },
-  {
-    name: 'Chat',
-    href: '/chat',
-    activeOn: ['/chat'],
-    icon: MessageSquare,
-  },
-  {
-    name: 'Patterns',
-    href: '/patterns',
-    activeOn: ['/patterns'],
-    icon: Layers,
-  },
-  {
-    name: 'Timeline',
-    href: '/timeline',
-    activeOn: ['/timeline'],
-    icon: GitBranch,
-  },
-  {
-    name: 'Analysis',
-    href: '/analysis',
-    activeOn: ['/analysis'],
-    icon: BarChart3,
-  },
-  {
-    name: 'Settings',
-    href: '/settings',
-    activeOn: ['/settings'],
-    icon: Settings,
-  },
-]
+const ROUTE_ICONS: Record<string, typeof LayoutList> = {
+  Queue: LayoutList,
+  Archive: Archive,
+  Library: BookOpen,
+  Chat: MessageSquare,
+  Patterns: Layers,
+  Timeline: GitBranch,
+  Analysis: BarChart3,
+  Settings: Settings,
+}
+
+export const navigation = ALL_NAV_ROUTES.map((route) => ({
+  ...route,
+  icon: ROUTE_ICONS[route.name] ?? LayoutList,
+}))
 
 export interface HamburgerDrawerProps {
   isOpen: boolean

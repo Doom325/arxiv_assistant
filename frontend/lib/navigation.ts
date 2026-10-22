@@ -131,6 +131,17 @@ export function buildResearchRedirectUrl(
     return queryString ? `/dashboard?${queryString}` : "/dashboard";
 }
 
+export async function executeResearchRedirect(
+    searchParams:
+        | Promise<Record<string, string | string[] | undefined>>
+        | Record<string, string | string[] | undefined>
+        | undefined,
+    redirectFn: (url: string) => never,
+): Promise<never> {
+    const resolvedParams = searchParams ? await searchParams : undefined;
+    return redirectFn(buildResearchRedirectUrl(resolvedParams));
+}
+
 export interface DashboardFilterState {
     selectedCategories: string[];
     dateStart: string | null;
@@ -169,9 +180,14 @@ export function serializeDashboardSearchParams(state: DashboardFilterState): str
     }
     if (state.dateStart) params.set("start", state.dateStart);
     if (state.dateEnd) params.set("end", state.dateEnd);
-    if (state.searchQuery) params.set("q", state.searchQuery);
+    const trimmedQuery = state.searchQuery.trim();
+    if (trimmedQuery) params.set("q", trimmedQuery);
     if (state.sortBy !== "relevance") params.set("sort", state.sortBy);
     return params.toString();
+}
+
+export function shouldUseDashboardSearchApi(searchQuery: string): boolean {
+    return searchQuery.trim().length > 0;
 }
 
 export function hasActiveDashboardFilters(state: DashboardFilterState): boolean {
@@ -179,7 +195,7 @@ export function hasActiveDashboardFilters(state: DashboardFilterState): boolean 
         state.selectedCategories.length > 0 ||
         Boolean(state.dateStart) ||
         Boolean(state.dateEnd) ||
-        state.searchQuery.trim().length > 0 ||
+        shouldUseDashboardSearchApi(state.searchQuery) ||
         state.sortBy !== "relevance"
     );
 }
@@ -187,6 +203,36 @@ export function hasActiveDashboardFilters(state: DashboardFilterState): boolean 
 export function shouldCacheDashboardPapers(state: DashboardFilterState): boolean {
     return !hasActiveDashboardFilters(state);
 }
+
+export interface StorageLike {
+    getItem(key: string): string | null;
+    setItem(key: string, value: string): void;
+    clear(): void;
+}
+
+export function writeDashboardCacheIfEligible(
+    storage: Pick<StorageLike, "setItem"> | null | undefined,
+    state: DashboardFilterState,
+    papers: unknown[],
+    pageNum: number,
+    hasMore: boolean,
+    now: number = Date.now(),
+): boolean {
+    if (!storage || !shouldCacheDashboardPapers(state)) {
+        return false;
+    }
+    try {
+        storage.setItem("dashboard_papers", JSON.stringify(papers));
+        storage.setItem("dashboard_page", pageNum.toString());
+        storage.setItem("dashboard_has_more", hasMore.toString());
+        storage.setItem("dashboard_cached_at", now.toString());
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock"]);
 
 export interface KeyboardNavEventInput {
     key: string;
@@ -210,11 +256,17 @@ export type KeyboardNavAction =
     | { type: "none"; clearChord?: boolean }
     | { type: "start-chord" }
     | { type: "navigate"; href: string; preventDefault: true; clearChord: true }
-    | { type: "focus"; nextIndex: number; preventDefault: true }
-    | { type: "peek"; index: number; nextFocusedIndex: number; preventDefault: true }
+    | { type: "focus"; nextIndex: number; preventDefault: true; clearChord?: boolean }
+    | {
+          type: "peek";
+          index: number;
+          nextFocusedIndex: number;
+          preventDefault: true;
+          clearChord?: boolean;
+      }
     | { type: "bookmark"; index: number; preventDefault: true }
-    | { type: "toggle-shortcuts"; preventDefault: true }
-    | { type: "escape"; closeShortcuts: boolean };
+    | { type: "toggle-shortcuts"; preventDefault: true; clearChord?: boolean }
+    | { type: "escape"; closeShortcuts: boolean; clearChord?: boolean };
 
 export function resolveKeyboardNavAction(
     event: KeyboardNavEventInput,
@@ -224,38 +276,52 @@ export function resolveKeyboardNavAction(
         return { type: "none" };
     }
 
+    if (MODIFIER_KEYS.has(event.key)) {
+        return { type: "none" };
+    }
+
+    let clearedPendingChord = false;
     if (state.chordPending) {
-        if (state.enableChords) {
-            const dest = CHORD_MAP[event.key.toLowerCase()];
-            if (dest) {
+        const chordDest = CHORD_MAP[event.key.toLowerCase()];
+        if (chordDest) {
+            if (state.enableChords) {
                 return {
                     type: "navigate",
-                    href: dest,
+                    href: chordDest,
                     preventDefault: true,
                     clearChord: true,
                 };
             }
+            // In item mode (enableChords: false), consume recognized g+<chord> keys
+            // (such as g+b) so they never trigger single-key item actions.
+            return { type: "none", clearChord: true };
         }
-        return { type: "none", clearChord: true };
+        // Unrecognized second key after 'g': clear pending chord and fall through
+        // so non-colliding item keys (j, k, Space, Escape) still execute.
+        clearedPendingChord = true;
     }
+
+    const chordSuffix = clearedPendingChord ? { clearChord: true as const } : {};
 
     switch (event.key) {
         case "j":
-            if (state.itemCount <= 0) return { type: "none" };
+            if (state.itemCount <= 0) return { type: "none", ...chordSuffix };
             return {
                 type: "focus",
                 nextIndex: Math.min(state.focusedIndex + 1, state.itemCount - 1),
                 preventDefault: true,
+                ...chordSuffix,
             };
         case "k":
-            if (state.itemCount <= 0) return { type: "none" };
+            if (state.itemCount <= 0) return { type: "none", ...chordSuffix };
             return {
                 type: "focus",
                 nextIndex: Math.max(state.focusedIndex - 1, 0),
                 preventDefault: true,
+                ...chordSuffix,
             };
         case " ":
-            if (!state.hasPeek || state.itemCount <= 0) return { type: "none" };
+            if (!state.hasPeek || state.itemCount <= 0) return { type: "none", ...chordSuffix };
             {
                 const index = state.focusedIndex >= 0 ? state.focusedIndex : 0;
                 return {
@@ -263,10 +329,13 @@ export function resolveKeyboardNavAction(
                     index,
                     nextFocusedIndex: index,
                     preventDefault: true,
+                    ...chordSuffix,
                 };
             }
         case "b":
-            if (state.focusedIndex < 0 || !state.hasBookmark) return { type: "none" };
+            if (state.focusedIndex < 0 || !state.hasBookmark) {
+                return { type: "none", ...chordSuffix };
+            }
             return {
                 type: "bookmark",
                 index: state.focusedIndex,
@@ -275,11 +344,54 @@ export function resolveKeyboardNavAction(
         case "g":
             return { type: "start-chord" };
         case "?":
-            if (!state.enableOverlayShortcut) return { type: "none" };
-            return { type: "toggle-shortcuts", preventDefault: true };
+            if (!state.enableOverlayShortcut) return { type: "none", ...chordSuffix };
+            return { type: "toggle-shortcuts", preventDefault: true, ...chordSuffix };
         case "Escape":
-            return { type: "escape", closeShortcuts: state.enableOverlayShortcut };
+            return {
+                type: "escape",
+                closeShortcuts: state.enableOverlayShortcut,
+                ...chordSuffix,
+            };
         default:
-            return { type: "none" };
+            return { type: "none", ...chordSuffix };
+    }
+}
+
+export function triggerOpenAddPaper(
+    onAddPaperOpen?: () => void,
+    eventTarget?: Pick<EventTarget, "dispatchEvent"> | null,
+): void {
+    if (onAddPaperOpen) {
+        onAddPaperOpen();
+        return;
+    }
+    const target = eventTarget ?? (typeof window !== "undefined" ? window : null);
+    target?.dispatchEvent(new CustomEvent(OPEN_ADD_PAPER_EVENT));
+}
+
+export interface SubmitAddPaperDeps<TPaper extends { title?: string; arxiv_id: string }> {
+    addPaperFn: (query: string) => Promise<TPaper>;
+    onResetQuery: () => void;
+    onSuccessToast: (message: string) => void;
+    onErrorToast: (message: string) => void;
+    onSuccess?: () => void;
+    onNavigate: (href: string) => void;
+}
+
+export async function submitAddPaperRequest<
+    TPaper extends { title?: string; arxiv_id: string },
+>(query: string, deps: SubmitAddPaperDeps<TPaper>): Promise<boolean> {
+    if (!query.trim()) return false;
+    try {
+        const paper = await deps.addPaperFn(query);
+        deps.onResetQuery();
+        deps.onSuccessToast(`Added "${paper.title || paper.arxiv_id}"`);
+        deps.onSuccess?.();
+        deps.onNavigate(`/paper/${paper.arxiv_id}`);
+        return true;
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to add paper";
+        deps.onErrorToast(message);
+        return false;
     }
 }

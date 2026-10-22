@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { addPaper } from '../lib/api'
+import { submitAddPaperRequest } from '../lib/navigation'
 
 export interface AddPaperFormProps {
   onSuccess?: () => void
@@ -21,14 +22,14 @@ export default function AddPaperForm({ onSuccess }: AddPaperFormProps = {}) {
 
     setLoading(true)
     try {
-      const paper = await addPaper(query)
-      setQuery('')
-      toast.success(`Added "${paper.title || paper.arxiv_id}"`)
-      onSuccess?.()
-      router.push(`/paper/${paper.arxiv_id}`)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to add paper'
-      toast.error(message)
+      await submitAddPaperRequest(query, {
+        addPaperFn: addPaper,
+        onResetQuery: () => setQuery(''),
+        onSuccessToast: (message) => toast.success(message),
+        onErrorToast: (message) => toast.error(message),
+        onSuccess,
+        onNavigate: (href) => router.push(href),
+      })
     } finally {
       setLoading(false)
     }
