@@ -2,14 +2,39 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, LayoutList, FolderOpen, Archive, Settings, Keyboard, BookMarked, ScanSearch } from 'lucide-react'
+import {
+  LayoutList,
+  Archive,
+  BookOpen,
+  MessageSquare,
+  Layers,
+  GitBranch,
+  BarChart3,
+  Settings,
+  Keyboard,
+  BookMarked,
+  ScanSearch,
+} from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
-import ShortcutOverlay from './ShortcutOverlay'
+import { isRouteActive, SETTINGS_NAV_ROUTE } from '../lib/navigation'
 import { toast } from 'sonner'
 
-const navItems = [
+export const navItems = [
+  {
+    name: 'Queue',
+    href: '/queue',
+    icon: LayoutList,
+    activeOn: ['/', '/queue'],
+    showBadge: true,
+  },
+  {
+    name: 'Archive',
+    href: '/dashboard',
+    icon: Archive,
+    activeOn: ['/dashboard', '/research'],
+  },
   {
     name: 'Library',
     href: '/bookmarks',
@@ -17,30 +42,38 @@ const navItems = [
     activeOn: ['/bookmarks'],
   },
   {
-    name: 'Queue',
-    href: '/queue',
-    icon: LayoutList,
-    activeOn: ['/queue', '/'],
-    showBadge: true,
+    name: 'Chat',
+    href: '/chat',
+    icon: MessageSquare,
+    activeOn: ['/chat'],
   },
   {
-    name: 'Collections',
-    href: '/bookmarks',
-    icon: FolderOpen,
-    activeOn: [] as string[], // placeholder — no unique route yet
+    name: 'Patterns',
+    href: '/patterns',
+    icon: Layers,
+    activeOn: ['/patterns'],
   },
   {
-    name: 'Archive',
-    href: '/research',
-    icon: Archive,
-    activeOn: ['/research'],
+    name: 'Timeline',
+    href: '/timeline',
+    icon: GitBranch,
+    activeOn: ['/timeline'],
+  },
+  {
+    name: 'Analysis',
+    href: '/analysis',
+    icon: BarChart3,
+    activeOn: ['/analysis'],
   },
 ]
 
-export default function SidebarRail() {
+export interface SidebarRailProps {
+  onOpenShortcuts?: () => void
+}
+
+export default function SidebarRail({ onOpenShortcuts }: SidebarRailProps = {}) {
   const pathname = usePathname()
   const [unreadCount, setUnreadCount] = useState(0)
-  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [scanning, setScanning] = useState(false)
 
   const handleTriggerScan = async () => {
@@ -60,92 +93,97 @@ export default function SidebarRail() {
     api
       .getQueueStats()
       .then((qs) => setUnreadCount(qs.total_unread))
-      .catch(() => {}) // silently fail
+      .catch(() => {})
   }, [])
 
+  const isSettingsActive = isRouteActive(pathname, SETTINGS_NAV_ROUTE.activeOn)
+
   return (
-    <>
-      <nav className="flex flex-col h-full w-16 bg-surface-card">
-        {/* Logo slot — aligns with 60px top bar height */}
-        <div className="h-[60px] flex items-center justify-center flex-shrink-0">
-          <BookMarked
-            size={24}
-            className="text-accent"
-            aria-label="Scholar's Atelier"
-          />
+    <nav className="flex flex-col h-full w-16 bg-surface-card" aria-label="Primary">
+      {/* Logo slot — aligns with 60px top bar height */}
+      <div className="h-[60px] flex items-center justify-center flex-shrink-0">
+        <BookMarked
+          size={24}
+          className="text-accent"
+          aria-label="Scholar's Atelier"
+        />
+      </div>
+
+      {/* Primary nav items */}
+      <div className="flex flex-col gap-1 px-2 flex-1">
+        {navItems.map((item) => {
+          const isActive = isRouteActive(pathname, item.activeOn)
+          const Icon = item.icon
+          const showDot = Boolean(item.showBadge && unreadCount > 0)
+
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              title={item.name}
+              aria-label={item.name}
+              aria-current={isActive ? 'page' : undefined}
+              className={[
+                'relative flex items-center justify-center h-10 w-full rounded-md transition-colors',
+                isActive
+                  ? 'border-l-2 border-accent bg-surface-inset text-accent'
+                  : 'text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary',
+              ].join(' ')}
+            >
+              <Icon size={20} aria-hidden="true" />
+              {showDot && (
+                <span
+                  className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent"
+                  aria-label={`${unreadCount} unread`}
+                />
+              )}
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Footer slot */}
+      <div className="flex flex-col gap-1 px-2 pb-4">
+        <Link
+          href={SETTINGS_NAV_ROUTE.href}
+          title={SETTINGS_NAV_ROUTE.name}
+          aria-label={SETTINGS_NAV_ROUTE.name}
+          aria-current={isSettingsActive ? 'page' : undefined}
+          className={[
+            'flex items-center justify-center h-10 w-full rounded-md transition-colors',
+            isSettingsActive
+              ? 'border-l-2 border-accent bg-surface-inset text-accent'
+              : 'text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary',
+          ].join(' ')}
+        >
+          <Settings size={20} aria-hidden="true" />
+        </Link>
+
+        <div className="flex items-center justify-center h-10 w-full">
+          <ThemeToggle />
         </div>
 
-        {/* Primary nav items */}
-        <div className="flex flex-col gap-1 px-2 flex-1">
-          {navItems.map((item) => {
-            const isActive = item.activeOn.includes(pathname)
-            const Icon = item.icon
-            const showDot =
-              item.showBadge && unreadCount > 0
+        <button
+          type="button"
+          title="Trigger AI Scan"
+          aria-label="Trigger AI Scan"
+          onClick={handleTriggerScan}
+          disabled={scanning}
+          className="flex items-center justify-center h-10 w-full rounded-md transition-colors text-foreground-muted hover:bg-surface-inset hover:text-accent disabled:opacity-50"
+        >
+          <ScanSearch size={20} aria-hidden="true" />
+        </button>
 
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                title={item.name}
-                className={[
-                  'relative flex items-center justify-center h-10 w-full rounded-md transition-colors',
-                  isActive
-                    ? 'border-l-2 border-accent bg-surface-inset text-accent'
-                    : 'text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary',
-                ].join(' ')}
-              >
-                <Icon size={20} />
-                {showDot && (
-                  <span
-                    className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent"
-                    aria-label={`${unreadCount} unread`}
-                  />
-                )}
-              </Link>
-            )
-          })}
-        </div>
-
-        {/* Footer slot */}
-        <div className="flex flex-col gap-1 px-2 pb-4">
-          <Link
-            href="/settings"
-            title="Settings"
-            className={[
-              'flex items-center justify-center h-10 w-full rounded-md transition-colors',
-              pathname === '/settings'
-                ? 'border-l-2 border-accent bg-surface-inset text-accent'
-                : 'text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary',
-            ].join(' ')}
-          >
-            <Settings size={20} />
-          </Link>
-
-          <div className="flex items-center justify-center h-10 w-full">
-            <ThemeToggle />
-          </div>
-
-          <button
-            title="Trigger AI Scan"
-            onClick={handleTriggerScan}
-            disabled={scanning}
-            className="flex items-center justify-center h-10 w-full rounded-md transition-colors text-foreground-muted hover:bg-surface-inset hover:text-accent disabled:opacity-50"
-          >
-            <ScanSearch size={20} />
-          </button>
-
-          <button
-            title="Keyboard shortcuts"
-            onClick={() => setShortcutsOpen(true)}
-            className="flex items-center justify-center h-10 w-full rounded-md transition-colors text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary"
-          >
-            <Keyboard size={20} />
-          </button>
-        </div>
-      </nav>
-
-      <ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
-    </>
+        <button
+          type="button"
+          title="Keyboard shortcuts"
+          aria-label="Keyboard shortcuts"
+          onClick={() => onOpenShortcuts?.()}
+          className="flex items-center justify-center h-10 w-full rounded-md transition-colors text-foreground-muted hover:bg-surface-inset hover:text-foreground-secondary"
+        >
+          <Keyboard size={20} aria-hidden="true" />
+        </button>
+      </div>
+    </nav>
   )
 }

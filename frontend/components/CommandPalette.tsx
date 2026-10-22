@@ -5,20 +5,29 @@ import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Home, Search, Bookmark, BarChart3, Layers, MessageSquare, Settings,
-    FileText, Command as CommandIcon, Inbox,
+    LayoutList,
+    Archive,
+    BookOpen,
+    MessageSquare,
+    Layers,
+    GitBranch,
+    BarChart3,
+    Settings,
+    FileText,
+    Command as CommandIcon,
 } from "lucide-react";
 import { api, Paper } from "../lib/api";
+import { OPEN_ADD_PAPER_EVENT } from "../lib/navigation";
 import { getCategoryColor } from "../lib/categoryColors";
 
-const pages = [
-    { name: "Dashboard", href: "/", icon: Home },
-    { name: "Queue", href: "/queue", icon: Inbox },
-    { name: "Research", href: "/research", icon: Search },
-    { name: "Library", href: "/bookmarks", icon: Bookmark },
-    { name: "Analysis", href: "/analysis", icon: BarChart3 },
+export const pages = [
+    { name: "Queue", href: "/queue", icon: LayoutList },
+    { name: "Archive", href: "/dashboard", icon: Archive },
+    { name: "Library", href: "/bookmarks", icon: BookOpen },
+    { name: "Chat", href: "/chat", icon: MessageSquare },
     { name: "Patterns", href: "/patterns", icon: Layers },
-    { name: "Deep Dive", href: "/chat", icon: MessageSquare },
+    { name: "Timeline", href: "/timeline", icon: GitBranch },
+    { name: "Analysis", href: "/analysis", icon: BarChart3 },
     { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -58,12 +67,16 @@ export default function CommandPalette() {
             debounceRef.current = setTimeout(async () => {
                 try {
                     const data = await api.searchPapers(q, 0, 8);
-                    const transformed = (data || []).map((p: any) => ({
-                        ...p,
-                        id: p.arxiv_id || `paper-${p.id}`,
-                        db_id: p.id,
-                        categories: Array.isArray(p.categories) ? p.categories : [p.category || "cs.AI"],
-                    }));
+                    const transformed: Paper[] = (data || []).map(
+                        (p: Paper & { category?: string }) => ({
+                            ...p,
+                            id: p.arxiv_id || `paper-${p.id}`,
+                            db_id: p.db_id ?? (typeof p.id === "number" ? p.id : undefined),
+                            categories: Array.isArray(p.categories)
+                                ? p.categories
+                                : [p.category || "cs.AI"],
+                        }),
+                    );
                     setResults(transformed);
                 } catch {
                     setResults([]);
@@ -136,7 +149,10 @@ export default function CommandPalette() {
                                 </Command.Empty>
 
                                 {/* Pages */}
-                                <Command.Group heading="Pages" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-foreground-secondary [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider">
+                                <Command.Group
+                                    heading="Pages"
+                                    className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-foreground-secondary [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider"
+                                >
                                     {pages.map((page) => (
                                         <Command.Item
                                             key={page.href}
@@ -152,7 +168,10 @@ export default function CommandPalette() {
 
                                 {/* Paper results */}
                                 {results.length > 0 && (
-                                    <Command.Group heading="Papers" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-foreground-secondary [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider">
+                                    <Command.Group
+                                        heading="Papers"
+                                        className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-foreground-secondary [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider"
+                                    >
                                         {results.map((paper) => {
                                             const cc = getCategoryColor(paper.categories?.[0] || "cs.AI");
                                             return (
@@ -164,7 +183,9 @@ export default function CommandPalette() {
                                                 >
                                                     <FileText className="h-4 w-4 text-foreground-muted shrink-0" />
                                                     <span className="truncate flex-1">{paper.title}</span>
-                                                    <span className={`px-2 py-0.5 ${cc.bg} ${cc.text} border ${cc.border} text-[10px] rounded-full shrink-0`}>
+                                                    <span
+                                                        className={`px-2 py-0.5 ${cc.bg} ${cc.text} border ${cc.border} text-[10px] rounded-full shrink-0`}
+                                                    >
                                                         {paper.categories?.[0]}
                                                     </span>
                                                 </Command.Item>
@@ -174,14 +195,15 @@ export default function CommandPalette() {
                                 )}
 
                                 {/* Actions */}
-                                <Command.Group heading="Actions" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-foreground-secondary [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider">
+                                <Command.Group
+                                    heading="Actions"
+                                    className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-foreground-secondary [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider"
+                                >
                                     <Command.Item
                                         value="Add paper from arXiv URL"
                                         onSelect={() => {
                                             setOpen(false);
-                                            // Focus the sidebar add paper input
-                                            const input = document.querySelector<HTMLInputElement>('input[placeholder="ArXiv ID or URL..."]');
-                                            input?.focus();
+                                            window.dispatchEvent(new CustomEvent(OPEN_ADD_PAPER_EVENT));
                                         }}
                                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-foreground-secondary cursor-pointer data-[selected=true]:bg-surface-inset data-[selected=true]:text-accent transition-colors"
                                     >

@@ -6,7 +6,11 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { addPaper } from '../lib/api'
 
-export default function AddPaperForm() {
+export interface AddPaperFormProps {
+  onSuccess?: () => void
+}
+
+export default function AddPaperForm({ onSuccess }: AddPaperFormProps = {}) {
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -20,6 +24,7 @@ export default function AddPaperForm() {
       const paper = await addPaper(query)
       setQuery('')
       toast.success(`Added "${paper.title || paper.arxiv_id}"`)
+      onSuccess?.()
       router.push(`/paper/${paper.arxiv_id}`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to add paper'
@@ -37,11 +42,13 @@ export default function AddPaperForm() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="ArXiv ID or URL..."
+          aria-label="ArXiv ID or URL"
           disabled={loading}
           className="w-full bg-surface-inset border border-foreground-muted/20 rounded-lg py-2 px-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent transition-all disabled:opacity-50"
         />
         <button
           type="submit"
+          aria-label="Submit arXiv ID or URL"
           disabled={loading || !query.trim()}
           className="absolute right-1 top-1 p-1.5 bg-surface-card rounded-md text-foreground-muted hover:text-foreground hover:bg-accent hover:text-on-accent transition-all disabled:opacity-30"
         >
