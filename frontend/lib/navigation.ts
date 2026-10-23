@@ -7,15 +7,15 @@ export interface NavRouteConfig {
 
 export const CORE_NAV_ROUTES: readonly NavRouteConfig[] = [
     {
-        name: "Queue",
-        href: "/queue",
-        activeOn: ["/", "/queue"],
-        showBadge: true,
+        name: "Dashboard",
+        href: "/",
+        activeOn: ["/", "/dashboard", "/research"],
     },
     {
-        name: "Archive",
-        href: "/dashboard",
-        activeOn: ["/dashboard", "/research"],
+        name: "Queue",
+        href: "/queue",
+        activeOn: ["/queue"],
+        showBadge: true,
     },
     {
         name: "Library",
@@ -81,8 +81,8 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     { keys: ["B"], description: "Bookmark focused paper" },
     { keys: ["?"], description: "Toggle shortcuts" },
     { keys: ["G", "Q"], description: "Go to Queue" },
-    { keys: ["G", "D"], description: "Go to Archive" },
-    { keys: ["G", "R"], description: "Go to Archive" },
+    { keys: ["G", "D"], description: "Go to Dashboard" },
+    { keys: ["G", "R"], description: "Go to Dashboard" },
     { keys: ["G", "L"], description: "Go to Library" },
     { keys: ["G", "B"], description: "Go to Library" },
     { keys: ["G", "C"], description: "Go to Chat" },

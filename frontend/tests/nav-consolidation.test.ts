@@ -59,8 +59,8 @@ describe("Unified Navigation Routes & Active Highlighting", () => {
         assert.deepEqual(
             CORE_NAV_ROUTES.map((r) => ({ name: r.name, href: r.href })),
             [
+                { name: "Dashboard", href: "/" },
                 { name: "Queue", href: "/queue" },
-                { name: "Archive", href: "/dashboard" },
                 { name: "Library", href: "/bookmarks" },
                 { name: "Chat", href: "/chat" },
                 { name: "Patterns", href: "/patterns" },
@@ -78,24 +78,26 @@ describe("Unified Navigation Routes & Active Highlighting", () => {
         });
     });
 
-    it("highlights Queue on both / and /queue (including trailing slash)", () => {
-        const queueRoute = CORE_NAV_ROUTES[0];
-        assert.equal(queueRoute.name, "Queue");
-        assert.equal(queueRoute.showBadge, true);
-        assert.equal(isRouteActive("/", queueRoute.activeOn), true);
-        assert.equal(isRouteActive("/queue", queueRoute.activeOn), true);
-        assert.equal(isRouteActive("/queue/", queueRoute.activeOn), true);
-        assert.equal(isRouteActive("/dashboard", queueRoute.activeOn), false);
+    it("highlights Dashboard on /, /dashboard, and /research (including trailing slash)", () => {
+        const dashboardRoute = CORE_NAV_ROUTES[0];
+        assert.equal(dashboardRoute.name, "Dashboard");
+        assert.equal(isRouteActive("/", dashboardRoute.activeOn), true);
+        assert.equal(isRouteActive("/dashboard", dashboardRoute.activeOn), true);
+        assert.equal(isRouteActive("/dashboard/", dashboardRoute.activeOn), true);
+        assert.equal(isRouteActive("/research", dashboardRoute.activeOn), true);
+        assert.equal(isRouteActive("/research/", dashboardRoute.activeOn), true);
+        assert.equal(isRouteActive("/queue", dashboardRoute.activeOn), false);
+        assert.equal(isRouteActive("/bookmarks", dashboardRoute.activeOn), false);
     });
 
-    it("highlights Archive on both /dashboard and /research (including trailing slash)", () => {
-        const archiveRoute = CORE_NAV_ROUTES[1];
-        assert.equal(archiveRoute.name, "Archive");
-        assert.equal(isRouteActive("/dashboard", archiveRoute.activeOn), true);
-        assert.equal(isRouteActive("/dashboard/", archiveRoute.activeOn), true);
-        assert.equal(isRouteActive("/research", archiveRoute.activeOn), true);
-        assert.equal(isRouteActive("/research/", archiveRoute.activeOn), true);
-        assert.equal(isRouteActive("/bookmarks", archiveRoute.activeOn), false);
+    it("highlights Queue on /queue (including trailing slash) and not on /", () => {
+        const queueRoute = CORE_NAV_ROUTES[1];
+        assert.equal(queueRoute.name, "Queue");
+        assert.equal(queueRoute.showBadge, true);
+        assert.equal(isRouteActive("/queue", queueRoute.activeOn), true);
+        assert.equal(isRouteActive("/queue/", queueRoute.activeOn), true);
+        assert.equal(isRouteActive("/", queueRoute.activeOn), false);
+        assert.equal(isRouteActive("/dashboard", queueRoute.activeOn), false);
     });
 
     it("normalizes trailing slashes consistently", () => {
@@ -127,8 +129,8 @@ describe("Global Keyboard Chords & Shortcut Definitions", () => {
             SHORTCUT_DEFINITIONS.map((item) => [item.keys.join("+"), item.description]),
         );
         assert.equal(chordTextMap.get("G+Q"), "Go to Queue");
-        assert.equal(chordTextMap.get("G+D"), "Go to Archive");
-        assert.equal(chordTextMap.get("G+R"), "Go to Archive");
+        assert.equal(chordTextMap.get("G+D"), "Go to Dashboard");
+        assert.equal(chordTextMap.get("G+R"), "Go to Dashboard");
         assert.equal(chordTextMap.get("G+L"), "Go to Library");
         assert.equal(chordTextMap.get("G+B"), "Go to Library");
         assert.equal(chordTextMap.get("G+C"), "Go to Chat");
