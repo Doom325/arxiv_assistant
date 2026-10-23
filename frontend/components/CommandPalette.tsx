@@ -5,8 +5,8 @@ import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+    LayoutDashboard,
     LayoutList,
-    Archive,
     BookOpen,
     MessageSquare,
     Layers,
@@ -21,8 +21,8 @@ import { ALL_NAV_ROUTES, triggerOpenAddPaper } from "../lib/navigation";
 import { getCategoryColor } from "../lib/categoryColors";
 
 const ROUTE_ICONS: Record<string, typeof LayoutList> = {
+    Dashboard: LayoutDashboard,
     Queue: LayoutList,
-    Archive: Archive,
     Library: BookOpen,
     Chat: MessageSquare,
     Patterns: Layers,

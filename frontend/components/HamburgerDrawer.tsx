@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  LayoutDashboard,
   LayoutList,
-  Archive,
   BookOpen,
   MessageSquare,
   Layers,
@@ -75,8 +75,8 @@ function LibraryRing({
 }
 
 const ROUTE_ICONS: Record<string, typeof LayoutList> = {
+  Dashboard: LayoutDashboard,
   Queue: LayoutList,
-  Archive: Archive,
   Library: BookOpen,
   Chat: MessageSquare,
   Patterns: Layers,

@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  LayoutDashboard,
   LayoutList,
-  Archive,
   BookOpen,
   MessageSquare,
   Layers,
@@ -26,8 +26,8 @@ import {
 import { toast } from 'sonner'
 
 const CORE_ROUTE_ICONS: Record<string, typeof LayoutList> = {
+  Dashboard: LayoutDashboard,
   Queue: LayoutList,
-  Archive: Archive,
   Library: BookOpen,
   Chat: MessageSquare,
   Patterns: Layers,
@@ -75,11 +75,18 @@ export default function SidebarRail({ onOpenShortcuts }: SidebarRailProps = {}) 
     <nav className="flex flex-col h-full w-16 bg-surface-card" aria-label="Primary">
       {/* Logo slot — aligns with 60px top bar height */}
       <div className="h-[60px] flex items-center justify-center flex-shrink-0">
-        <BookMarked
-          size={24}
-          className="text-accent"
-          aria-label="Scholar's Atelier"
-        />
+        <Link
+          href="/"
+          title="Dashboard"
+          aria-label="Scholar's Atelier Home"
+          className="flex items-center justify-center h-10 w-10 rounded-md hover:bg-surface-inset transition-colors"
+        >
+          <BookMarked
+            size={24}
+            className="text-accent"
+            aria-hidden="true"
+          />
+        </Link>
       </div>
 
       {/* Primary nav items */}
