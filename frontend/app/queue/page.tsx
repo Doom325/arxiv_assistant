@@ -355,7 +355,7 @@ export default function QueuePage() {
     return (
         <div className="relative min-h-screen bg-background">
             {/* Main canvas — takes full width minus right gutter when preview is open */}
-            <div className={`px-12 pt-8 pb-24 space-y-6 transition-all duration-300 ${previewOpen ? "mr-[400px]" : "mr-0"}`}>
+            <div className={`px-12 pt-8 pb-24 space-y-6 transition-all duration-300 ${previewOpen ? "lg:mr-[400px]" : "lg:mr-0"}`}>
                 {/* Hero Header — Task 3.2 */}
                 <div className="mb-2">
                     <h1 className="leading-tight">
