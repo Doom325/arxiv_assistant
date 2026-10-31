@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { api, QueueItem, QueueStats } from "../../lib/api";
 import QueueCard from "../../components/QueueCard";
-import QuickPeekSheet from "../../components/QuickPeekSheet";
 import QuickPreviewPanel from "@/components/queue/QuickPreviewPanel";
 import QueueFAB from "@/components/queue/QueueFAB";
 import AddPaperForm from "@/components/AddPaperForm";
@@ -745,25 +744,6 @@ export default function QueuePage() {
                     router.push(`/paper/${paper.arxiv_id}`);
                 }}
             />
-
-            {/* Peek sheet — Task 3.8.6: mobile fallback (hidden on lg+, handled by QuickPreviewPanel's isWide check) */}
-            {peekPaper && (
-                <QuickPeekSheet
-                    paper={{
-                        id: peekPaper.arxiv_id,
-                        db_id: peekPaper.paper_id,
-                        arxiv_id: peekPaper.arxiv_id,
-                        title: peekPaper.title,
-                        summary: peekPaper.summary || "",
-                        published_date: peekPaper.published_date || "",
-                        categories: [peekPaper.category],
-                        pdf_url: peekPaper.pdf_url,
-                        generated_summary:
-                            peekPaper.generated_summary ?? undefined,
-                    }}
-                    onClose={() => setPeekPaper(null)}
-                />
-            )}
 
             {/* AddPaperForm modal — Task 3.9 */}
             {fabOpen && (
