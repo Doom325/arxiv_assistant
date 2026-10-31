@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import { api, QueueItem, QueueStats } from "../../lib/api";
 import QueueCard from "../../components/QueueCard";
+import QuickPeekSheet from "../../components/QuickPeekSheet";
 import QuickPreviewPanel from "@/components/queue/QuickPreviewPanel";
+import { useIsWideViewport } from "../../lib/useIsWideViewport";
 import QueueFAB from "@/components/queue/QueueFAB";
 import AddPaperForm from "@/components/AddPaperForm";
 import FeaturedStatBlock from "@/components/queue/FeaturedStatBlock";
@@ -319,6 +321,7 @@ export default function QueuePage() {
         (dateFilterFrom ? 1 : 0) +
         (dateFilterTo ? 1 : 0);
 
+    const isWide = useIsWideViewport();
     const previewOpen = peekPaper !== null;
 
     // previewIndex for QuickPreviewPanel prev/next navigation
@@ -744,6 +747,25 @@ export default function QueuePage() {
                     router.push(`/paper/${paper.arxiv_id}`);
                 }}
             />
+
+            {/* Bottom peek sheet — narrow screens only; wide screens use QuickPreviewPanel */}
+            {peekPaper && !isWide && (
+                <QuickPeekSheet
+                    paper={{
+                        id: peekPaper.arxiv_id,
+                        db_id: peekPaper.paper_id,
+                        arxiv_id: peekPaper.arxiv_id,
+                        title: peekPaper.title,
+                        summary: peekPaper.summary || "",
+                        published_date: peekPaper.published_date || "",
+                        categories: [peekPaper.category],
+                        pdf_url: peekPaper.pdf_url,
+                        generated_summary:
+                            peekPaper.generated_summary ?? undefined,
+                    }}
+                    onClose={() => setPeekPaper(null)}
+                />
+            )}
 
             {/* AddPaperForm modal — Task 3.9 */}
             {fabOpen && (
