@@ -1,4 +1,5 @@
 import datetime
+import os
 
 import arxiv
 import pytest
@@ -45,23 +46,23 @@ def test_fetch_papers(arxiv_service):
         assert papers[0]['title'] == "Test Paper"
         assert papers[0]['authors'] == ["Author One"]
 
-@patch('requests.get')
-@patch('builtins.open', new_callable=MagicMock)
-def test_download_pdf(mock_open, mock_get, arxiv_service):
-    # Mock response
-    mock_response = MagicMock()
-    mock_response.content = b"PDF Content"
-    mock_response.status_code = 200
-    mock_get.return_value = mock_response
-    
-    # Mock file handle
-    mock_file = MagicMock()
-    mock_open.return_value.__enter__.return_value = mock_file
+@patch("core.pdf_utils.time.sleep")
+@patch("core.pdf_utils.requests.get")
+def test_download_pdf_delegates_to_core(mock_get, _sleep, arxiv_service, tmp_path):
+    """ArxivService.download_pdf routes through the shared validated/atomic
+    helper: one HTTP fetch, a %PDF-validated body, written to save_path."""
+    response = MagicMock()
+    response.content = b"%PDF-1.4 content"
+    response.raise_for_status = MagicMock()
+    mock_get.return_value = response
 
-    arxiv_service.download_pdf("http://example.com/paper.pdf", "paper.pdf")
-    
+    save_path = str(tmp_path / "2401.00001.pdf")
+    arxiv_service.download_pdf("http://example.com/paper.pdf", save_path)
+
     mock_get.assert_called_once()
-    mock_file.write.assert_called_once_with(b"PDF Content")
+    assert os.path.exists(save_path)
+    with open(save_path, "rb") as f:
+        assert f.read().startswith(b"%PDF-")
 
 def test_extract_text(arxiv_service):
     with patch('core.pdf_utils.PdfReader') as MockPdfReader:

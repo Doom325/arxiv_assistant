@@ -66,13 +66,20 @@ class TestRunSummarizationFailures:
     def test_pdf_download_failure_populates_error_columns(
         self, db_session, sample_paper, tmp_path
     ):
-        """PDF-download failure must set summary_status='failed' and populate
-        summary_error without touching generated_summary."""
+        """A PDF-download failure must set summary_status='failed' and record
+        the REAL reason (e.g. disk full) with its retryability, without
+        touching generated_summary."""
+        from core.pdf_utils import PdfDownloadError
+
         with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
              patch.object(
-                 integrations.arxiv_service,
-                 "download_pdf",
-                 side_effect=RuntimeError("network boom"),
+                 integrations,
+                 "download_pdf_strict",
+                 side_effect=PdfDownloadError(
+                     "No space left on the PDF storage volume.",
+                     code="pdf_disk_full",
+                     retryable=False,
+                 ),
              ), \
              _patch_session_local(db_session):
             integrations.run_summarization(sample_paper.id, sample_paper.pdf_url)
@@ -83,7 +90,8 @@ class TestRunSummarizationFailures:
         assert refreshed.generated_summary is None
         assert isinstance(refreshed.summary_error, dict)
         assert refreshed.summary_error["code"] == "pdf_download_failed"
-        assert "network boom" in refreshed.summary_error["message"]
+        assert "No space left" in refreshed.summary_error["message"]
+        assert refreshed.summary_error["retryable"] is False
         assert refreshed.summary_error["attempt_count"] == 1
         assert refreshed.summary_attempted_at is not None
 

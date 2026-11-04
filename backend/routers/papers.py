@@ -10,6 +10,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from config import settings
+from core.pdf_utils import (
+    PdfDownloadError,
+    download_pdf_strict,
+    get_local_pdf_path,
+)
 from database import get_db
 from ingestion import process_paper_entry
 from models import Paper, PaperEmbedding
@@ -19,6 +25,22 @@ from services.arxiv_service import arxiv_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/papers", tags=["papers"])
+
+# Disk-full is the one download failure with a dedicated HTTP status; every
+# other failure is an upstream/gateway problem (502).
+_PDF_DOWNLOAD_HTTP_STATUS = {"pdf_disk_full": 507}
+
+
+def _resolve_paper(db: Session, paper_id_or_arxiv_id: str) -> Optional[Paper]:
+    """Look a paper up by numeric PK, falling back to its arXiv id."""
+    try:
+        return db.query(Paper).filter(Paper.id == int(paper_id_or_arxiv_id)).first()
+    except ValueError:
+        return (
+            db.query(Paper)
+            .filter(Paper.arxiv_id == paper_id_or_arxiv_id)
+            .first()
+        )
 
 @router.get("/", response_model=List[PaperResponse])
 @router.get("", response_model=List[PaperResponse], include_in_schema=False)
@@ -44,16 +66,14 @@ def get_papers(
 
 @router.get("/{paper_id_or_arxiv_id}", response_model=PaperResponse)
 def get_paper(paper_id_or_arxiv_id: str, db: Session = Depends(get_db)):
-    # Try to parse as integer ID first
-    try:
-        paper_id = int(paper_id_or_arxiv_id)
-        paper = db.query(Paper).filter(Paper.id == paper_id).first()
-    except ValueError:
-        # If not an integer, treat as arxiv_id
-        paper = db.query(Paper).filter(Paper.arxiv_id == paper_id_or_arxiv_id).first()
-        
+    paper = _resolve_paper(db, paper_id_or_arxiv_id)
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
+    # Single-paper detail stats the file so the UI can offer an on-demand
+    # download; list endpoints deliberately skip this per-row filesystem hit.
+    paper.pdf_available = (
+        get_local_pdf_path(paper.arxiv_id, settings.PDF_SAVE_DIR) is not None
+    )
     return paper
 
 @router.get("/{paper_id_or_arxiv_id}/images/{filename}")
@@ -162,6 +182,56 @@ def get_paper_full_text(paper_id_or_arxiv_id: str, db: Session = Depends(get_db)
         "word_count": word_count,
         "estimated_reading_minutes": max(1, word_count // 250),
     }
+
+def _pdf_error_detail(exc: PdfDownloadError) -> dict:
+    """Shape a PdfDownloadError like the summarization ``summary_error`` body."""
+    detail: dict = {
+        "code": exc.code,
+        "message": exc.message,
+        "retryable": exc.retryable,
+    }
+    if exc.http_status is not None:
+        detail["http_status"] = exc.http_status
+    return detail
+
+
+@router.post("/{paper_id_or_arxiv_id}/pdf/download")
+def download_paper_pdf(paper_id_or_arxiv_id: str, db: Session = Depends(get_db)):
+    """Idempotently ensure one paper's PDF is on local disk.
+
+    Returns quickly when a valid PDF already exists; otherwise downloads that
+    single paper via the shared validated/atomic helper. The arXiv id comes
+    from the DB row, never the raw path, so no caller input reaches the
+    filesystem. Failures surface as structured errors (disk full vs upstream)
+    matching the summarization error shape.
+    """
+    paper = _resolve_paper(db, paper_id_or_arxiv_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    pdf_dir = settings.PDF_SAVE_DIR
+    if get_local_pdf_path(paper.arxiv_id, pdf_dir):
+        return {
+            "status": "available",
+            "pdf_available": True,
+            "message": "PDF already available",
+        }
+
+    pdf_url = paper.pdf_url or f"https://arxiv.org/pdf/{paper.arxiv_id}.pdf"
+    try:
+        download_pdf_strict(pdf_url, paper.arxiv_id, pdf_dir)
+    except PdfDownloadError as exc:
+        raise HTTPException(
+            status_code=_PDF_DOWNLOAD_HTTP_STATUS.get(exc.code, 502),
+            detail=_pdf_error_detail(exc),
+        ) from exc
+
+    return {
+        "status": "downloaded",
+        "pdf_available": True,
+        "message": "PDF downloaded",
+    }
+
 
 @router.get("/{paper_id_or_arxiv_id}/similar", response_model=List[PaperResponse])
 def get_similar_papers(paper_id_or_arxiv_id: str, limit: int = 6, db: Session = Depends(get_db)):
