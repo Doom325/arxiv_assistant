@@ -17,6 +17,7 @@ import { api, QueueItem, QueueStats } from "../../lib/api";
 import QueueCard from "../../components/QueueCard";
 import QuickPeekSheet from "../../components/QuickPeekSheet";
 import QuickPreviewPanel from "@/components/queue/QuickPreviewPanel";
+import { useIsWideViewport } from "../../lib/useIsWideViewport";
 import QueueFAB from "@/components/queue/QueueFAB";
 import AddPaperForm from "@/components/AddPaperForm";
 import FeaturedStatBlock from "@/components/queue/FeaturedStatBlock";
@@ -320,6 +321,7 @@ export default function QueuePage() {
         (dateFilterFrom ? 1 : 0) +
         (dateFilterTo ? 1 : 0);
 
+    const isWide = useIsWideViewport();
     const previewOpen = peekPaper !== null;
 
     // previewIndex for QuickPreviewPanel prev/next navigation
@@ -356,7 +358,7 @@ export default function QueuePage() {
     return (
         <div className="relative min-h-screen bg-background">
             {/* Main canvas — takes full width minus right gutter when preview is open */}
-            <div className={`px-12 pt-8 pb-24 space-y-6 transition-all duration-300 ${previewOpen ? "mr-[400px]" : "mr-0"}`}>
+            <div className={`px-12 pt-8 pb-24 space-y-6 transition-all duration-300 ${previewOpen ? "lg:mr-[400px]" : "lg:mr-0"}`}>
                 {/* Hero Header — Task 3.2 */}
                 <div className="mb-2">
                     <h1 className="leading-tight">
@@ -746,8 +748,8 @@ export default function QueuePage() {
                 }}
             />
 
-            {/* Peek sheet — Task 3.8.6: mobile fallback (hidden on lg+, handled by QuickPreviewPanel's isWide check) */}
-            {peekPaper && (
+            {/* Bottom peek sheet — narrow screens only; wide screens use QuickPreviewPanel */}
+            {peekPaper && !isWide && (
                 <QuickPeekSheet
                     paper={{
                         id: peekPaper.arxiv_id,

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { QueueItem } from "../../lib/api";
 import { useSummarize } from "../../lib/useSummarize";
+import { useIsWideViewport } from "../../lib/useIsWideViewport";
 
 interface QuickPreviewPanelProps {
   paper: QueueItem | null;
@@ -31,13 +31,7 @@ export default function QuickPreviewPanel({
   totalCount,
 }: QuickPreviewPanelProps) {
   // 3.8.4 — Narrow viewport fallback: render nothing below 1024px
-  const [isWide, setIsWide] = useState(false);
-  useEffect(() => {
-    const check = () => setIsWide(window.innerWidth >= 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+  const isWide = useIsWideViewport();
 
   // 3.8.2 — Wire useSummarize (same pattern as QuickPeekSheet)
   const { summarizing, updatedSummary, error, triggerSummarize } = useSummarize(
