@@ -55,7 +55,11 @@ class Paper(Base):
     # Status transitions: None -> pending -> running -> succeeded|failed.
     summary_status = Column(String(20), nullable=True)
     # Structured error payload, shape:
-    #   {"code": str, "message": str, "attempted_at": iso8601, "attempt_count": int}
+    #   {"code": str, "message": str, "attempted_at": iso8601,
+    #    "attempt_count": int, "retryable": bool,
+    #    "http_status": int (optional), "provider": str (optional)}
+    # http_status/provider are present only when an upstream provider supplied
+    # them; all keys live in this JSON column, so no migration is needed.
     if "sqlite" in settings.DATABASE_URL:
         summary_error = Column(JSON, nullable=True)
     else:

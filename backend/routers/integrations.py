@@ -28,6 +28,7 @@ from services.arxiv_service import arxiv_service
 from services.email_service import email_service
 from services.gdrive import GoogleDriveService, NeedAuthException
 from services.llm_service import (
+    ProviderError,
     get_summarization_provider,
     list_all_summarization_models,
     get_summarization_providers_metadata,
@@ -50,8 +51,17 @@ def _record_summary_failure(
     *,
     code: str,
     message: str,
+    http_status: int | None = None,
+    provider: str | None = None,
+    retryable: bool = False,
 ) -> None:
     """Persist a structured failure for the paper's summarization attempt.
+
+    ``http_status``/``provider`` are stored only when the upstream provider
+    supplied them; ``retryable`` lets the UI distinguish a transient failure
+    (429/5xx/timeout) from a structural one (bad key, wrong model). All extra
+    keys live inside the existing ``summary_error`` JSON column, so no schema
+    migration is needed.
 
     Does NOT touch ``generated_summary`` — that column is reserved for
     successful model output (or NULL).
@@ -63,15 +73,38 @@ def _record_summary_failure(
     if isinstance(paper.summary_error, dict):
         prior_count = int(paper.summary_error.get("attempt_count") or 0)
     paper.summary_status = SUMMARY_STATUS_FAILED
-    paper.summary_error = {
+    error: dict = {
         "code": code,
         "message": message,
         "attempted_at": now.isoformat(),
         "attempt_count": prior_count + 1,
+        "retryable": retryable,
     }
+    if http_status is not None:
+        error["http_status"] = http_status
+    if provider is not None:
+        error["provider"] = provider
+    paper.summary_error = error
     paper.summary_attempted_at = now
     flag_modified(paper, "summary_error")
     db.commit()
+
+
+def _summary_failure_fields(exc: Exception) -> dict:
+    """Map a summarization exception to ``_record_summary_failure`` kwargs.
+
+    A ``ProviderError`` carries the upstream status/provider/retryability
+    verbatim; any other exception falls back to a generic, still-descriptive
+    message that is not treated as retryable.
+    """
+    if isinstance(exc, ProviderError):
+        return {
+            "message": exc.message,
+            "http_status": exc.http_status,
+            "provider": exc.provider,
+            "retryable": exc.retryable,
+        }
+    return {"message": f"Summarization failed: {exc}", "retryable": False}
 
 
 def run_summarization(
@@ -131,6 +164,7 @@ def run_summarization(
                     paper,
                     code="pdf_download_failed",
                     message=f"Failed to download PDF: {e}",
+                    retryable=True,
                 )
                 return
 
@@ -162,7 +196,7 @@ def run_summarization(
                     db,
                     paper,
                     code="summarization_failed",
-                    message=f"Summarization failed: {e}",
+                    **_summary_failure_fields(e),
                 )
         except Exception:
             # Recovery-path failure (e.g. DB unavailable when trying to
