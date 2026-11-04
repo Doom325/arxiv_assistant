@@ -1,14 +1,12 @@
 import arxiv
 import logging
 import random
-import requests
 import os
 from datetime import date, timedelta
 from typing import Iterator
 
 import time
-from config import settings
-from core.pdf_utils import extract_text_from_pdf
+from core.pdf_utils import download_pdf_strict, extract_text_from_pdf
 from poll_constants import POLL_SAFETY_CAP
 
 logger = logging.getLogger(__name__)
@@ -178,25 +176,18 @@ class ArxivService:
             print(f"Error fetching paper {arxiv_id}: {e}")
             return None
 
-    def download_pdf(self, pdf_url: str, save_path: str):
+    def download_pdf(self, pdf_url: str, save_path: str) -> None:
+        """Download a PDF to *save_path* via the shared, validated helper.
+
+        Kept for backwards compatibility; delegates to
+        :func:`core.pdf_utils.download_pdf_strict` so there is a single atomic,
+        validated download implementation (arXiv politeness delay + User-Agent
+        included there). Raises :class:`~core.pdf_utils.PdfDownloadError` on
+        failure.
         """
-        Downloads the PDF from the given URL.
-        """
-        # Respect arXiv's rate limit for PDF downloads too
-        time.sleep(3)
-        
-        headers = {
-            "User-Agent": f"arXiv-AI-Assistant/1.0 (mailto:{settings.EMAIL_SENDER})"
-        }
-        
-        try:
-            response = requests.get(pdf_url, headers=headers, timeout=30)
-            response.raise_for_status()
-            with open(save_path, 'wb') as f:
-                f.write(response.content)
-        except Exception as e:
-            print(f"Error downloading PDF {pdf_url}: {e}")
-            raise
+        pdf_dir = os.path.dirname(save_path) or "."
+        arxiv_id = os.path.basename(save_path).removesuffix(".pdf")
+        download_pdf_strict(pdf_url, arxiv_id, pdf_dir)
 
     def extract_text(self, pdf_path: str) -> str:
         """Extracts text from a PDF file. Delegates to core.pdf_utils."""
