@@ -13,6 +13,41 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SUMMARIZATION_TEMPERATURE = 0.3
 
+# HTTP statuses worth an automatic retry: rate-limiting and request-timing
+# signals, plus any 5xx. The rest of the 4xx range is structural (bad key,
+# wrong model, malformed payload) and will fail identically on retry.
+_RETRYABLE_HTTP_STATUSES = frozenset({408, 409, 425, 429})
+
+
+def _is_retryable_status(status: int | None) -> bool:
+    """True when an upstream HTTP failure is transient enough to retry."""
+    if status is None:
+        return False
+    return status in _RETRYABLE_HTTP_STATUSES or status >= 500
+
+
+class ProviderError(Exception):
+    """An upstream LLM-provider failure carrying structured detail.
+
+    Lets a failed request surface its real cause end-to-end (HTTP status,
+    provider, whether a retry is worthwhile) instead of collapsing into a
+    generic "Summarization failed" by the time it reaches the UI.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        provider: str,
+        http_status: int | None = None,
+        retryable: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.provider = provider
+        self.http_status = http_status
+        self.retryable = retryable
+
 
 class LLMProvider(ABC):
     @abstractmethod
@@ -487,17 +522,56 @@ class NvidiaProvider(LLMProvider):
         try:
             response = requests.post(self._chat_url(), headers=self._headers(), json=payload, timeout=600)
             response.raise_for_status()
-            data = response.json()
-            msg = data["choices"][0]["message"]
-            return msg.get("content") or msg.get("reasoning_content") or ""
+            return self._extract_summary(response.json())
         except requests.exceptions.HTTPError as e:
-            detail = self._parse_error_detail(e.response)
-            err_msg = f"NVIDIA API {e.response.status_code}: {detail}" if detail else str(e)
-            logger.error(f"NVIDIA summarization error: {err_msg}")
-            raise RuntimeError(err_msg) from e
-        except Exception as e:
-            logger.error(f"NVIDIA summarization error: {e}")
-            raise e
+            raise self._http_provider_error(e) from e
+        except requests.exceptions.Timeout as e:
+            raise self._network_provider_error("request timed out") from e
+        except requests.exceptions.ConnectionError as e:
+            raise self._network_provider_error("connection failed — endpoint unreachable") from e
+        except (KeyError, IndexError, TypeError, ValueError, AttributeError) as e:
+            raise self._shape_provider_error(e) from e
+
+    @staticmethod
+    def _extract_summary(data: dict) -> str:
+        """Pull the assistant text out of an OpenAI-style chat response,
+        treating an empty body as a failure rather than a blank success."""
+        msg = data["choices"][0]["message"]
+        content = msg.get("content") or msg.get("reasoning_content") or ""
+        if not content.strip():
+            raise ProviderError(
+                "NVIDIA returned an empty response (no summary content).",
+                provider="nvidia",
+                retryable=True,
+            )
+        return content
+
+    def _http_provider_error(self, e: requests.exceptions.HTTPError) -> ProviderError:
+        status = e.response.status_code if e.response is not None else None
+        detail = self._parse_error_detail(e.response)
+        message = (
+            f"NVIDIA API {status}: {detail}" if detail
+            else f"NVIDIA API request failed (HTTP {status})."
+        )
+        logger.error(f"NVIDIA summarization error: {message}")
+        return ProviderError(
+            message, provider="nvidia", http_status=status, retryable=_is_retryable_status(status)
+        )
+
+    @staticmethod
+    def _network_provider_error(what: str) -> ProviderError:
+        message = f"NVIDIA API {what}."
+        logger.error(f"NVIDIA summarization error: {message}")
+        return ProviderError(message, provider="nvidia", retryable=True)
+
+    @staticmethod
+    def _shape_provider_error(e: Exception) -> ProviderError:
+        logger.error(f"NVIDIA summarization error: unexpected response shape ({e!r})")
+        return ProviderError(
+            "NVIDIA API returned an unexpected response format.",
+            provider="nvidia",
+            retryable=True,
+        )
 
     def list_summarization_models(self) -> list[str]:
         return list(_NVIDIA_SUMMARIZATION_MODELS)

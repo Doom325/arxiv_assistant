@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { generateSummary, addBookmark, removeBookmark, getBookmarkedIds, Paper, getPaper, getSimilarPapers, getPaperPatterns, PaperPattern, emailPaperSummary, parseServerDate } from "../../../lib/api";
 import { showSummaryCompleteNotification, requestNotificationPermission } from "../../../lib/notifications";
+import { formatSummaryError } from "../../../lib/summaryError";
 import { ArrowLeft } from "lucide-react";
 import ErrorBoundary from "../../../components/ErrorBoundary";
 import PaperHero from "@/components/paper/PaperHero";
@@ -113,9 +114,9 @@ export default function PaperDetail() {
                             // keep polling for this session's real result.
                             return;
                         }
-                        const errorMsg =
-                            updatedPaper.summary_error?.message ??
-                            "Summarization failed.";
+                        const errorMsg = formatSummaryError(
+                            updatedPaper.summary_error
+                        );
                         console.error("Summarization error:", errorMsg);
                         setSummarizing(false);
                         clearInterval(pollInterval);

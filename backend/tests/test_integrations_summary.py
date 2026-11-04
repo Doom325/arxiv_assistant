@@ -110,7 +110,43 @@ class TestRunSummarizationFailures:
         assert refreshed.generated_summary is None
         assert refreshed.summary_error["code"] == "summarization_failed"
         assert "context too small" in refreshed.summary_error["message"]
+        assert refreshed.summary_error["retryable"] is False
         assert refreshed.summary_attempted_at is not None
+
+    def test_provider_error_preserves_upstream_status_and_retryability(
+        self, db_session, sample_paper, tmp_path
+    ):
+        """A ``ProviderError`` from the provider must survive end-to-end into
+        ``summary_error`` with its http_status, provider, and retryable flag —
+        not be flattened into a generic 'Summarization failed' string."""
+        from services.llm_service import ProviderError
+
+        pdf_path = tmp_path / f"{sample_paper.arxiv_id}.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        with patch.object(integrations.settings, "PDF_SAVE_DIR", str(tmp_path)), \
+             patch.object(
+                 integrations.summarization_service,
+                 "generate_summary",
+                 side_effect=ProviderError(
+                     "NVIDIA API 429: Rate limit exceeded",
+                     provider="nvidia",
+                     http_status=429,
+                     retryable=True,
+                 ),
+             ), \
+             _patch_session_local(db_session):
+            integrations.run_summarization(sample_paper.id, sample_paper.pdf_url)
+
+        db_session.expire_all()
+        refreshed = db_session.query(Paper).filter(Paper.id == sample_paper.id).one()
+        err = refreshed.summary_error
+        assert refreshed.summary_status == "failed"
+        assert err["code"] == "summarization_failed"
+        assert err["message"] == "NVIDIA API 429: Rate limit exceeded"
+        assert err["http_status"] == 429
+        assert err["provider"] == "nvidia"
+        assert err["retryable"] is True
 
 
 class TestRunSummarizationSuccess:

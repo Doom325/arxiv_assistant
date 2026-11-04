@@ -1,6 +1,14 @@
 import pytest
+import requests
 from unittest.mock import MagicMock, patch
-from services.llm_service import GeminiProvider, OllamaProvider, get_llm_service
+from services.llm_service import (
+    GeminiProvider,
+    NvidiaProvider,
+    OllamaProvider,
+    ProviderError,
+    _is_retryable_status,
+    get_llm_service,
+)
 
 @pytest.fixture
 def gemini_provider():
@@ -276,3 +284,184 @@ def test_get_summarization_provider_custom_endpoint_param():
         )
         assert name == "nvidia"
         MockN.assert_called_once_with(base_url="https://my-nim.internal/v1")
+
+
+# ─────────────────────────────────────────────────────
+# NVIDIA summarization error surfacing (regression for the generic
+# "Summarization failed" that hid the real upstream cause).
+# ─────────────────────────────────────────────────────
+
+def _nvidia_provider() -> NvidiaProvider:
+    return NvidiaProvider(base_url="https://integrate.api.nvidia.com/v1", api_key="nvapi-test")
+
+
+def _http_error_response(status: int, body: dict) -> MagicMock:
+    """A mock requests.Response whose raise_for_status raises an HTTPError."""
+    err_response = MagicMock()
+    err_response.status_code = status
+    err_response.json.return_value = body
+    resp = MagicMock()
+    resp.raise_for_status.side_effect = requests.exceptions.HTTPError(response=err_response)
+    return resp
+
+
+def test_is_retryable_status_classifies_transient_vs_structural():
+    assert _is_retryable_status(429) is True
+    assert _is_retryable_status(408) is True
+    assert _is_retryable_status(503) is True
+    assert _is_retryable_status(500) is True
+    assert _is_retryable_status(401) is False
+    assert _is_retryable_status(403) is False
+    assert _is_retryable_status(404) is False
+    assert _is_retryable_status(400) is False
+    assert _is_retryable_status(None) is False
+
+
+@patch("requests.post")
+def test_nvidia_http_429_raises_retryable_provider_error(mock_post):
+    """A 429 must surface status + upstream message and be marked retryable."""
+    mock_post.return_value = _http_error_response(
+        429, {"error": {"message": "Rate limit exceeded"}}
+    )
+    with pytest.raises(ProviderError) as exc_info:
+        _nvidia_provider().summarize_text("paper text")
+    err = exc_info.value
+    assert err.http_status == 429
+    assert err.retryable is True
+    assert err.provider == "nvidia"
+    assert "429" in err.message and "Rate limit exceeded" in err.message
+
+
+@patch("requests.post")
+def test_nvidia_http_401_is_structural_not_retryable(mock_post):
+    """A 401 (bad key) is structural: surfaced, but not flagged for retry."""
+    mock_post.return_value = _http_error_response(
+        401, {"error": {"message": "invalid API key"}}
+    )
+    with pytest.raises(ProviderError) as exc_info:
+        _nvidia_provider().summarize_text("paper text")
+    err = exc_info.value
+    assert err.http_status == 401
+    assert err.retryable is False
+    assert "invalid API key" in err.message
+
+
+@patch("requests.post")
+def test_nvidia_http_404_model_not_found_surfaced(mock_post):
+    mock_post.return_value = _http_error_response(
+        404, {"detail": "model 'nvidia/bogus' not found"}
+    )
+    with pytest.raises(ProviderError) as exc_info:
+        _nvidia_provider().summarize_text("paper text")
+    err = exc_info.value
+    assert err.http_status == 404
+    assert err.retryable is False
+    assert "not found" in err.message
+
+
+@patch("requests.post")
+def test_nvidia_http_500_is_retryable(mock_post):
+    mock_post.return_value = _http_error_response(500, {"error": {"message": "server error"}})
+    with pytest.raises(ProviderError) as exc_info:
+        _nvidia_provider().summarize_text("paper text")
+    assert exc_info.value.http_status == 500
+    assert exc_info.value.retryable is True
+
+
+@patch("requests.post", side_effect=requests.exceptions.Timeout("read timed out"))
+def test_nvidia_timeout_raises_retryable_provider_error(mock_post):
+    with pytest.raises(ProviderError) as exc_info:
+        _nvidia_provider().summarize_text("paper text")
+    err = exc_info.value
+    assert err.retryable is True
+    assert err.http_status is None
+    assert "timed out" in err.message.lower()
+
+
+@patch("requests.post", side_effect=requests.exceptions.ConnectionError("refused"))
+def test_nvidia_connection_error_raises_retryable_provider_error(mock_post):
+    with pytest.raises(ProviderError) as exc_info:
+        _nvidia_provider().summarize_text("paper text")
+    assert exc_info.value.retryable is True
+    assert "connection" in exc_info.value.message.lower()
+
+
+@patch("requests.post")
+def test_nvidia_empty_content_raises_provider_error(mock_post):
+    """An empty model response must be a failure, not a blank 'success'."""
+    resp = MagicMock()
+    resp.raise_for_status.return_value = None
+    resp.json.return_value = {"choices": [{"message": {"content": "   "}}]}
+    mock_post.return_value = resp
+    with pytest.raises(ProviderError) as exc_info:
+        _nvidia_provider().summarize_text("paper text")
+    assert "empty" in exc_info.value.message.lower()
+    assert exc_info.value.retryable is True
+
+
+@patch("requests.post")
+def test_nvidia_malformed_response_raises_provider_error(mock_post):
+    """A response missing 'choices' must become a clear ProviderError, not a
+    cryptic KeyError bubbling up as 'Summarization failed: 'choices''."""
+    resp = MagicMock()
+    resp.raise_for_status.return_value = None
+    resp.json.return_value = {"unexpected": "shape"}
+    mock_post.return_value = resp
+    with pytest.raises(ProviderError) as exc_info:
+        _nvidia_provider().summarize_text("paper text")
+    assert exc_info.value.provider == "nvidia"
+    assert "unexpected" in exc_info.value.message.lower()
+
+
+@patch("requests.post")
+def test_nvidia_reasoning_content_fallback_still_returns(mock_post):
+    """Empty content but populated reasoning_content is a valid summary."""
+    resp = MagicMock()
+    resp.raise_for_status.return_value = None
+    resp.json.return_value = {
+        "choices": [{"message": {"content": "", "reasoning_content": "Reasoned summary"}}]
+    }
+    mock_post.return_value = resp
+    assert _nvidia_provider().summarize_text("paper text") == "Reasoned summary"
+
+
+@patch("requests.post")
+def test_nvidia_surfaced_error_never_leaks_key_or_endpoint(mock_post):
+    """A surfaced ProviderError message must never contain the API key,
+    'Authorization', or the base URL/host — on any failure path.
+
+    The no-leak property currently holds by construction (messages are built
+    from status + parsed response body; str(e) is surfaced on no path). This
+    locks it in: if a future edit reintroduces str(e) on, say, the timeout
+    path, the raw requests message would carry the endpoint (sk-local on the
+    LiteLLM path leaks analogously) and this test would fail.
+    """
+    secret_key = "nvapi-SUPERSECRETKEY123"
+    secret_host = "secret-nim.internal"
+    provider = NvidiaProvider(base_url=f"https://{secret_host}/v1", api_key=secret_key)
+
+    def _assert_clean(message: str) -> None:
+        assert secret_key not in message
+        assert secret_host not in message
+        assert "Authorization" not in message
+
+    # HTTP failures: the surfaced message is the parsed body, not str(e).
+    for status in (429, 500, 401, 404):
+        mock_post.side_effect = None
+        mock_post.return_value = _http_error_response(status, {"error": {"message": "upstream said no"}})
+        with pytest.raises(ProviderError) as exc_info:
+            provider.summarize_text("paper text")
+        _assert_clean(exc_info.value.message)
+
+    # Network failures: the raw exception string carries the endpoint, but the
+    # surfaced message must be the generic, host-free phrasing.
+    for exc in (
+        requests.exceptions.Timeout(f"HTTPSConnectionPool(host='{secret_host}'): read timed out"),
+        requests.exceptions.ConnectionError(f"cannot connect to https://{secret_host}/v1"),
+    ):
+        mock_post.return_value = None
+        mock_post.side_effect = exc
+        with pytest.raises(ProviderError) as exc_info:
+            provider.summarize_text("paper text")
+        _assert_clean(exc_info.value.message)
+    mock_post.side_effect = None
