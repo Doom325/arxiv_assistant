@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { generateSummary, addBookmark, removeBookmark, getBookmarkedIds, Paper, getPaper, getSimilarPapers, getPaperPatterns, PaperPattern, emailPaperSummary, parseServerDate } from "../../../lib/api";
+import { generateSummary, addBookmark, removeBookmark, getBookmarkedIds, Paper, getPaper, getSimilarPapers, getPaperPatterns, PaperPattern, emailPaperSummary, parseServerDate, downloadPaperPdf } from "../../../lib/api";
 import { showSummaryCompleteNotification, requestNotificationPermission } from "../../../lib/notifications";
 import { formatSummaryError } from "../../../lib/summaryError";
 import { ArrowLeft } from "lucide-react";
@@ -27,6 +27,8 @@ export default function PaperDetail() {
     const [paperPatterns, setPaperPatterns] = useState<PaperPattern | null>(null);
     const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
     const [activeTab, setActiveTab] = useState<"full-paper" | "ai-analysis">("full-paper");
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
+    const [pdfDownloadError, setPdfDownloadError] = useState<string | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
@@ -117,11 +119,19 @@ export default function PaperDetail() {
                         const errorMsg = formatSummaryError(
                             updatedPaper.summary_error
                         );
+                        const needsDownload =
+                            updatedPaper.summary_error?.code === "pdf_download_failed";
                         console.error("Summarization error:", errorMsg);
                         setSummarizing(false);
                         clearInterval(pollInterval);
+                        // Refresh paper state so pdf_available reflects the failed
+                        // download; the "Download PDF" action re-appears above.
                         setPaper(transformPaper(updatedPaper));
-                        alert(`Summarization failed: ${errorMsg}`);
+                        alert(
+                            needsDownload
+                                ? `Summarization failed: ${errorMsg}\n\nThe PDF isn't available — use "Download PDF" above, then try again.`
+                                : `Summarization failed: ${errorMsg}`
+                        );
                         return;
                     }
 
@@ -153,6 +163,23 @@ export default function PaperDetail() {
         } catch (e) {
             console.error(e);
             setSummarizing(false);
+        }
+    };
+
+    const handleDownloadPdf = async () => {
+        if (!paper) return;
+        setDownloadingPdf(true);
+        setPdfDownloadError(null);
+        try {
+            await downloadPaperPdf(paper.db_id ?? paper.arxiv_id);
+            // Success: the button disappears and Summarize can now find the PDF.
+            setPaper({ ...paper, pdf_available: true });
+        } catch (e) {
+            setPdfDownloadError(
+                e instanceof Error ? e.message : "Failed to download PDF."
+            );
+        } finally {
+            setDownloadingPdf(false);
         }
     };
 
@@ -218,6 +245,27 @@ export default function PaperDetail() {
                             emailStatus={emailStatus}
                             onEmail={handleEmailSummary}
                         />
+
+                        {paper.pdf_available === false && (
+                            <div className="rounded-xl border border-border bg-surface-card p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div className="space-y-1">
+                                    <p className="text-foreground font-medium">PDF not downloaded</p>
+                                    <p className="text-sm text-foreground-secondary">
+                                        This paper&apos;s PDF isn&apos;t stored locally yet. Download it to read the full text and generate a summary.
+                                    </p>
+                                    {pdfDownloadError && (
+                                        <p className="text-sm text-red-400 mt-1">{pdfDownloadError}</p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleDownloadPdf}
+                                    disabled={downloadingPdf}
+                                    className="shrink-0 inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {downloadingPdf ? "Downloading…" : "Download PDF"}
+                                </button>
+                            </div>
+                        )}
 
                         <PaperTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
