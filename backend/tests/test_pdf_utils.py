@@ -155,6 +155,20 @@ class TestDownloadPdfStrict:
         assert not os.path.exists(os.path.join(tmp_path, "2401.6.pdf"))
         assert not [p for p in os.listdir(tmp_path) if p.endswith(".part")]
 
+    @patch("core.pdf_utils.tempfile.mkstemp")
+    @patch("core.pdf_utils.requests.get")
+    def test_disk_full_at_temp_creation_is_disk_full(
+        self, mock_get, mock_mkstemp, tmp_path
+    ):
+        """A volume so full that even the temp dirent can't be created must
+        still surface as the distinct disk-full error, not a bare OSError."""
+        mock_get.return_value = _pdf_response(b"%PDF-1.4 body")
+        mock_mkstemp.side_effect = OSError(errno.ENOSPC, "No space left on device")
+        with pytest.raises(PdfDownloadError) as ei:
+            download_pdf_strict("http://x/p.pdf", "2401.8", str(tmp_path), delay_seconds=0)
+        assert ei.value.code == "pdf_disk_full"
+        assert not os.path.exists(os.path.join(tmp_path, "2401.8.pdf"))
+
     @patch("core.pdf_utils.requests.get")
     def test_existing_zero_byte_file_is_replaced(self, mock_get, tmp_path):
         (tmp_path / "2401.7.pdf").write_bytes(b"")

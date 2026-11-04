@@ -249,16 +249,22 @@ def _write_pdf_atomic(content: bytes, final_path: str, pdf_dir: str) -> None:
     A reader never observes a partial or empty file: the bytes land in a temp
     file in the same directory and are renamed into place only once fully
     written. On any failure the temp file is removed, leaving no stub behind.
+    Directory and temp-file creation are inside the guard too, so a full volume
+    that fails even at ``makedirs``/``mkstemp`` still surfaces as disk-full
+    rather than a bare OSError.
     """
-    fd, tmp_path = tempfile.mkstemp(dir=pdf_dir, prefix=".pdf-", suffix=".part")
+    tmp_path: str | None = None
     try:
+        os.makedirs(pdf_dir, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(dir=pdf_dir, prefix=".pdf-", suffix=".part")
         with os.fdopen(fd, "wb") as tmp:
             tmp.write(content)
         os.replace(tmp_path, final_path)
     except OSError as exc:
         raise _pdf_write_error(exc) from exc
     finally:
-        _safe_unlink(tmp_path)
+        if tmp_path is not None:
+            _safe_unlink(tmp_path)
 
 
 def download_pdf_strict(
@@ -276,7 +282,6 @@ def download_pdf_strict(
     is ever left behind. Raises :class:`PdfDownloadError` (disk-full vs
     transient network/HTTP) on failure; returns the final path on success.
     """
-    os.makedirs(pdf_dir, exist_ok=True)
     final_path = os.path.join(pdf_dir, f"{arxiv_id}.pdf")
     logger.info("Downloading %s to %s", url, final_path)
     content = _fetch_pdf_bytes(url, timeout, delay_seconds)
