@@ -17,6 +17,11 @@ export interface SummaryError {
     message: string;
     attempted_at?: string | null;
     attempt_count?: number;
+    // True for transient failures (429 / 5xx / timeout / connection) worth a retry.
+    retryable?: boolean;
+    // Upstream HTTP status and provider, present only when the provider supplied them.
+    http_status?: number | null;
+    provider?: string | null;
 }
 
 export interface Paper {

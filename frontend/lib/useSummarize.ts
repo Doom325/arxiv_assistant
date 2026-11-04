@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { api, parseServerDate } from "./api";
+import { formatSummaryError } from "./summaryError";
 
 interface UseSummarizeResult {
     summarizing: boolean;
@@ -99,9 +100,9 @@ export function useSummarize(paperId: number | null): UseSummarizeResult {
                                 // Stale failure — keep polling.
                                 return;
                             }
-                            const errorMsg =
-                                updated.summary_error?.message ??
-                                "Summarization failed.";
+                            const errorMsg = formatSummaryError(
+                                updated.summary_error
+                            );
                             setError(errorMsg);
                             setSummarizing(false);
                             cleanup();
