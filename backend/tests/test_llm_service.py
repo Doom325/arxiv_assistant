@@ -423,3 +423,45 @@ def test_nvidia_reasoning_content_fallback_still_returns(mock_post):
     }
     mock_post.return_value = resp
     assert _nvidia_provider().summarize_text("paper text") == "Reasoned summary"
+
+
+@patch("requests.post")
+def test_nvidia_surfaced_error_never_leaks_key_or_endpoint(mock_post):
+    """A surfaced ProviderError message must never contain the API key,
+    'Authorization', or the base URL/host — on any failure path.
+
+    The no-leak property currently holds by construction (messages are built
+    from status + parsed response body; str(e) is surfaced on no path). This
+    locks it in: if a future edit reintroduces str(e) on, say, the timeout
+    path, the raw requests message would carry the endpoint (sk-local on the
+    LiteLLM path leaks analogously) and this test would fail.
+    """
+    secret_key = "nvapi-SUPERSECRETKEY123"
+    secret_host = "secret-nim.internal"
+    provider = NvidiaProvider(base_url=f"https://{secret_host}/v1", api_key=secret_key)
+
+    def _assert_clean(message: str) -> None:
+        assert secret_key not in message
+        assert secret_host not in message
+        assert "Authorization" not in message
+
+    # HTTP failures: the surfaced message is the parsed body, not str(e).
+    for status in (429, 500, 401, 404):
+        mock_post.side_effect = None
+        mock_post.return_value = _http_error_response(status, {"error": {"message": "upstream said no"}})
+        with pytest.raises(ProviderError) as exc_info:
+            provider.summarize_text("paper text")
+        _assert_clean(exc_info.value.message)
+
+    # Network failures: the raw exception string carries the endpoint, but the
+    # surfaced message must be the generic, host-free phrasing.
+    for exc in (
+        requests.exceptions.Timeout(f"HTTPSConnectionPool(host='{secret_host}'): read timed out"),
+        requests.exceptions.ConnectionError(f"cannot connect to https://{secret_host}/v1"),
+    ):
+        mock_post.return_value = None
+        mock_post.side_effect = exc
+        with pytest.raises(ProviderError) as exc_info:
+            provider.summarize_text("paper text")
+        _assert_clean(exc_info.value.message)
+    mock_post.side_effect = None
