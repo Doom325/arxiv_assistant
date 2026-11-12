@@ -319,8 +319,23 @@ export const api = {
     },
 
     getSimilarPapers: async (id: string | number): Promise<Paper[]> => {
-        const response = await fetch(`${API_URL}/papers/${id}/similar`);
+        const response = await fetch(`${API_URL}/papers/${encodeURIComponent(String(id))}/similar`);
         if (!response.ok) await handleApiError(response, "Failed to fetch similar papers");
+        return response.json();
+    },
+
+    findSimilarPapers: async (
+        id: string | number,
+        limit: number = 6,
+        force: boolean = false,
+    ): Promise<Paper[]> => {
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (force) params.set("force", "true");
+        const response = await fetch(
+            `${API_URL}/papers/${encodeURIComponent(String(id))}/similar?${params.toString()}`,
+            { method: "POST" },
+        );
+        if (!response.ok) await handleApiError(response, "Failed to find similar papers");
         return response.json();
     },
 
@@ -745,6 +760,7 @@ export const downloadPaperPdf = api.downloadPaperPdf;
 export const getSummarizationModels = api.getSummarizationModels;
 export const addPaper = api.addPaper;
 export const getSimilarPapers = api.getSimilarPapers;
+export const findSimilarPapers = api.findSimilarPapers;
 export const exportToGDrive = api.exportToGDrive;
 export const gdriveAuthConfirm = api.gdriveAuthConfirm;
 export const getPatternOverview = api.getPatternOverview;

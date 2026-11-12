@@ -36,6 +36,21 @@ from config import settings
 
 EXTRACTION_FAILED = "[FAILED]"
 DOWNLOAD_FAILED = "[DOWNLOAD FAILED]"
+NO_ABSTRACT_EXTRACTED = "[NO_ABSTRACT]"
+_UNUSABLE_TEXT_SENTINELS = frozenset({
+    EXTRACTION_FAILED,
+    DOWNLOAD_FAILED,
+    NO_ABSTRACT_EXTRACTED,
+})
+
+
+def _first_usable_text(*candidates: str | None) -> str | None:
+    """Return the first non-empty candidate that is not an extraction failure sentinel."""
+    for candidate in candidates:
+        cleaned = (candidate or "").strip()
+        if cleaned and cleaned not in _UNUSABLE_TEXT_SENTINELS:
+            return cleaned
+    return None
 
 # Setup Logger
 logging.basicConfig(
@@ -202,7 +217,9 @@ def _extract_step(db, paper, processor, pdf_path: str) -> None:
         return
 
     logger.info(f"Step 2: Sanitizing data for {paper.arxiv_id}...")
-    paper.extracted_abstract = sanitize_text(result['sections']['abstract']) or None
+    extracted_abs = sanitize_text(result['sections']['abstract'])
+    fallback_abs = sanitize_text(paper.summary or "")
+    paper.extracted_abstract = extracted_abs or fallback_abs or NO_ABSTRACT_EXTRACTED
     paper.extracted_introduction = sanitize_text(result['sections']['introduction']) or None
     paper.citations = result['citations']
     paper.entities = result['entities']
@@ -224,14 +241,12 @@ def _extract_step(db, paper, processor, pdf_path: str) -> None:
     )
 
 
-def _search_embedding_step(db, paper) -> None:
+def _search_embedding_step(db, paper: Paper) -> None:
     try:
-        search_text = paper.summary or paper.extracted_abstract or paper.title
-        if (
-            not search_text
-            or search_text == EXTRACTION_FAILED
-            or search_text == DOWNLOAD_FAILED
-        ):
+        search_text = _first_usable_text(
+            paper.summary, paper.extracted_abstract, paper.title
+        )
+        if not search_text:
             logger.warning(f"No valid text to embed for {paper.arxiv_id}, skipping search sync.")
             return
 
@@ -272,7 +287,61 @@ def _search_embedding_step(db, paper) -> None:
         db.rollback()
 
 
-def _classify_step(db, paper) -> None:
+def _build_pattern_result(
+    paper: Paper,
+    model_name: str,
+    parsed: dict,
+    elapsed: float,
+) -> PatternExperimentResult:
+    """Construct a validated PatternExperimentResult ORM row from parsed LLM output."""
+    issues = validate_classification_output(parsed)
+    patterns = parsed.get("patterns", [])
+    return PatternExperimentResult(
+        arxiv_id=paper.arxiv_id,
+        paper_title=(paper.title or "")[:200],
+        prompt_version=TAXONOMY_PROMPT_VERSION,
+        model_name=model_name,
+        is_agentic=parsed.get("is_agentic"),
+        primary_category=parsed.get("primary_category"),
+        reasoning=parsed.get("reasoning", ""),
+        patterns=patterns,
+        raw_json=parsed,
+        num_patterns=len(patterns),
+        taxonomy_violations=issues if issues else None,
+        num_violations=len(issues),
+        elapsed_seconds=elapsed,
+        error=None,
+    )
+
+
+def _persist_pattern_result(db, paper: Paper, result: PatternExperimentResult, elapsed: float) -> None:
+    """Insert PatternExperimentResult and record worker_classify job log."""
+    try:
+        db.add(result)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        logger.info(
+            f"PatternExperimentResult for {paper.arxiv_id} created concurrently; skipping"
+        )
+        return
+
+    agentic_str = str(result.is_agentic)[:5] if result.is_agentic is not None else "err"
+    logger.info(
+        f"Step 3: Classified {paper.arxiv_id} -> {result.primary_category} "
+        f"(agentic={agentic_str}) in {elapsed:.1f}s"
+    )
+    log_job(
+        db, "worker_classify", "SUCCESS",
+        {
+            "arxiv_id": paper.arxiv_id,
+            "is_agentic": result.is_agentic,
+            "category": result.primary_category,
+        },
+    )
+
+
+def _classify_step(db, paper: Paper) -> None:
     try:
         existing = (
             db.query(PatternExperimentResult)
@@ -285,12 +354,8 @@ def _classify_step(db, paper) -> None:
         if existing:
             return
 
-        abstract_text = paper.extracted_abstract or paper.summary or ""
-        if (
-            not abstract_text
-            or abstract_text in (EXTRACTION_FAILED, DOWNLOAD_FAILED)
-            or len(abstract_text) <= 50
-        ):
+        abstract_text = _first_usable_text(paper.extracted_abstract, paper.summary) or ""
+        if len(abstract_text) <= 50:
             logger.info(f"Step 3: Skipping classification for {paper.arxiv_id} (insufficient abstract text)")
             return
 
@@ -299,72 +364,15 @@ def _classify_step(db, paper) -> None:
         with _llm_semaphore:
             parsed = llm_service.classify_paper(paper.title, abstract_text)
         elapsed = time.time() - start
-
-        model_name = getattr(
-            llm_service, 'model_name',
-            getattr(llm_service, 'chat_model', 'unknown'),
-        )
+        model_name = getattr(llm_service, "model_name", getattr(llm_service, "chat_model", "unknown"))
 
         if parsed is None:
-            result = PatternExperimentResult(
-                arxiv_id=paper.arxiv_id,
-                paper_title=(paper.title or "")[:200],
-                prompt_version=TAXONOMY_PROMPT_VERSION,
-                model_name=model_name,
-                is_agentic=None,
-                primary_category=None,
-                reasoning=None,
-                patterns=None,
-                raw_json=None,
-                num_patterns=0,
-                taxonomy_violations=["PARSE_FAILED"],
-                num_violations=1,
-                elapsed_seconds=elapsed,
-                error="LLM returned None",
-            )
-        else:
-            issues = validate_classification_output(parsed)
-            result = PatternExperimentResult(
-                arxiv_id=paper.arxiv_id,
-                paper_title=(paper.title or "")[:200],
-                prompt_version=TAXONOMY_PROMPT_VERSION,
-                model_name=model_name,
-                is_agentic=parsed.get("is_agentic"),
-                primary_category=parsed.get("primary_category"),
-                reasoning=parsed.get("reasoning", ""),
-                patterns=parsed.get("patterns", []),
-                raw_json=parsed,
-                num_patterns=len(parsed.get("patterns", [])),
-                taxonomy_violations=issues if issues else None,
-                num_violations=len(issues),
-                elapsed_seconds=elapsed,
-                error=None,
-            )
-
-        try:
-            db.add(result)
-            db.commit()
-        except IntegrityError:
-            db.rollback()
-            logger.info(
-                f"PatternExperimentResult for {paper.arxiv_id} created concurrently; skipping"
-            )
+            logger.warning(f"Step 3: LLM unavailable or returned None for {paper.arxiv_id}; deferring classification")
+            log_job(db, "worker_classify", "FAILED", {"arxiv_id": paper.arxiv_id, "model": model_name}, "LLM returned None")
             return
-        agentic_str = (
-            str(result.is_agentic)[:5] if result.is_agentic is not None else "err"
-        )
-        logger.info(
-            f"Step 3: Classified {paper.arxiv_id} -> {result.primary_category} "
-            f"(agentic={agentic_str}) in {elapsed:.1f}s"
-        )
-        log_job(
-            db, "worker_classify", "SUCCESS",
-            {
-                "arxiv_id": paper.arxiv_id,
-                "is_agentic": result.is_agentic,
-                "category": result.primary_category,
-            },
-        )
+
+        result = _build_pattern_result(paper, model_name, parsed, elapsed)
+        _persist_pattern_result(db, paper, result, elapsed)
     except Exception as classify_err:
         logger.error(f"Step 3: Classification failed for {paper.arxiv_id}: {classify_err}")
         db.rollback()
