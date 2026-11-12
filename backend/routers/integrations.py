@@ -15,6 +15,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from config import settings
+from core.pdf_utils import (
+    PdfDownloadError,
+    download_pdf_strict,
+    get_local_pdf_path,
+)
 from database import get_db, SessionLocal
 from models import Paper, UserLibrary
 from models.paper import (
@@ -24,7 +29,6 @@ from models.paper import (
     SUMMARY_STATUS_SUCCEEDED,
 )
 from urllib.parse import urlparse
-from services.arxiv_service import arxiv_service
 from services.email_service import email_service
 from services.gdrive import GoogleDriveService, NeedAuthException
 from services.llm_service import (
@@ -127,48 +131,32 @@ def run_summarization(
         paper.summary_status = SUMMARY_STATUS_RUNNING
         db.commit()
 
-        # Use configured save directory
+        # Use configured save directory. A zero-byte/corrupt local file is
+        # treated as missing so we re-download instead of parsing a stub.
         pdf_dir = settings.PDF_SAVE_DIR
+        pdf_path = get_local_pdf_path(paper.arxiv_id, pdf_dir)
 
-        # Robust file finding
-        filename = f"{paper.arxiv_id}.pdf"
-        found = False
-
-        # Check if the exact filename exists first
-        if os.path.exists(os.path.join(pdf_dir, filename)):
-            found = True
-        else:
-            # Fallback search
-            for f in os.listdir(pdf_dir):
-                if f.startswith(paper.arxiv_id):
-                    filename = f
-                    found = True
-                    break
-
-        if not found:
+        if pdf_path is None:
             logger.warning(
-                f"PDF not found for paper {paper.arxiv_id} in {pdf_dir}. "
-                "Attempting download..."
+                "PDF missing for paper %s in %s; downloading on demand",
+                paper.arxiv_id, pdf_dir,
             )
-            filename = f"{paper.arxiv_id}.pdf"
-            pdf_path = os.path.join(pdf_dir, filename)
             try:
-                arxiv_service.download_pdf(paper.pdf_url, pdf_path)
-                found = True
-            except Exception as e:
-                logger.error(
-                    f"Failed to download PDF for {paper.arxiv_id}: {e}"
+                pdf_path = download_pdf_strict(
+                    paper.pdf_url, paper.arxiv_id, pdf_dir
                 )
+            except PdfDownloadError as exc:
+                # Record the REAL reason (e.g. disk full) so the UI shows it,
+                # not a generic "failed to extract text".
                 _record_summary_failure(
                     db,
                     paper,
                     code="pdf_download_failed",
-                    message=f"Failed to download PDF: {e}",
-                    retryable=True,
+                    message=exc.message,
+                    http_status=exc.http_status,
+                    retryable=exc.retryable,
                 )
                 return
-
-        pdf_path = os.path.join(pdf_dir, filename)
 
         summary = summarization_service.generate_summary(
             pdf_path,
@@ -414,29 +402,23 @@ def email_debug():
 
 # --- Google Drive Export ---
 
-def _download_pdf_for_export(url: str, arxiv_id: str) -> str:
-    """Download PDF for GDrive export (custom UA, existence check)."""
+def _download_pdf_for_export(url: str, arxiv_id: str) -> str | None:
+    """Return a valid local PDF for GDrive export, downloading if absent.
+
+    A zero-byte or corrupt existing file is treated as missing and replaced via
+    the shared validated/atomic helper. Returns None on download failure so the
+    export loop simply skips the paper, as before.
+    """
+    pdf_dir = settings.PDF_SAVE_DIR
+    existing = get_local_pdf_path(arxiv_id, pdf_dir)
+    if existing:
+        return existing
     try:
-        pdf_dir = settings.PDF_SAVE_DIR
-        if not os.path.exists(pdf_dir):
-            os.makedirs(pdf_dir, exist_ok=True)
-
-        target_path = os.path.join(pdf_dir, f"{arxiv_id}.pdf")
-        if os.path.exists(target_path):
-            return target_path
-
-        logger.info(f"Downloading {url} to {target_path}...")
-        import requests
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36'
-        }
-        response = requests.get(url, timeout=60, headers=headers)
-        response.raise_for_status()
-        with open(target_path, 'wb') as f:
-            f.write(response.content)
-        return target_path
-    except Exception as e:
-        logger.error(f"Download failed for {arxiv_id}: {e}")
+        return download_pdf_strict(url, arxiv_id, pdf_dir)
+    except PdfDownloadError as exc:
+        logger.error(
+            "PDF download for export failed for %s: %s", arxiv_id, exc.message
+        )
         return None
 
 

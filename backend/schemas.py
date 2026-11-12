@@ -24,6 +24,10 @@ class PaperResponse(BaseModel):
     summary_status: Optional[str] = None
     summary_error: Optional[Any] = None
     summary_attempted_at: Optional[datetime] = None
+    # Whether a valid local PDF exists. Populated only on the single-paper
+    # detail response (one filesystem stat); left None on list endpoints to
+    # keep them free of per-row filesystem hits.
+    pdf_available: Optional[bool] = None
 
     @field_serializer("summary_attempted_at")
     def serialize_summary_attempted_at(self, dt: Optional[datetime]) -> Optional[str]:

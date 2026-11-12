@@ -41,6 +41,67 @@ export interface Paper {
     summary_status?: SummaryStatus | null;
     summary_error?: SummaryError | null;
     summary_attempted_at?: string | null;
+    // Whether a valid local PDF exists. Present only on the single-paper
+    // detail response; undefined/null elsewhere (list endpoints skip the stat).
+    pdf_available?: boolean | null;
+}
+
+// Structured detail for an on-demand PDF download failure. Same shape as
+// SummaryError so `formatSummaryError` can render it too.
+export interface PdfDownloadErrorDetail {
+    code: string;
+    message: string;
+    retryable?: boolean;
+    http_status?: number | null;
+}
+
+export interface PdfDownloadResult {
+    status: "available" | "downloaded";
+    pdf_available: boolean;
+    message?: string;
+}
+
+// Thrown by `downloadPaperPdf` on failure, carrying the server's real reason.
+export class PdfDownloadFailedError extends Error {
+    readonly code: string;
+    readonly retryable: boolean;
+    readonly httpStatus: number | null;
+
+    constructor(detail: PdfDownloadErrorDetail) {
+        super(detail.message);
+        this.name = "PdfDownloadFailedError";
+        this.code = detail.code;
+        this.retryable = detail.retryable ?? false;
+        this.httpStatus = detail.http_status ?? null;
+    }
+}
+
+/**
+ * Extracts the structured download-failure detail from a backend error body
+ * (`{ detail: { code, message, retryable, http_status? } }`). Tolerates a
+ * string `detail` or a malformed body by falling back to *fallback*.
+ */
+export function parsePdfDownloadError(
+    body: unknown,
+    fallback: string,
+): PdfDownloadErrorDetail {
+    if (typeof body === "object" && body !== null && "detail" in body) {
+        const detail = (body as { detail: unknown }).detail;
+        if (typeof detail === "string") {
+            return { code: "pdf_download_failed", message: detail, retryable: false };
+        }
+        if (typeof detail === "object" && detail !== null) {
+            const d = detail as Record<string, unknown>;
+            return {
+                code: typeof d.code === "string" ? d.code : "pdf_download_failed",
+                message: typeof d.message === "string" ? d.message : fallback,
+                retryable: typeof d.retryable === "boolean" ? d.retryable : false,
+                http_status:
+                    typeof d.http_status === "number" ? d.http_status : null,
+            };
+        }
+    }
+    return { code: "pdf_download_failed", message: fallback, retryable: false };
 }
 
 export interface UserConfig {
@@ -313,6 +374,27 @@ export const api = {
         });
         if (!response.ok) await handleApiError(response, "Failed to start summarization");
         return response.json();
+    },
+
+    // On-demand single-paper PDF fetch. Idempotent: returns quickly when a
+    // valid PDF already exists, otherwise downloads it. Throws
+    // PdfDownloadFailedError (with the server's real reason) on failure.
+    downloadPaperPdf: async (id: string | number): Promise<PdfDownloadResult> => {
+        const response = await fetch(`${API_URL}/papers/${id}/pdf/download`, {
+            method: "POST",
+        });
+        if (!response.ok) {
+            let body: unknown = null;
+            try {
+                body = await response.json();
+            } catch {
+                // Non-JSON body (e.g. a proxy error page) — fall back below.
+            }
+            throw new PdfDownloadFailedError(
+                parsePdfDownloadError(body, `PDF download failed (${response.status})`),
+            );
+        }
+        return response.json() as Promise<PdfDownloadResult>;
     },
 
     getSummarizationModels: async (): Promise<SummarizationModelsResponse> => {
@@ -674,6 +756,7 @@ export const getLibraryLists = api.getLibraryLists;
 export const getLibrary = api.getLibrary;
 export const getPaper = api.getPaper;
 export const generateSummary = api.generateSummary;
+export const downloadPaperPdf = api.downloadPaperPdf;
 export const getSummarizationModels = api.getSummarizationModels;
 export const addPaper = api.addPaper;
 export const getSimilarPapers = api.getSimilarPapers;
