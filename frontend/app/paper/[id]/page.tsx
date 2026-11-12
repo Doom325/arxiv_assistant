@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { generateSummary, addBookmark, removeBookmark, getBookmarkedIds, Paper, getPaper, getSimilarPapers, getPaperPatterns, PaperPattern, emailPaperSummary, parseServerDate } from "../../../lib/api";
+import { generateSummary, Paper, getPaper, getSimilarPapers, findSimilarPapers, getPaperPatterns, PaperPattern, emailPaperSummary, parseServerDate } from "../../../lib/api";
 import { showSummaryCompleteNotification, requestNotificationPermission } from "../../../lib/notifications";
 import { formatSummaryError } from "../../../lib/summaryError";
 import { ArrowLeft } from "lucide-react";
@@ -15,12 +15,22 @@ import PaperTabBar from "@/components/paper/PaperTabBar";
 import FullPaperReader from "@/components/paper/FullPaperReader";
 import AIAnalysisTab from "@/components/paper/AIAnalysisTab";
 
+interface RawPaperPayload extends Omit<Paper, "id" | "categories"> {
+    id: number | string;
+    category?: string;
+    categories?: string[];
+}
+
 export default function PaperDetail() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
     const [paper, setPaper] = useState<Paper | null>(null);
     const [similarPapers, setSimilarPapers] = useState<Paper[]>([]);
+    const [findingSimilar, setFindingSimilar] = useState(false);
+    const [hasSearchedSimilar, setHasSearchedSimilar] = useState(false);
+    const [similarError, setSimilarError] = useState<string | null>(null);
+    const similarReqRef = useRef(0);
     const [loading, setLoading] = useState(true);
     const [summarizing, setSummarizing] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
@@ -34,37 +44,61 @@ export default function PaperDetail() {
 
     useEffect(() => {
         if (id && isMounted) {
-            loadPaper();
+            void loadPaper();
         }
     }, [id, isMounted]);
 
-    const transformPaper = (data: any): Paper => ({
+    const transformPaper = (data: RawPaperPayload): Paper => ({
         ...data,
         id: data.arxiv_id,
-        db_id: data.id,
-        categories: [data.category || "cs.AI"],
+        db_id: typeof data.id === "number" ? data.id : data.db_id,
+        categories: data.categories?.length ? data.categories : [data.category || "cs.AI"],
     });
 
     const loadPaper = async () => {
+        const reqToken = ++similarReqRef.current;
+        setSimilarError(null);
+        setHasSearchedSimilar(false);
+        setFindingSimilar(false);
         try {
-            const data = await getPaper(id);
-            const transformed = transformPaper(data);
-            setPaper(transformed);
+            const data = (await getPaper(id)) as RawPaperPayload;
+            if (reqToken !== similarReqRef.current) return;
+            setPaper(transformPaper(data));
 
-            const similar = await getSimilarPapers(id);
+            const similar = (await getSimilarPapers(id)) as unknown as RawPaperPayload[];
+            if (reqToken !== similarReqRef.current) return;
             setSimilarPapers(similar.map(transformPaper));
 
-            // Load pattern classification
             try {
                 const patterns = await getPaperPatterns(data.arxiv_id || id);
-                setPaperPatterns(patterns);
-            } catch (e) {
-                console.log("[PAPER DETAIL] No patterns found for this paper");
+                if (reqToken === similarReqRef.current) setPaperPatterns(patterns);
+            } catch {
+                if (reqToken === similarReqRef.current) setPaperPatterns(null);
             }
-        } catch (e) {
-            console.error("[PAPER DETAIL] Error loading paper:", e);
+        } catch (err) {
+            console.error("[PAPER DETAIL] Error loading paper:", err);
         } finally {
-            setLoading(false);
+            if (reqToken === similarReqRef.current) setLoading(false);
+        }
+    };
+
+    const handleFindSimilarPapers = async (force: boolean = false) => {
+        const lookupId = paper?.arxiv_id || id;
+        if (!lookupId || findingSimilar) return;
+        const reqToken = ++similarReqRef.current;
+        setFindingSimilar(true);
+        setSimilarError(null);
+        try {
+            const results = (await findSimilarPapers(lookupId, 6, force)) as unknown as RawPaperPayload[];
+            if (reqToken !== similarReqRef.current) return;
+            setSimilarPapers(results.map(transformPaper));
+            setHasSearchedSimilar(true);
+        } catch (err) {
+            if (reqToken !== similarReqRef.current) return;
+            const message = err instanceof Error ? err.message : "Failed to find similar papers";
+            setSimilarError(message);
+        } finally {
+            if (reqToken === similarReqRef.current) setFindingSimilar(false);
         }
     };
 
@@ -240,7 +274,13 @@ export default function PaperDetail() {
                         />
 
                         <section id="recommendations">
-                            <RecommendedResearch papers={similarPapers} />
+                            <RecommendedResearch
+                                papers={similarPapers}
+                                isFinding={findingSimilar}
+                                hasSearchedOnDemand={hasSearchedSimilar}
+                                error={similarError}
+                                onFindSimilar={handleFindSimilarPapers}
+                            />
                         </section>
                     </div>
 
